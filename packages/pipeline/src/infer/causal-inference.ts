@@ -11,6 +11,7 @@
  */
 import { CausalGraph } from '../graph/causal-graph.js';
 import type { IdentifiedEstimand, CausalEstimate, CausalEdge } from '@agentix-e/causality-analyzer-core';
+import { solveLinear, normalTail } from '@agentix-e/causality-analyzer-core';
 
 // ── Estimand Identification ────────────────────────────────────────────
 
@@ -162,29 +163,6 @@ function computeSE(
   return Math.sqrt(ss / Math.max(1, n - predIdx.length));
 }
 
-function solveLinear(A: number[][], b: number[]): number[] {
-  const n = A.length;
-  if (n === 0) return [];
-  const aug = A.map((row, i) => [...row, b[i] ?? 0]);
-  for (let col = 0; col < n; col++) {
-    let pivot = col;
-    for (let row = col + 1; row < n; row++) if (Math.abs(aug[row]![col]!) > Math.abs(aug[pivot]![col]!)) pivot = row;
-    [aug[col], aug[pivot]] = [aug[pivot]!, aug[col]!];
-    if (Math.abs(aug[col]![col]!) < 1e-12) continue;
-    for (let row = col + 1; row < n; row++) {
-      const f = aug[row]![col]! / aug[col]![col]!;
-      for (let j = col; j <= n; j++) aug[row]![j]! -= f * aug[col]![j]!;
-    }
-  }
-  const x = new Array(n).fill(0);
-  for (let i = n - 1; i >= 0; i--) {
-    let sum = aug[i]![n]!;
-    for (let j = i + 1; j < n; j++) sum -= aug[i]![j]! * (x[j] ?? 0);
-    x[i] = sum / aug[i]![i]!;
-  }
-  return x;
-}
-
 // ── Refutation ─────────────────────────────────────────────────────────
 
 export interface RefutationResult {
@@ -214,7 +192,9 @@ export function refutePlaceboTreatment(
   }
 
   const nullMean = nullEstimates.reduce((a, b) => a + b, 0) / nullEstimates.length;
-  const pValue = Math.abs(nullMean) > Math.abs(original.ate) ? 0.5 : 0.01;
+  // Empirical p-value: fraction of null estimates >= more extreme than original
+  const moreExtreme = nullEstimates.filter(e => Math.abs(e) >= Math.abs(original.ate)).length;
+  const pValue = (moreExtreme + 1) / (nullEstimates.length + 1);
   return { method: 'placebo_treatment', originalEstimate: original.ate, newEstimate: nullMean, pValue, isRobust: pValue > 0.05 };
 }
 
@@ -261,11 +241,6 @@ export function refuteBootstrap(
   const ciHigh = estimates[Math.floor(nBootstraps * 0.975)] ?? 0;
   const isRobust = ciLow <= 0 === ciHigh <= 0; // effect sign consistent
   return { method: 'bootstrap', originalEstimate: full.ate, newEstimate: (ciLow + ciHigh) / 2, pValue: ciLow * ciHigh > 0 ? 0.01 : 0.5, isRobust };
-}
-
-function normalTail(x: number): number {
-  const t = 1 / (1 + 0.2316419 * Math.abs(x));
-  return Math.max(0, 0.3989423 * Math.exp(-x * x / 2) * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274)))));
 }
 
 function shuffle<T>(arr: T[]): T[] {

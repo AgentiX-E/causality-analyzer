@@ -74,6 +74,9 @@ export interface IRelationalStore {
 
   /** Set a named checkpoint within the current transaction */
   setCheckpoint(sessionId: string, name: string): Promise<void>;
+
+  /** Close the store and release all resources */
+  close(): void;
 }
 
 // ── Graph Store ─────────────────────────────────────────────────────────
@@ -105,4 +108,7 @@ export interface IGraphStore {
    * Used for detecting structural drift over time.
    */
   findSimilarGraphs(graph: CausalGraph, limit: number): Promise<CausalGraph[]>;
+
+  /** Close the store and release all resources */
+  close(): void;
 }

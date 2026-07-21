@@ -10,6 +10,7 @@
  */
 import { CausalGraph } from '../graph/causal-graph.js';
 import type { CausalityAnalyzerConfig, DetectionResult, RootCause, RCAResult } from '@agentix-e/causality-analyzer-core';
+import { solveLinear, normalTail } from '@agentix-e/causality-analyzer-core';
 
 // ── Causal Mechanism ──────────────────────────────────────────────────
 /** A learnable causal mechanism: X = f(parents) + noise */
@@ -219,31 +220,3 @@ export function cateToRCA(treatmentEffects: Map<string, number>): RootCause[] {
   return results;
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────
-function solveLinear(A: number[][], b: number[]): number[] {
-  const n = A.length;
-  if (n === 0) return [];
-  const aug = A.map((row, i) => [...row, b[i] ?? 0]);
-  for (let col = 0; col < n; col++) {
-    let pivot = col;
-    for (let row = col + 1; row < n; row++) if (Math.abs(aug[row]![col]!) > Math.abs(aug[pivot]![col]!)) pivot = row;
-    [aug[col], aug[pivot]] = [aug[pivot]!, aug[col]!];
-    if (Math.abs(aug[col]![col]!) < 1e-12) continue;
-    for (let row = col + 1; row < n; row++) {
-      const f = aug[row]![col]! / aug[col]![col]!;
-      for (let j = col; j <= n; j++) aug[row]![j]! -= f * aug[col]![j]!;
-    }
-  }
-  const x = new Array(n).fill(0);
-  for (let i = n - 1; i >= 0; i--) {
-    let sum = aug[i]![n]!;
-    for (let j = i + 1; j < n; j++) sum -= aug[i]![j]! * (x[j] ?? 0);
-    x[i] = sum / aug[i]![i]!;
-  }
-  return x;
-}
-
-function normalTail(x: number): number {
-  const t = 1 / (1 + 0.2316419 * Math.abs(x));
-  return Math.max(0, 0.3989423 * Math.exp(-x * x / 2) * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274)))));
-}

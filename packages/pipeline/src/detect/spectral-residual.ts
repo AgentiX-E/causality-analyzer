@@ -132,13 +132,10 @@ export class SpectralResidualDetector {
     return Math.abs(scores[n - 1]!);
   }
 
-  /** Batch detection on an array */
+  /** Batch detection — processes data without resetting streaming state. */
   detect(data: number[]): DetectionResult[] {
     const results: DetectionResult[] = [];
-    const tmp = this.buffer;
-    this.buffer = [];
     for (const v of data) results.push(this.update(v));
-    this.buffer = tmp;
     return results;
   }
 }

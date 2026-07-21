@@ -63,6 +63,9 @@ export { BaseConfig } from './config/index.js';
 // ── DI ────────────────────────────────────────────────────────────
 export type { CausalityAnalyzerConfig } from './di/index.js';
 
+// ── Math ─────────────────────────────────────────────────────────
+export { solveLinear, normalTail, normalCDFTail, normalCDF, erf } from './math.js';
+
 // ── Visualization Types ───────────────────────────────────────────
 export type {
   GraphVizNode,

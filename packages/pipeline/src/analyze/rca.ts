@@ -8,6 +8,7 @@
  */
 import { Matrix } from 'ml-matrix';
 import { CausalGraph } from '../graph/causal-graph.js';
+import { solveLinear, normalCDFTail } from '@agentix-e/causality-analyzer-core';
 import type { RootCause, RootCausePath, RCAResult, AnalysisMetadata } from '@agentix-e/causality-analyzer-core';
 
 // ── Common Result Builder ─────────────────────────────────────────────
@@ -33,25 +34,38 @@ export class BayesianRCA {
     for (const node of nodes) {
       const parents = graph.parents(node);
       const nodeIdx = nodes.indexOf(node);
-      // Estimate CPT: P(node=anomalous | parents)
-      const cpt: CPT = {};
       const n = data.rows;
+      // Estimate per-row anomaly threshold from data
+      let colSum = 0, colSq = 0;
+      for (let r = 0; r < n; r++) { const v = data.get(r, nodeIdx); colSum += v; colSq += v * v; }
+      const colMean = colSum / n;
+      const colStd = Math.sqrt(Math.max(1e-10, colSq / n - colMean * colMean));
+      const threshold = colMean + 2.5 * colStd; // >2.5σ = anomalous
+      const isAnomalous = (r: number) => data.get(r, nodeIdx) > threshold;
+
+      // Estimate CPT: P(node=anomalous | parent configuration)
+      const cpt: CPT = {};
       if (parents.length === 0) {
         let anomCount = 0;
-        for (let r = 0; r < n; r++) anomCount += anomalies.has(node) ? 1 : 0;
-        const p = Math.max(0.01, Math.min(0.99, anomCount / n));
-        cpt['root'] = p;
+        for (let r = 0; r < n; r++) if (isAnomalous(r)) anomCount++;
+        cpt['root'] = Math.max(0.01, Math.min(0.99, anomCount / n));
       } else {
-        const pKeys: string[] = [];
         const counts: Record<string, { anom: number; total: number }> = {};
+        const pIndices = parents.map(p => nodes.indexOf(p));
+        // Determine anomaly threshold for each parent
+        const parentThresholds = pIndices.map(pi => {
+          let s2 = 0, c2 = 0;
+          for (let r = 0; r < n; r++) { const v = data.get(r, pi); s2 += v; c2 += v * v; }
+          const m2 = s2 / n; const sd2 = Math.sqrt(Math.max(1e-10, c2 / n - m2 * m2)); return m2 + 2.5 * sd2;
+        });
         for (let r = 0; r < n; r++) {
-          const key = parents.map(p => anomalies.has(p) ? '1' : '0').join('');
+          const key = parents.map((_, i) => data.get(r, pIndices[i]!) > parentThresholds[i]! ? '1' : '0').join('');
           if (!counts[key]) counts[key] = { anom: 0, total: 0 };
           counts[key]!.total++;
-          if (anomalies.has(node)) counts[key]!.anom++;
+          if (isAnomalous(r)) counts[key]!.anom++;
         }
         for (const [key, cnt] of Object.entries(counts)) {
-          cpt[key] = Math.max(0.01, Math.min(0.99, cnt.anom / cnt.total));
+          cpt[key] = Math.max(0.01, Math.min(0.99, cnt.total > 0 ? cnt.anom / cnt.total : 0.5));
         }
       }
       this.cpts.set(node, cpt);
@@ -196,7 +210,12 @@ export class HTRCA {
         }
       }
       const coef = solveLinear(XtX, Xty);
-      const intercept = yMean - coef.reduce((s, c, i) => s + c * (pIdx.reduce((a, pi) => a + (data.rows > 0 ? data.get(0, pi)! : 0), 0) / n / pIdx.length), 0);
+      // Intercept = yMean - Σ(βi * xiMean) where xiMean = mean of parent column i
+      const parentMeans = pIdx.map(pi => {
+        let sum = 0; for (let r = 0; r < n; r++) sum += data.get(r, pi);
+        return sum / n;
+      });
+      const intercept = yMean - coef.reduce((s, c, i) => s + c * (parentMeans[i] ?? 0), 0);
       // Residual std
       let ss = 0; for (let r = 0; r < n; r++) {
         let pred = intercept;
@@ -234,35 +253,6 @@ export class HTRCA {
     scores.forEach((s, i) => (s as { rank: number }).rank = i + 1);
     return buildResult(scores.slice(0, 5), [], 'ht');
   }
-}
-
-function solveLinear(A: number[][], b: number[]): number[] {
-  const n = A.length;
-  const aug = A.map((row, i) => [...row, b[i] ?? 0]);
-  for (let col = 0; col < n; col++) {
-    let pivot = col;
-    for (let row = col + 1; row < n; row++) if (Math.abs(aug[row]![col]!) > Math.abs(aug[pivot]![col]!)) pivot = row;
-    [aug[col], aug[pivot]] = [aug[pivot]!, aug[col]!];
-    if (Math.abs(aug[col]![col]!) < 1e-12) continue;
-    for (let row = col + 1; row < n; row++) {
-      const f = aug[row]![col]! / aug[col]![col]!;
-      for (let j = col; j <= n; j++) aug[row]![j]! -= f * aug[col]![j]!;
-    }
-  }
-  const x = new Array(n).fill(0);
-  for (let i = n - 1; i >= 0; i--) {
-    let sum = aug[i]![n]!;
-    for (let j = i + 1; j < n; j++) sum -= aug[i]![j]! * (x[j] ?? 0);
-    x[i] = sum / aug[i]![i]!;
-  }
-  return x;
-}
-
-function normalCDFTail(x: number): number {
-  const t = 1 / (1 + 0.2316419 * Math.abs(x));
-  const d = 0.3989423 * Math.exp(-x * x / 2);
-  const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
-  return Math.max(0, p);
 }
 
 // ── FP-Growth Trace RCA ──────────────────────────────────────────────
@@ -345,10 +335,95 @@ export class FPGrowthRCA {
       }
     }
 
-    // Collect frequent singleton patterns as result
-    return freqItems.map(item => ({
-      items: new Set([item]),
-      support: (itemCounts.get(item) ?? 0) / total,
-    }));
+    // Recursive FP-Growth mining
+    const result: Array<{ items: Set<string>; support: number }> = [];
+    // Add singleton frequent items
+    for (const item of freqItems) {
+      result.push({ items: new Set([item]), support: (itemCounts.get(item) ?? 0) / total });
+    }
+
+    // Mine multi-item patterns (process items in reverse frequency order)
+    const orderedItems = [...freqItems].reverse();
+    for (const item of orderedItems) {
+      // Build conditional pattern base for this item
+      const condPatterns: Array<{ items: Set<string>; count: number }> = [];
+      let node = headerTable.get(item);
+      while (node) {
+        // Walk up to root collecting prefix path
+        const path: string[] = [];
+        let p = node.parent;
+        while (p && p.item !== 'ROOT') { path.push(p.item); p = p.parent; }
+        if (path.length > 0) {
+          condPatterns.push({ items: new Set(path), count: node.count });
+        }
+        node = node.next;
+      }
+      // Recursively mine conditional FP-Tree
+      this.mineFPTree(
+        condPatterns,
+        new Set([item]),
+        (itemCounts.get(item) ?? 0) / total,
+        minCount,
+        total,
+        result,
+      );
+    }
+
+    return result;
+  }
+
+  /** Recursive FP-Growth: mine conditional FP-Tree for a given prefix. */
+  private mineFPTree(
+    patterns: Array<{ items: Set<string>; count: number }>,
+    prefix: Set<string>,
+    prefixSupport: number,
+    minCount: number,
+    total: number,
+    result: Array<{ items: Set<string>; support: number }>,
+  ): void {
+    // Count items in conditional pattern base
+    const counts = new Map<string, number>();
+    for (const p of patterns) {
+      for (const item of p.items) counts.set(item, (counts.get(item) ?? 0) + p.count);
+    }
+    const freqItems = [...counts.entries()]
+      .filter(([, c]) => c >= minCount)
+      .sort((a, b) => b[1] - a[1])
+      .map(([item]) => item);
+
+    if (freqItems.length === 0) return;
+
+    // Process in reverse order for bottom-up recursive mining
+    for (const item of [...freqItems].reverse()) {
+      const newPrefix = new Set(prefix);
+      newPrefix.add(item);
+      result.push({ items: newPrefix, support: (counts.get(item) ?? 0) / total });
+
+      // Build conditional pattern base for the extended prefix
+      const nextPatterns: Array<{ items: Set<string>; count: number }> = [];
+      for (const p of patterns) {
+        if (p.items.has(item)) {
+          const filtered = new Set(p.items);
+          filtered.delete(item);
+          if (filtered.size > 0) nextPatterns.push({ items: filtered, count: p.count });
+        }
+      }
+      if (nextPatterns.length > 0) {
+        this.mineFPTree(nextPatterns, newPrefix, (counts.get(item) ?? 0) / total, minCount, total, result);
+      } else if (freqItems.length === 1) {
+        // Single path: all combinations of freqItems
+        for (let mask = 1; mask < (1 << freqItems.length); mask++) {
+          const combo = new Set(prefix);
+          for (let b = 0; b < freqItems.length; b++) {
+            if (mask & (1 << b)) combo.add(freqItems[b]!);
+          }
+          if (combo.size > prefix.size) {
+            // Find min support along path
+            const minSupport = Math.min(...freqItems.map(f => counts.get(f) ?? 0));
+            result.push({ items: combo, support: minSupport / total });
+          }
+        }
+      }
+    }
   }
 }

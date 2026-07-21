@@ -7,6 +7,7 @@ import { StatsDetector } from '../detect/stats-detector.js';
  * to exercise every conditional path in the numerical optimization code.
  */
 import { describe, it, expect } from 'vitest';
+import { solveLinear } from '@agentix-e/causality-analyzer-core';
 
 // Re-implement the internal functions from spot.ts for direct testing.
 // In production, these would be extracted into a public module.
@@ -215,29 +216,6 @@ describe('estimateGPD branch coverage', () => {
 // ════════════════════════════════════════════════════════════════════
 // solveLinear — all branches in Gaussian elimination
 // ════════════════════════════════════════════════════════════════════
-function solveLinear(A: number[][], b: number[]): number[] {
-  const n = A.length;
-  if (n === 0) return [];
-  const aug = A.map((row, i) => [...row, b[i] ?? 0]);
-  for (let col = 0; col < n; col++) {
-    let pivot = col;
-    for (let row = col + 1; row < n; row++) if (Math.abs(aug[row]![col]!) > Math.abs(aug[pivot]![col]!)) pivot = row;
-    [aug[col], aug[pivot]] = [aug[pivot]!, aug[col]!];
-    if (Math.abs(aug[col]![col]!) < 1e-12) continue;
-    for (let row = col + 1; row < n; row++) {
-      const f = aug[row]![col]! / aug[col]![col]!;
-      for (let j = col; j <= n; j++) aug[row]![j]! -= f * aug[col]![j]!;
-    }
-  }
-  const x = new Array(n).fill(0);
-  for (let i = n - 1; i >= 0; i--) {
-    let sum = aug[i]![n]!;
-    for (let j = i + 1; j < n; j++) sum -= aug[i]![j]! * (x[j] ?? 0);
-    x[i] = sum / aug[i]![i]!;
-  }
-  return x;
-}
-
 describe('solveLinear branch coverage', () => {
   it('returns empty array for 0x0 matrix', () => {
     expect(solveLinear([], [])).toEqual([]);
