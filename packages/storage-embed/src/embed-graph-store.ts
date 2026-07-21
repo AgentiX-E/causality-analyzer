@@ -1,11 +1,13 @@
 /**
- * EmbedGraphStore — in-process IGraphStore implementation.
+ * EmbedGraphStore — file-persisted IGraphStore.
  *
- * Stores causal graphs with full versioning, similarity search,
- * and temporal queries. Uses in-process data structures.
- * Ready for overgraph backend swap via the same IGraphStore interface.
+ * Default: ./causality-analyzer-graph.json (JSON file persistence).
+ * :memory: mode available via { path: ':memory:' }.
+ * Overgraph backend ready: swap via the same IGraphStore interface.
  */
-import type { IGraphStore, CausalGraph, CausalEdge, GraphMetadata, GraphVersion } from '@agentix-e/causality-analyzer-core';
+import { readFileSync, writeFileSync, existsSync, unlinkSync } from 'fs';
+import { join } from 'path';
+import type { IGraphStore, CausalGraph, GraphMetadata, GraphVersion } from '@agentix-e/causality-analyzer-core';
 
 interface GraphEntry {
   graph: CausalGraph;
@@ -14,41 +16,64 @@ interface GraphEntry {
   timestamp: number;
 }
 
+export interface EmbedGraphOptions {
+  /** File path. Default: ./causality-analyzer-graph.json. ':memory:' for CI. */
+  path?: string;
+}
+
 export class EmbedGraphStore implements IGraphStore {
-  private graphs = new Map<string, GraphEntry[]>();
+  private path: string;
+  private graphs: Map<string, GraphEntry[]>;
+
+  constructor(opts: EmbedGraphOptions = {}) {
+    this.path = opts.path === ':memory:' ? '' : (opts.path || './causality-analyzer-graph.json');
+    if (this.path && existsSync(this.path)) {
+      try {
+        const data = JSON.parse(readFileSync(this.path, 'utf-8'));
+        this.graphs = new Map(Object.entries(data).map(([k, v]) => [k, v as GraphEntry[]]));
+      } catch { this.graphs = new Map(); }
+    } else {
+      this.graphs = new Map();
+    }
+    if (!this.path) this.path = '';
+  }
+
+  private persist() {
+    if (this.path) {
+      const obj: Record<string, GraphEntry[]> = {};
+      for (const [k, v] of this.graphs) obj[k] = v;
+      writeFileSync(this.path, JSON.stringify(obj, null, 2));
+    }
+  }
 
   async saveGraph(graph: CausalGraph, metadata: GraphMetadata): Promise<string> {
     const id = metadata.id;
     const versions = this.graphs.get(id) ?? [];
-    const entry: GraphEntry = { graph, metadata, version: versions.length + 1, timestamp: Date.now() };
-    versions.push(entry);
+    versions.push({ graph, metadata, version: versions.length + 1, timestamp: Date.now() });
     this.graphs.set(id, versions);
+    this.persist();
     return id;
   }
 
   async loadGraph(graphId: string): Promise<CausalGraph | null> {
-    const versions = this.graphs.get(graphId);
-    if (!versions || versions.length === 0) return null;
-    return versions[versions.length - 1]!.graph;
+    const v = this.graphs.get(graphId);
+    return v?.[v.length - 1]?.graph ?? null;
   }
 
   async loadGraphVersion(graphId: string, version: number): Promise<CausalGraph | null> {
-    return this.graphs.get(graphId)?.find(v => v.version === version)?.graph ?? null;
+    return this.graphs.get(graphId)?.find(e => e.version === version)?.graph ?? null;
   }
 
   async listGraphVersions(graphId: string): Promise<GraphVersion[]> {
-    return (this.graphs.get(graphId) ?? []).map(v => ({
-      graphId,
-      version: v.version,
-      timestamp: v.timestamp,
-    }));
+    return (this.graphs.get(graphId) ?? []).map(e => ({ graphId, version: e.version, timestamp: e.timestamp }));
   }
 
   async findSimilarGraphs(_target: CausalGraph, limit: number): Promise<CausalGraph[]> {
     const all: CausalGraph[] = [];
-    for (const versions of this.graphs.values()) {
-      for (const v of versions) all.push(v.graph);
-    }
+    for (const versions of this.graphs.values()) for (const e of versions) all.push(e.graph);
     return all.slice(0, limit);
   }
+
+  /** Delete the persisted file (for test cleanup) */
+  deleteFile(): void { if (this.path) try { unlinkSync(this.path); } catch {} }
 }

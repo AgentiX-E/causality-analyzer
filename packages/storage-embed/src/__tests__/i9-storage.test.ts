@@ -76,7 +76,7 @@ describe('EmbedRelationalStore', () => {
 // ── EmbedGraphStore ──────────────────────────────────────────────────
 describe('EmbedGraphStore', () => {
   let store: EmbedGraphStore;
-  beforeEach(() => { store = new EmbedGraphStore(); });
+  beforeEach(() => { store = new EmbedGraphStore({ path: ":memory:" }); });
 
   it('save + load graph', async () => {
     const id = await store.saveGraph({ nodes: ['A', 'B'], edges: [{ source: 'A', target: 'B', weight: 1, directed: true }] }, { id: 'g1', method: 'pc', computedAt: 1, parameters: {}, confidence: 0.9 });
