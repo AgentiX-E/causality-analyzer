@@ -94,3 +94,23 @@ jobs:
           name: coverage-report
           path: coverage/
           retention-days: 7
+
+  browser-test:
+    needs: [build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: 'pnpm'
+      - run: pnpm config set approve-builds true 2>/dev/null || true
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run --filter @agentix-e/causality-analyzer-core build
+      - run: npx playwright install chromium --with-deps
+      - run: pnpm run --filter @agentix-e/causality-analyzer-visual browser-test
+

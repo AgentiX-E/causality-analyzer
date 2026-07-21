@@ -1,7 +1,7 @@
 {
   "name": "@agentix-e/causality-analyzer-visual",
   "version": "0.1.0",
-  "description": "Causality Analyzer Visual — Framework-Agnostic Web Components for graph, time series, and ranking visualization",
+  "description": "Causality Analyzer Visual \u2014 Framework-Agnostic Web Components for graph, time series, and ranking visualization",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -9,7 +9,8 @@
     "build": "tsc -p tsconfig.json",
     "test": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "browser-test": "playwright test --config playwright.config.ts"
   },
   "dependencies": {
     "@agentix-e/causality-analyzer-core": "workspace:*",
