@@ -7,6 +7,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run --coverage",
+    "test:neo4j": "vitest run --config vitest.neo4j.config.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
