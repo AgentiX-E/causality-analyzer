@@ -102,7 +102,7 @@ importers:
         version: 3.2.7(happy-dom@15.11.7)
     optionalDependencies:
       neo4j-driver-lite:
-        specifier: ^6.0.0
+        specifier: ^6.2.0
         version: 6.2.0
       pg:
         specifier: ^8.0.0

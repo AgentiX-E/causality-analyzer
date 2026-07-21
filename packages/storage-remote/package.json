@@ -14,7 +14,7 @@
     "@electric-sql/pglite": "^0.5.4"
   },
   "optionalDependencies": {
-    "neo4j-driver-lite": "^6.0.0",
+    "neo4j-driver-lite": "^6.2.0",
     "pg": "^8.0.0"
   },
   "devDependencies": {
