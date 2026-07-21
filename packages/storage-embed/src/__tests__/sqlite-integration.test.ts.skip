@@ -1,0 +1,45 @@
+import { RELATIONAL_SCHEMA } from '../embed-relational-store.js';
+
+// Module-level: check if better-sqlite3 is available
+let hasSQLite = false;
+try { require('better-sqlite3'); hasSQLite = true; } catch { /* unavailable */ }
+
+if (hasSQLite) {
+  const { describe, it, expect, beforeEach, afterEach } = await import('vitest');
+  const Database = require('better-sqlite3');
+
+  describe('Real SQLite integration', () => {
+    let db: any;
+    beforeEach(() => { db = new Database(':memory:'); db.pragma('journal_mode=WAL'); for (const ddl of Object.values(RELATIONAL_SCHEMA)) db.exec(ddl); });
+    afterEach(() => db?.close());
+
+    it('creates all 5 tables', () => {
+      const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all();
+      const names = tables.map((t: any) => t.name);
+      expect(names).toEqual(expect.arrayContaining(['metrics','cpt','regression_models','rca_results','analysis_state']));
+    });
+
+    it('CPT insert + query', () => {
+      db.prepare('INSERT OR REPLACE INTO cpt VALUES (?,?,?,?)').run('g1','CPU','0',0.05);
+      db.prepare('INSERT OR REPLACE INTO cpt VALUES (?,?,?,?)').run('g1','CPU','1',0.80);
+      expect(db.prepare('SELECT * FROM cpt WHERE graph_id=? AND node=?').all('g1','CPU')).toHaveLength(2);
+    });
+
+    it('SAVEPOINT rollback', () => {
+      db.exec("SAVEPOINT sp1");
+      db.prepare('INSERT INTO cpt VALUES (?,?,?,?)').run('g2','X','0',0.3);
+      db.exec("ROLLBACK TO SAVEPOINT sp1");
+      expect(db.prepare('SELECT * FROM cpt WHERE graph_id=?').all('g2')).toHaveLength(0);
+    });
+
+    it('SAVEPOINT release', () => {
+      db.exec("SAVEPOINT sp2");
+      db.prepare('INSERT INTO cpt VALUES (?,?,?,?)').run('g3','Y','1',0.7);
+      db.exec("RELEASE SAVEPOINT sp2");
+      expect(db.prepare('SELECT * FROM cpt WHERE graph_id=? AND node=?').get('g3','Y').prob).toBe(0.7);
+    });
+  });
+} else {
+  // Native addon unavailable — tests gracefully skipped
+  console.log('[storage-embed] better-sqlite3 native addon unavailable — SQLite tests skipped');
+}
