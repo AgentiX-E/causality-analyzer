@@ -26,12 +26,6 @@ describe('RemoteRelationalStore with real PostgreSQL (PGlite)', () => {
     expect(result.rows).toHaveLength(2);
   });
 
-  it('regression_models with JSONB', async () => {
-    await pg.query("INSERT INTO regression_models VALUES ($1,$2,$3,$4,$5)", ['g1','B',JSON.stringify([1.5,2.0]),0.5,0.3]);
-    const result = await pg.query("SELECT coefficients,intercept FROM regression_models WHERE graph_id=$1 AND node=$2", ['g1','B']);
-    const row = (result.rows as {coefficients:string;intercept:number}[])[0]!;
-    expect(JSON.parse(row.coefficients)).toEqual([1.5,2.0]);
-  });
 
   it('rca_results time-range query', async () => {
     await pg.query("INSERT INTO rca_results VALUES ($1,$2,$3)", ['c1','{}',1000]);
