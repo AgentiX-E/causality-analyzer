@@ -1,82 +1,147 @@
 /**
- * Embedded Storage — better-sqlite3 based IRelationalStore.
+ * EmbedRelationalStore — better-sqlite3 backed IRelationalStore.
  *
- * Requires better-sqlite3 as optionalDependency. Falls back to
- * a mock implementation when better-sqlite3 is not installed (CI/testing).
+ * Uses real SQLite via the better-sqlite3 native addon.
+ * :memory: mode for CI/testing. Persistent WAL for production.
+ * All operations are synchronous internally, wrapped in Promise
+ * for IRelationalStore contract compliance.
  */
-import type { IRelationalStore, ColumnarTable, TableSchema, MetricQuery, DetectionResult, ConditionalProbabilityTable, RegressionParams, RCAResult, ResultQuery } from '@agentix-e/causality-analyzer-core';
+import Database from 'better-sqlite3';
+import type {
+  IRelationalStore, MetricQuery, DetectionResult,
+  ConditionalProbabilityTable, RegressionParams, RCAResult, ResultQuery,
+  ColumnarTable, TableSchema,
+} from '@agentix-e/causality-analyzer-core';
 
-// ── Schema Definitions ─────────────────────────────────────────────────
+// ── Schema ──────────────────────────────────────────────────────────────
 
-export const RELATIONAL_SCHEMA = {
-  metrics: `CREATE TABLE IF NOT EXISTS metrics (ts INTEGER NOT NULL, metrics_json TEXT NOT NULL, PRIMARY KEY (ts))`,
-  cpt: `CREATE TABLE IF NOT EXISTS cpt (graph_id TEXT NOT NULL, node TEXT NOT NULL, parent_state TEXT NOT NULL, prob REAL NOT NULL, PRIMARY KEY (graph_id, node, parent_state))`,
-  regression_models: `CREATE TABLE IF NOT EXISTS regression_models (graph_id TEXT NOT NULL, node TEXT NOT NULL, coefficients TEXT NOT NULL, intercept REAL NOT NULL, residual_std REAL NOT NULL, PRIMARY KEY (graph_id, node))`,
-  rca_results: `CREATE TABLE IF NOT EXISTS rca_results (case_id TEXT PRIMARY KEY, result_json TEXT NOT NULL, analyzed_at INTEGER NOT NULL)`,
-  analysis_state: `CREATE TABLE IF NOT EXISTS analysis_state (session_id TEXT PRIMARY KEY, stage TEXT, checkpoint_name TEXT, progress TEXT)`,
+export const SQL = {
+  metrics:      `CREATE TABLE IF NOT EXISTS metrics (ts INTEGER NOT NULL, value REAL NOT NULL, metric_name TEXT NOT NULL, metadata_json TEXT, PRIMARY KEY (ts, metric_name))`,
+  cpt:          `CREATE TABLE IF NOT EXISTS cpt (graph_id TEXT NOT NULL, node TEXT NOT NULL, parent_state TEXT NOT NULL, prob REAL NOT NULL, PRIMARY KEY (graph_id, node, parent_state))`,
+  regression:   `CREATE TABLE IF NOT EXISTS regression_models (graph_id TEXT NOT NULL, node TEXT NOT NULL, coefficients TEXT NOT NULL, intercept REAL NOT NULL, residual_std REAL NOT NULL, PRIMARY KEY (graph_id, node))`,
+  rca_results:  `CREATE TABLE IF NOT EXISTS rca_results (case_id TEXT PRIMARY KEY, result_json TEXT NOT NULL, analyzed_at INTEGER NOT NULL, root_cause TEXT)`,
+  analysis:     `CREATE TABLE IF NOT EXISTS analysis_state (session_id TEXT NOT NULL, stage TEXT NOT NULL, checkpoint_name TEXT, progress TEXT, PRIMARY KEY (session_id, checkpoint_name))`,
 };
 
-/** In-memory store for CI/testing when better-sqlite3 is unavailable */
+export interface EmbedStoreOptions {
+  /** Path to SQLite database file. Omit for :memory: */
+  dbPath?: string;
+  /** Enable WAL journal mode (default: true) */
+  wal?: boolean;
+}
+
+// ── Store Implementation ────────────────────────────────────────────────
+
 export class EmbedRelationalStore implements IRelationalStore {
-  private metrics = new Map<string, Float64Array>();
-  private cptStore = new Map<string, ConditionalProbabilityTable>();
-  private regressionStore = new Map<string, RegressionParams>();
-  private results: Array<{ caseId: string; result: RCAResult; ts: number }> = [];
-  private state = new Map<string, { stage: string; checkpoint: string | null }>();
+  private db: any;
+  private init: ReturnType<typeof setInterval> | null = null;
+
+  constructor(options: EmbedStoreOptions = {}) {
+    this.db = new Database(options.dbPath ?? ':memory:');
+    this.db.pragma(options.wal !== false ? 'journal_mode = WAL' : 'journal_mode = DELETE');
+    this.db.pragma('synchronous = NORMAL');
+    for (const ddl of Object.values(SQL)) this.db.exec(ddl);
+
+    // Prepared statements (compiled once at construction)
+    this._stmt = {
+      insertMetric:   this.db.prepare('INSERT OR REPLACE INTO metrics (ts, value, metric_name, metadata_json) VALUES (?, ?, ?, ?)'),
+      insertCPT:      this.db.prepare('INSERT OR REPLACE INTO cpt (graph_id, node, parent_state, prob) VALUES (?, ?, ?, ?)'),
+      loadCPT:        this.db.prepare('SELECT parent_state, prob FROM cpt WHERE graph_id = ? AND node = ? ORDER BY parent_state'),
+      insertReg:      this.db.prepare('INSERT OR REPLACE INTO regression_models (graph_id, node, coefficients, intercept, residual_std) VALUES (?, ?, ?, ?, ?)'),
+      loadReg:        this.db.prepare('SELECT coefficients, intercept, residual_std FROM regression_models WHERE graph_id = ? AND node = ?'),
+      insertRCA:      this.db.prepare('INSERT OR REPLACE INTO rca_results (case_id, result_json, analyzed_at, root_cause) VALUES (?, ?, ?, ?)'),
+      queryRCA:       this.db.prepare('SELECT result_json FROM rca_results WHERE (? IS NULL OR analyzed_at >= ?) AND (? IS NULL OR analyzed_at <= ?) AND (? IS NULL OR root_cause = ?) ORDER BY analyzed_at DESC LIMIT ?'),
+      upsertState:    this.db.prepare('INSERT OR REPLACE INTO analysis_state (session_id, stage, checkpoint_name, progress) VALUES (?, ?, ?, ?)'),
+      readMetrics:    this.db.prepare('SELECT ts, value FROM metrics WHERE ts >= ? AND ts <= ? ORDER BY ts'),
+    };
+  }
+
+  private _stmt!: Record<string, any>;
+
+  // ── IRelationalStore ──────────────────────────────────────────────
 
   async readMetrics<S extends TableSchema>(query: MetricQuery): Promise<ColumnarTable<S>> {
-    const data = this.metrics.get(`${query.start}-${query.end}`);
-    if (!data) {
-      const { ColumnarTable } = await import('@agentix-e/causality-analyzer-core');
-      return ColumnarTable.fromRows([]) as unknown as ColumnarTable<S>;
-    }
-    const rows = Array.from({ length: data.length }, (_, i) => ({ ts: query.start + i, value: data[i]! }) as Record<string, number>);
+    const rows = this._stmt.readMetrics.all(query.start, query.end) as Array<{ ts: number; value: number }>;
+    const col = new Float64Array(rows.length);
+    for (let i = 0; i < rows.length; i++) { col[i] = rows[i]!.value; }
     const { ColumnarTable } = await import('@agentix-e/causality-analyzer-core');
-    return ColumnarTable.fromRows(rows) as unknown as ColumnarTable<S>;
+    return ColumnarTable.fromColumnar({ ts: new Float64Array(rows.map(r => r.ts)), value: col }) as unknown as ColumnarTable<S>;
   }
 
   async writeDetections(detections: DetectionResult[]): Promise<void> {
-    for (const d of detections) {
-      this.metrics.set(`detection-${d.timestamp}`, d.scores);
-    }
+    const insert = this._stmt.insertMetric;
+    const tx = this.db.transaction((items: DetectionResult[]) => {
+      for (const d of items) {
+        for (let i = 0; i < d.scores.length; i++) {
+          insert.run(d.timestamp, d.scores[i]!, `metric_${i}`, JSON.stringify(d.metadata));
+        }
+      }
+    });
+    tx(detections);
   }
 
   async saveCPT(graphId: string, node: string, cpt: ConditionalProbabilityTable): Promise<void> {
-    this.cptStore.set(`${graphId}:${node}`, cpt);
+    const insert = this._stmt.insertCPT;
+    const tx = this.db.transaction(() => {
+      for (const [state, prob] of Object.entries(cpt.entries)) {
+        insert.run(graphId, node, state, prob);
+      }
+    });
+    tx();
   }
+
   async loadCPT(graphId: string, node: string): Promise<ConditionalProbabilityTable | null> {
-    return this.cptStore.get(`${graphId}:${node}`) ?? null;
+    const rows = this._stmt.loadCPT.all(graphId, node) as Array<{ parent_state: string; prob: number }>;
+    if (rows.length === 0) return null;
+    const entries: Record<string, number> = {};
+    for (const r of rows) entries[r.parent_state] = r.prob;
+    return { node, parents: [], entries };
   }
 
   async saveRegressionModel(graphId: string, node: string, model: RegressionParams): Promise<void> {
-    this.regressionStore.set(`${graphId}:${node}`, model);
+    this._stmt.insertReg.run(graphId, node, JSON.stringify(model.coefficients), model.intercept, model.residualStdDev);
   }
+
   async loadRegressionModel(graphId: string, node: string): Promise<RegressionParams | null> {
-    return this.regressionStore.get(`${graphId}:${node}`) ?? null;
+    const row = this._stmt.loadReg.get(graphId, node) as { coefficients: string; intercept: number; residual_std: number } | undefined;
+    if (!row) return null;
+    return { coefficients: JSON.parse(row.coefficients), intercept: row.intercept, residualStdDev: row.residual_std };
   }
 
   async saveRCAResult(caseId: string, result: RCAResult): Promise<void> {
-    this.results.push({ caseId, result, ts: Date.now() });
+    this._stmt.insertRCA.run(caseId, JSON.stringify(result.toJSON()), Date.now(), result.rootCauses[0]?.name ?? null);
   }
 
   async queryHistoricalResults(query: ResultQuery): Promise<RCAResult[]> {
-    return this.results
-      .filter(r => (!query.start || r.ts >= query.start) && (!query.end || r.ts <= query.end))
-      .filter(r => !query.rootCause || r.result.rootCauses.some(rc => rc.name === query.rootCause))
-      .slice(0, query.limit ?? 100)
-      .map(r => r.result);
+    const rows = this._stmt.queryRCA.all(
+      query.start ?? null, query.start ?? 0,
+      query.end ?? null, query.end ?? Number.MAX_SAFE_INTEGER,
+      query.rootCause ?? null, query.rootCause ?? null,
+      query.limit ?? 100,
+    ) as Array<{ result_json: string }>;
+    return rows.map(r => JSON.parse(r.result_json) as RCAResult);
   }
 
   async beginTransaction(sessionId: string): Promise<void> {
-    this.state.set(sessionId, { stage: 'started', checkpoint: null });
+    this.db.exec(`SAVEPOINT "${sessionId.replace(/"/g, '""')}"`);
+    this._stmt.upsertState.run(sessionId, 'started', null, null);
   }
+
   async commitTransaction(sessionId: string): Promise<void> {
-    this.state.set(sessionId, { stage: 'committed', checkpoint: this.state.get(sessionId)?.checkpoint ?? null });
+    this.db.exec(`RELEASE SAVEPOINT "${sessionId.replace(/"/g, '""')}"`);
+    this._stmt.upsertState.run(sessionId, 'committed', null, null);
   }
+
   async rollbackToCheckpoint(sessionId: string, checkpoint: string): Promise<void> {
-    this.state.set(sessionId, { stage: `rolled_back_to_${checkpoint}`, checkpoint });
+    this.db.exec(`ROLLBACK TO SAVEPOINT "${checkpoint.replace(/"/g, '""')}"`);
+    this._stmt.upsertState.run(sessionId, `rolled_back`, checkpoint, null);
   }
+
   async setCheckpoint(sessionId: string, name: string): Promise<void> {
-    this.state.set(sessionId, { stage: `checkpoint_${name}`, checkpoint: name });
+    this.db.exec(`SAVEPOINT "${name.replace(/"/g, '""')}"`);
+    this._stmt.upsertState.run(sessionId, 'checkpoint', name, null);
   }
+
+  /** Close the database connection */
+  close(): void { this.db.close(); }
 }
