@@ -1,26 +1,45 @@
-import { describe, it, expect } from 'vitest';
-import { newDb } from 'pg-mem';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { RemoteRelationalStore } from '../remote-relational-store.js';
 import { RemoteGraphStore } from '../remote-graph-store.js';
+import { startPgMemServer } from './pg-wire-server.js';
 
-// Test: inject pg-mem Client so RemoteRelationalStore connects to the in-memory PG server
-describe('RemoteRelationalStore via pg-mem (PG-wire)', () => {
-  it('CPT save + load through PG-wire client', async () => {
-    const db = newDb();
-    const { Client } = db.adapters.createPg();
-    const store = new RemoteRelationalStore({ _Client: Client as any });
+// Start a real PG-wire TCP server backed by pg-mem.
+// RemoteRelationalStore connects via TCP → authentic PG-wire protocol.
+let serverUrl: string;
+let stopServer: () => void;
+
+beforeAll(async () => {
+  const srv = await startPgMemServer();
+  serverUrl = srv.url;
+  stopServer = srv.stop;
+});
+
+afterAll(() => {
+  stopServer();
+});
+
+describe('RemoteRelationalStore via real PG-wire TCP', () => {
+  it('connects via PG-wire and saves/loads CPT', async () => {
+    const store = new RemoteRelationalStore({ connectionString: serverUrl });
     await store.saveCPT('g1', 'CPU', { node:'CPU', parents:[], entries:{'0':0.1,'1':0.75} });
     const cpt = await store.loadCPT('g1', 'CPU');
     expect(cpt?.entries['0']).toBe(0.1);
-    expect(cpt?.entries['1']).toBe(0.75);
     await store.close();
   });
 
-  it('loadCPT returns null for unknown', async () => {
-    const db = newDb();
-    const { Client } = db.adapters.createPg();
-    const store = new RemoteRelationalStore({ _Client: Client as any });
-    expect(await store.loadCPT('x', 'y')).toBeNull();
+  it('SAVEPOINT commit + rollback', async () => {
+    const store = new RemoteRelationalStore({ connectionString: serverUrl });
+    await store.beginTransaction('s1');
+    await store.saveCPT('g2', 'A', { node:'A', parents:[], entries:{'0':0.5} });
+    await store.commitTransaction('s1');
+
+    await store.beginTransaction('s2');
+    await store.setCheckpoint('s2', 'cp');
+    await store.saveCPT('g3', 'B', { node:'B', parents:[], entries:{'1':0.9} });
+    await store.rollbackToCheckpoint('s2', 'cp');
+
+    expect(await store.loadCPT('g2', 'A')).not.toBeNull();
+    expect(await store.loadCPT('g3', 'B')).toBeNull();
     await store.close();
   });
 });

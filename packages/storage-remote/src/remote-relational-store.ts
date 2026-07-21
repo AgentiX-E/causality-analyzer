@@ -12,8 +12,6 @@ const DDL = [
 export interface RemoteRelationalConfig {
   /** PG connection string. Default: postgresql://localhost:5432/postgres */
   connectionString?: string;
-  /** Client constructor override (for pg-mem testing) */
-  _Client?: new (opts: any) => any;
 }
 
 export class RemoteRelationalStore implements IRelationalStore {
@@ -21,8 +19,7 @@ export class RemoteRelationalStore implements IRelationalStore {
   private _ready: Promise<void>;
 
   constructor(config: RemoteRelationalConfig = {}) {
-    const Client = config._Client || PgClient;
-    this.client = new Client(config.connectionString ? { connectionString: config.connectionString } : undefined);
+    this.client = new PgClient(config.connectionString ? { connectionString: config.connectionString } : undefined);
     this._ready = this._init();
   }
 
