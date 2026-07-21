@@ -26,6 +26,13 @@ export {
 } from './infer/index.js';
 export type { RefutationResult, LinearRegressionEstimate } from './infer/index.js';
 
+// Effect estimation (I7)
+export {
+  findBackdoorSet, adjustBackdoor, estimateFrontdoor,
+  estimateIV, estimatePropensityScore, estimatePSMatching,
+  estimateDoublyRobust,
+} from './infer/index.js';
+
 // GCM
 export { StructuralCausalModel, cateToRCA } from './gcm/index.js';
 
