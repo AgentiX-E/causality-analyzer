@@ -15,7 +15,7 @@
  * @packageDocumentation
  */
 import { CausalGraph } from '../graph/causal-graph.js';
-import { solveLinear, colMean } from '@agentix-e/causality-analyzer-core';
+import { solveLinear, colMean, createRNG } from '@agentix-e/causality-analyzer-core';
 import type { IdentifiedEstimand } from '@agentix-e/causality-analyzer-core';
 
 // ── Backdoor Adjustment ───────────────────────────────────────────────
@@ -371,7 +371,9 @@ export function estimatePSMatching(
   treatmentIdx: number,
   outcomeIdx: number,
   covariateIndices: number[] = [],
+  seed?: number,
 ): { ate: number; se: number } {
+  const rng = createRNG(seed ?? null);
   const n = data.length;
   const scores = estimatePropensityScore(data, treatmentIdx, covariateIndices);
 
@@ -406,7 +408,7 @@ export function estimatePSMatching(
   for (let b = 0; b < nBoot; b++) {
     let sum = 0, cnt = 0;
     for (const t of treated) {
-      const ri = Math.floor(Math.random() * control.length);
+      const ri = Math.floor(rng() * control.length);
       sum += t.y - control[ri]!.y;
       cnt++;
     }

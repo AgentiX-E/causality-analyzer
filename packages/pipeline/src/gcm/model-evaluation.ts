@@ -11,7 +11,7 @@
  * @packageDocumentation
  */
 import { StructuralCausalModel } from './structural-causal-model.js';
-import { solveLinear, colMean } from '@agentix-e/causality-analyzer-core';
+import { solveLinear, colMean, createRNG } from '@agentix-e/causality-analyzer-core';
 import type { RootCause } from '@agentix-e/causality-analyzer-core';
 
 // ── Model Evaluation ──────────────────────────────────────────────────
@@ -154,7 +154,9 @@ export function shapleyAttribute(
   scm: StructuralCausalModel,
   observation: Record<string, number>,
   topK: number = 5,
+  seed?: number,
 ): RootCause[] {
+  const rng = createRNG(seed ?? null);
   const graph = scm.causalGraph;
   const nodes = graph.topologicalSort().filter(n => graph.parents(n).length > 0);
   if (nodes.length <= 1) return [];
@@ -176,7 +178,7 @@ export function shapleyAttribute(
 
     for (let perm = 0; perm < nPermutations; perm++) {
       // Random permutation of other nodes
-      const shuffled = [...others].sort(() => Math.random() - 0.5);
+      const shuffled = [...others].sort(() => rng() - 0.5);
       const baseline = baselineScores.get(target) ?? 0;
 
       // Compute marginal contribution: v(S ∪ {i}) - v(S)
@@ -237,7 +239,9 @@ export function bootstrapRCA(
   observations: Record<string, number>[],
   nBootstraps: number = 200,
   alpha: number = 0.05,
+  seed?: number,
 ): Map<string, { mean: number; ciLow: number; ciHigh: number }> {
+  const rng = createRNG(seed ?? null);
   const graph = scm.causalGraph;
   const nodes = graph.topologicalSort();
   const n = observations.length;
@@ -250,7 +254,7 @@ export function bootstrapRCA(
   for (let b = 0; b < nBootstraps; b++) {
     const sample: Record<string, number>[] = [];
     for (let i = 0; i < n; i++) {
-      sample.push(observations[Math.floor(Math.random() * n)]!);
+      sample.push(observations[Math.floor(rng() * n)]!);
     }
     // Compute mean anomaly score per node
     for (const node of nodes) {

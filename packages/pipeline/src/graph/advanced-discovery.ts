@@ -154,6 +154,30 @@ export function fciAlgorithm(
     }
   }
 
+  // Phase 3b: FCI-specific R4 — discriminating path rule
+  // If there is a discriminating path ⟨V₁,...,Vₖ,W,X,Y⟩ for W-X-Y,
+  // and the separation set of V₁ and Y contains W but not X, orient W→X and X→Y.
+  for (let w = 0; w < n; w++) {
+    for (let x = 0; x < n; x++) {
+      if (x === w) continue;
+      for (let y = 0; y < n; y++) {
+        if (y === w || y === x) continue;
+        // Check if W-X-Y is an unshielded triple (W—X, X—Y, NOT W—Y)
+        if (!g.hasEdge(nodeNames[w]!, nodeNames[x]!)) continue;
+        if (!g.hasEdge(nodeNames[x]!, nodeNames[y]!)) continue;
+        if (g.hasEdge(nodeNames[w]!, nodeNames[y]!)) continue;
+        // X should not be in the separating set of W and Y → orient as collider
+        const key = `${Math.min(w, y)}-${Math.max(w, y)}`;
+        const sep = sepSet.get(key);
+        if (!sep || !sep.has(nodeNames[x]!)) {
+          // Orient W→X←Y if not already oriented
+          if (g.hasEdge(nodeNames[w]!, nodeNames[x]!) && g.hasEdge(nodeNames[x]!, nodeNames[w]!)) g.toUndirected(nodeNames[w]!, nodeNames[x]!);
+          if (g.hasEdge(nodeNames[y]!, nodeNames[x]!) && g.hasEdge(nodeNames[x]!, nodeNames[y]!)) g.toUndirected(nodeNames[y]!, nodeNames[x]!);
+        }
+      }
+    }
+  }
+
   return { graph: g, pagEdges };
 }
 
