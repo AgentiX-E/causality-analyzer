@@ -58,7 +58,7 @@ export class EmbedGraphStore implements IGraphStore {
     }
     if (nodes.length === 0) return null;
 
-    const edges: CausalGraph['edges'] = [];
+    const edges: Array<{ source: string; target: string; weight: number; directed: boolean }> = [];
     const edgeLabels = this.g.listEdgeLabels();
     for (const el of edgeLabels) {
       if (!el.label.includes('DEPENDS_ON')) continue;

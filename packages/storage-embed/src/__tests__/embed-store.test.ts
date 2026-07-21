@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { EmbedRelationalStore, SQL } from '../embed-relational-store.js';
+import { EmbedRelationalStore } from '../embed-relational-store.js';
 import { EmbedGraphStore } from '../embed-graph-store.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────

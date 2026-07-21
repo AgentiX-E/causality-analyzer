@@ -67,33 +67,10 @@ export function buildGraphVizData(
 
 // ── Time Series Visualization ────────────────────────────────────────
 
-/** A single self-describing data point */
-export interface TimeSeriesDataPoint {
-  ts: number; value: number;
-  /** Forecast lower bound (present only for forecasted points) */
-  q10?: number;
-  /** Forecast upper bound (present only for forecasted points) */
-  q90?: number;
-}
-
-/** Anomaly region annotation */
-export interface AnomalyRegion {
-  start: number; end: number;
-  severity: 'critical' | 'warning' | 'info';
-  rootCause?: string;
-}
-
-/** Detection threshold line */
+/** Detection threshold line — pipeline-specific with metric context. */
 export interface ThresholdLine {
   metric: string; value: number;
   type: 'upper' | 'lower';
-}
-
-/** Time series chart data — self-describing, framework-agnostic */
-export interface TimeSeriesChartData {
-  series: Array<{ name: string; data: TimeSeriesDataPoint[] }>;
-  anomalyRegions: AnomalyRegion[];
-  thresholds?: ThresholdLine[];
 }
 
 /** Build timeseries visualization data from metric data and detections */
@@ -120,22 +97,7 @@ export function buildTimeseriesVizData(
   return { series, anomalyRegions };
 }
 
-// ── RCA Ranking Visualization ────────────────────────────────────────
-
-/** Evidential detail for root cause ranking display */
-export interface RankingEvidence {
-  type: 'regression_residual' | 'parent_anomaly' | 'descendant_score' | 'frequent_pattern' | 'causal_effect';
-  description: string; value: number;
-}
-
-/** Root cause ranking entry */
-export interface RankingEntry { rank: number; name: string; score: number; confidence: number; evidence: RankingEvidence[]; }
-
-/** Propagation path for Sankey/tree display */
-export interface PropagationPath { root: string; path: string[]; score: number; }
-
-/** Root cause ranking data — framework-agnostic */
-export interface RCARankingData { rootCauses: RankingEntry[]; propagationPaths: PropagationPath[]; }
+// ── RCA Ranking Visualization — pipeline-specific types ────────────
 
 /** Build ranking visualization data from RCA result */
 export function buildRankingVizData(rootCauses: RootCause[], paths: RootCausePath[]): RCARankingData {

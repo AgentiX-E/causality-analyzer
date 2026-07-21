@@ -359,7 +359,7 @@ export class FPGrowthRCA {
     for (const item of orderedItems) {
       // Build conditional pattern base for this item
       const condPatterns: Array<{ items: Set<string>; count: number }> = [];
-      let node = headerTable.get(item);
+      let node: FPTreeNode | null = headerTable.get(item) ?? null;
       while (node) {
         // Walk up to root collecting prefix path
         const path: string[] = [];

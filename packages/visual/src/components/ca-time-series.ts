@@ -48,7 +48,7 @@ export class CaTimeSeries extends LitElement {
     const aligned: AlignedData = [ts] as AlignedData;
     for (const s of series) {
       const valueMap = new Map(s.data.map(d => [d.ts, d.value]));
-      aligned.push(ts.map(t => valueMap.get(t) ?? NaN));
+      aligned.push(Float64Array.from(ts.map(t => valueMap.get(t) ?? NaN)));
     }
 
     const opts: uPlot.Options = {

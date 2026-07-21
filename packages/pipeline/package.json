@@ -8,6 +8,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run --coverage",
+    "lint": "eslint src/ --ext .ts",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
   },

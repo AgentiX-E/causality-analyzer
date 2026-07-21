@@ -92,21 +92,21 @@ export class Canvas2DRenderer implements GraphRenderer {
     }
 
     // BFS layered layout: source nodes at top, sinks at bottom
-    const layers: string[][] = [];
+    const layers: GraphVizNode[][] = [];
     const assigned = new Set<string>();
     let frontier = nodes.filter(n => (parents.get(n.id)?.length ?? 0) === 0);
-    if (frontier.length === 0) frontier = [nodes[0]!]; // fallback for disconnected graphs
+    if (frontier.length === 0) frontier = [nodes[0]!];
 
     while (frontier.length > 0) {
       layers.push(frontier);
       for (const n of frontier) assigned.add(n.id);
-      const next: string[] = [];
+      const nextIds = new Set<string>();
       for (const n of frontier) {
         for (const c of children.get(n.id) ?? []) {
-          if (!assigned.has(c) && !next.includes(c)) next.push(c);
+          if (!assigned.has(c)) nextIds.add(c);
         }
       }
-      frontier = next;
+      frontier = [...nextIds].map(id => nodes.find(n => n.id === id)!).filter(Boolean);
     }
 
     // Position nodes by layer

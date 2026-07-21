@@ -91,7 +91,7 @@ export class RemoteRelationalStore implements IRelationalStore {
     if (config.client) {
       this.client = config.client;
     } else {
-      this.client = new PgClient(buildPgClientOpts(config));
+      this.client = new PgClient(buildPgClientOpts(config)) as unknown as PgClientLike;
     }
     this._ready = this._init();
   }

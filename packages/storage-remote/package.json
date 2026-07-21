@@ -7,8 +7,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run --coverage",
-    "test:neo4j": "vitest run --config vitest.neo4j.config.ts",
-    "typecheck": "tsc --noEmit"
+    "lint": "eslint src/ --ext .ts",
+    "typecheck": "tsc --noEmit",
+    "test:neo4j": "vitest run --config vitest.neo4j.config.ts"
   },
   "dependencies": {
     "@agentix-e/causality-analyzer-core": "workspace:*",

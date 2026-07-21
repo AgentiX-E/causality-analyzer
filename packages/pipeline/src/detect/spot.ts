@@ -120,26 +120,25 @@ export class SPOTDetector {
  * Subtracts a local exponential moving average before comparison.
  */
 export class DSPOTDetector extends SPOTDetector {
-  override config: DSPOTConfig;
   private driftValues: number[] = [];
   private ema = 0;
   private emaInitialized = false;
 
   constructor(config: Partial<DSPOTConfig> = {}) {
     super(config);
-    this.config = { ...this.config, driftWindow: config.driftWindow ?? 100 } as DSPOTConfig;
+    Object.assign(this.config, { driftWindow: config.driftWindow ?? 100 });
   }
 
   protected override transformValue(v: number): number {
     if (!this.emaInitialized) {
       this.driftValues.push(v);
-      if (this.driftValues.length >= this.config.driftWindow) {
+      if (this.driftValues.length >= (this.config as DSPOTConfig).driftWindow) {
         this.ema = this.driftValues.reduce((a, b) => a + b, 0) / this.driftValues.length;
         this.emaInitialized = true;
       }
       return v;
     }
-    const alpha = 2 / (this.config.driftWindow + 1);
+    const alpha = 2 / ((this.config as DSPOTConfig).driftWindow + 1);
     this.ema = alpha * v + (1 - alpha) * this.ema;
     return v - this.ema;
   }
