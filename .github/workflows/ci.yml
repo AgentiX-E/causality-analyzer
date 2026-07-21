@@ -46,7 +46,7 @@ jobs:
           cache: 'pnpm'
       - run: pnpm config set approve-builds true 2>/dev/null || true
       - run: pnpm install --frozen-lockfile
-      - run: pnpm build:ci
+      - run: pnpm run --filter @agentix-e/causality-analyzer-core build && pnpm run --filter @agentix-e/causality-analyzer-pipeline build
 
       - name: Download coverage artifact
         uses: actions/download-artifact@v8

@@ -58,7 +58,7 @@ jobs:
       - run: pnpm config set approve-builds true 2>/dev/null || true
       - run: pnpm install --frozen-lockfile
       - run: pnpm run --filter @agentix-e/causality-analyzer-core build
-      - run: pnpm -r --filter='!@agentix-e/causality-analyzer-storage-remote' --filter='!@agentix-e/causality-analyzer-visual' test
+      - run: pnpm -r test
       - name: Collect coverage
         if: always()
         run: |
@@ -66,7 +66,7 @@ jobs:
           node -e "
             const fs = require('fs');
             let merged = { total: { lines: { pct: 0, total: 0, covered: 0 }, statements: { pct: 0, total: 0, covered: 0 }, functions: { pct: 0, total: 0, covered: 0 }, branches: { pct: 0, total: 0, covered: 0 } } };
-            const pkgs = ['core', 'pipeline', 'storage-embed'];
+            const pkgs = ['core', 'pipeline', 'storage-embed', 'storage-remote', 'visual'];
             for (const pkg of pkgs) {
               const path = 'packages/' + pkg + '/coverage/coverage-summary.json';
               if (fs.existsSync(path)) {
