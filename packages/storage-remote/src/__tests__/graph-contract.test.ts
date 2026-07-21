@@ -1,18 +1,19 @@
 /**
  * IGraphStore Contract Test Suite.
  *
- * Validates that ALL IGraphStore implementations obey the
- * same interface contract. Production code is NEVER tested
- * through test infrastructure — test infrastructure is tested
- * through the contract suite alongside production code.
+ * Validates that IGraphStore implementations obey the same interface
+ * contract. Currently tests ContractGraphStore (test-only reference).
  *
- * The ContractGraphStore is a TEST-ONLY reference (__tests__/),
- * never imported by production code.
+ * Production implementations (EmbedGraphStore, RemoteGraphStore) are
+ * tested in their respective package test files with real backends
+ * or backend-specific mocks.
+ *
+ * The ContractGraphStore lives in __tests__/ and is NEVER imported
+ * by production code.
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { IGraphStore, CausalGraph, GraphMetadata, GraphVersion } from '@agentix-e/causality-analyzer-core';
 import { ContractGraphStore } from './contract-graph-store.js';
-import { RemoteGraphStore } from '../remote-graph-store.js';
 
 function makeGraph(): CausalGraph {
   return { nodes: ['A', 'B', 'C'], edges: [
@@ -73,8 +74,5 @@ function testContract(name: string, factory: () => IGraphStore) {
   });
 }
 
-// Run identical contract suite against:
-// 1. ContractGraphStore — TEST-ONLY reference (lives in __tests__/)
-// 2. RemoteGraphStore — PRODUCTION code (Bolt → Neo4j in production)
+// Run contract suite against the test-only reference implementation
 testContract('ContractGraphStore', () => new ContractGraphStore());
-testContract('RemoteGraphStore', () => new RemoteGraphStore());

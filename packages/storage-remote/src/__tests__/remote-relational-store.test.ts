@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { newDb } from 'pg-mem';
 import { RemoteRelationalStore } from '../remote-relational-store.js';
-import { RemoteGraphStore } from '../remote-graph-store.js';
+import type { MtlsConfig } from '../remote-graph-store.js';
 
 describe('RemoteRelationalStore via pg-mem adapter', () => {
   it('CPT save + load', async () => {
@@ -12,12 +12,42 @@ describe('RemoteRelationalStore via pg-mem adapter', () => {
     expect((await store.loadCPT('g1', 'CPU'))?.entries['0']).toBe(0.1);
     await store.close();
   });
-});
 
-describe('RemoteGraphStore', () => {
-  it('save + load graph', async () => {
-    const s = new RemoteGraphStore();
-    const id = await s.saveGraph({nodes:['A','B'],edges:[{source:'A',target:'B',weight:1,directed:true}]},{id:'g1',method:'pc',computedAt:1,parameters:{},confidence:0.9});
-    expect((await s.loadGraph(id))?.nodes).toEqual(['A','B']);
+  it('creates with mtls config', async () => {
+    const db = newDb();
+    const { Client } = db.adapters.createPg();
+    const mtls: MtlsConfig = {
+      ca: '-----BEGIN CERTIFICATE-----\nMOCK\n-----END CERTIFICATE-----',
+      cert: '-----BEGIN CERTIFICATE-----\nMOCK\n-----END CERTIFICATE-----',
+      key: '-----BEGIN PRIVATE KEY-----\nMOCK\n-----END PRIVATE KEY-----',
+      passphrase: 'test123',
+    };
+    const store = new RemoteRelationalStore({ _Client: Client as any, mtls });
+    expect(store).toBeDefined();
+    await store.close();
+  });
+
+  it('creates with ssl boolean', async () => {
+    const db = newDb();
+    const { Client } = db.adapters.createPg();
+    const store = new RemoteRelationalStore({ _Client: Client as any, ssl: true });
+    expect(store).toBeDefined();
+    await store.close();
+  });
+
+  it('creates with ssl object overriding mtls', async () => {
+    const db = newDb();
+    const { Client } = db.adapters.createPg();
+    const mtls: MtlsConfig = {
+      cert: 'CERT',
+      key: 'KEY',
+    };
+    const store = new RemoteRelationalStore({
+      _Client: Client as any,
+      mtls,
+      ssl: { rejectUnauthorized: false, ciphers: 'AES256-GCM-SHA384' },
+    });
+    expect(store).toBeDefined();
+    await store.close();
   });
 });

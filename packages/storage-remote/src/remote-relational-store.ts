@@ -1,5 +1,6 @@
 import { Client as PgClient } from 'pg';
 import type { IRelationalStore, MetricQuery, DetectionResult, ConditionalProbabilityTable, RegressionParams, RCAResult, ResultQuery, ColumnarTable, TableSchema } from '@agentix-e/causality-analyzer-core';
+import type { MtlsConfig } from './remote-graph-store.js';
 
 const DDL = [
   "CREATE TABLE IF NOT EXISTS metrics (ts BIGINT NOT NULL, value REAL NOT NULL, metric_name TEXT NOT NULL, PRIMARY KEY (ts, metric_name))",
@@ -11,6 +12,17 @@ const DDL = [
 
 export interface RemoteRelationalConfig {
   connectionString?: string;
+  /**
+   * PEM-string-based mTLS configuration (shared with Bolt store).
+   * Builds the pg.Client `ssl` object: ca → ssl.ca, cert → ssl.cert, key → ssl.key.
+   * When provided, TLS is always enabled (default: true, rejectUnauthorized: true).
+   */
+  mtls?: MtlsConfig;
+  /**
+   * Raw pg TLS options for advanced scenarios (e.g. custom ciphers, SNI overrides).
+   * When both `mtls` and `ssl` are provided, `ssl` takes precedence for overlapping keys.
+   */
+  ssl?: boolean | Record<string, unknown>;
   _Client?: new (...a: any[]) => any;
 }
 
@@ -20,7 +32,30 @@ export class RemoteRelationalStore implements IRelationalStore {
 
   constructor(config: RemoteRelationalConfig = {}) {
     const Ctor = config._Client || PgClient;
-    this.client = new Ctor(config.connectionString ? { connectionString: config.connectionString } : undefined);
+
+    // Build client options
+    const opts: Record<string, unknown> = config.connectionString
+      ? { connectionString: config.connectionString }
+      : {};
+
+    // mTLS: build pg ssl object from MtlsConfig
+    if (config.mtls) {
+      const sslObj: Record<string, unknown> = {
+        rejectUnauthorized: true,
+      };
+      if (config.mtls.ca) sslObj.ca = config.mtls.ca;
+      sslObj.cert = config.mtls.cert;
+      sslObj.key = config.mtls.key;
+      if (config.mtls.passphrase) sslObj.passphrase = config.mtls.passphrase;
+      // Merge with explicit ssl overrides
+      opts.ssl = config.ssl && typeof config.ssl === 'object'
+        ? { ...sslObj, ...config.ssl }
+        : sslObj;
+    } else if (config.ssl !== undefined) {
+      opts.ssl = config.ssl;
+    }
+
+    this.client = new Ctor(opts);
     this._ready = this._init();
   }
 

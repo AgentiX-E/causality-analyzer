@@ -1,4 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { mkdtempSync, rmSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
 import { EmbedRelationalStore, SQL } from '../embed-relational-store.js';
 import { EmbedGraphStore } from '../embed-graph-store.js';
 
@@ -73,26 +76,105 @@ describe('EmbedRelationalStore', () => {
   });
 });
 
-// ── EmbedGraphStore ──────────────────────────────────────────────────
+// ── EmbedGraphStore (overgraph persistent) ──────────────────────────
 describe('EmbedGraphStore', () => {
   let store: EmbedGraphStore;
-  beforeEach(() => { store = new EmbedGraphStore({ path: ":memory:" }); });
+  let tmpDir: string;
 
-  it('save + load graph', async () => {
-    const id = await store.saveGraph({ nodes: ['A', 'B'], edges: [{ source: 'A', target: 'B', weight: 1, directed: true }] }, { id: 'g1', method: 'pc', computedAt: 1, parameters: {}, confidence: 0.9 });
-    const graph = await store.loadGraph(id);
-    expect(graph?.nodes).toEqual(['A', 'B']);
+  beforeEach(() => {
+    // overgraph is a persistent LSM-tree engine, uses filesystem dirs.
+    // Create temp dir per test for isolation.
+    tmpDir = mkdtempSync(join(tmpdir(), 'ca-graph-'));
+    store = new EmbedGraphStore({ dbPath: tmpDir });
   });
 
-  it('versioned storage', async () => {
-    const id = await store.saveGraph({ nodes: ['A'], edges: [] }, { id: 'g2', method: 'pc', computedAt: 1, parameters: {}, confidence: 0.9 });
-    await store.saveGraph({ nodes: ['A', 'B'], edges: [] }, { id: 'g2', method: 'pc', computedAt: 2, parameters: {}, confidence: 0.9 });
-    const versions = await store.listGraphVersions(id);
-    expect(versions.length).toBeGreaterThanOrEqual(1);
-    expect((await store.loadGraphVersion(id, 1))?.nodes.length).toBeGreaterThanOrEqual(1);
+  afterEach(() => {
+    try { store?.close(); } catch {}
+    try { rmSync(tmpDir, { recursive: true, force: true }); } catch {}
+  });
+
+  const mg = (nodes: string[], edges?: Array<{ source: string; target: string; weight: number; directed: boolean }>) =>
+    ({ nodes, edges: edges ?? [] });
+
+  it('save + load graph preserves nodes and edges', async () => {
+    const graph = mg(['A', 'B'], [{ source: 'A', target: 'B', weight: 1, directed: true }]);
+    const id = await store.saveGraph(graph, { id: 'g1', method: 'pc', computedAt: 1, parameters: {}, confidence: 0.9 });
+    const loaded = await store.loadGraph(id);
+    expect(loaded?.nodes).toEqual(['A', 'B']);
+    expect(loaded).toHaveProperty('edges');
+  });
+
+  it('preserves edged graph structure', async () => {
+    const graph = mg(['X', 'Y', 'Z'], [
+      { source: 'X', target: 'Y', weight: 0.75, directed: true },
+      { source: 'Y', target: 'Z', weight: 0.5, directed: false },
+    ]);
+    await store.saveGraph(graph, { id: 'g-edge', method: 'pc', computedAt: 1, parameters: {}, confidence: 0.9 });
+    const loaded = await store.loadGraph('g-edge');
+    expect(loaded).not.toBeNull();
+    expect(loaded?.nodes).toContain('X');
+    expect(loaded?.nodes).toContain('Z');
+  });
+
+  it('loadGraph returns null for empty graph (no nodes)', async () => {
+    const graph = mg([], []);
+    const id = await store.saveGraph(graph, { id: 'g-empty', method: 'pc', computedAt: 1, parameters: {}, confidence: 0.9 });
+    // EmbedGraphStore returns null when no nodes found
+    const loaded = await store.loadGraph(id);
+    expect(loaded).toBeNull();
+  });
+
+  it('versioned storage preserves multiple versions', async () => {
+    await store.saveGraph(mg(['A']), { id: 'g2', method: 'pc', computedAt: 1, parameters: {}, confidence: 0.9 });
+    await store.saveGraph(mg(['A', 'B']), { id: 'g2', method: 'pc', computedAt: 2, parameters: {}, confidence: 0.9 });
+    const versions = await store.listGraphVersions('g2');
+    expect(versions.length).toBe(2);
+    expect(versions[0]!.version).toBe(1);
+    expect(versions[1]!.version).toBe(2);
+  });
+
+  it('loadGraph returns latest version', async () => {
+    await store.saveGraph(mg(['A', 'B']), { id: 'g3', method: 'pc', computedAt: 1, parameters: {}, confidence: 0.9 });
+    await store.saveGraph(mg(['A', 'B', 'C']), { id: 'g3', method: 'pc', computedAt: 2, parameters: {}, confidence: 0.9 });
+    // loadGraph always returns latest (version param ignored in EmbedGraphStore)
+    const g = await store.loadGraph('g3');
+    expect(g?.nodes.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('loadGraphVersion returns non-null for valid version', async () => {
+    await store.saveGraph(mg(['A']), { id: 'g4', method: 'pc', computedAt: 1, parameters: {}, confidence: 0.9 });
+    const v1 = await store.loadGraphVersion('g4', 1);
+    // EmbedGraphStore.loadGraphVersion delegates to loadGraph
+    expect(v1).not.toBeNull();
+    expect(v1?.nodes).toContain('A');
   });
 
   it('null for unknown graph', async () => {
     expect(await store.loadGraph('none')).toBeNull();
+  });
+
+  it('listGraphVersions returns empty for unknown', async () => {
+    expect(await store.listGraphVersions('unknown')).toEqual([]);
+  });
+
+  it('findSimilarGraphs returns array', async () => {
+    const graph = mg(['A', 'B', 'C'], [{ source: 'A', target: 'B', weight: 1, directed: true }]);
+    await store.saveGraph(graph, { id: 'g5', method: 'pc', computedAt: 1, parameters: {}, confidence: 0.9 });
+    const results = await store.findSimilarGraphs(graph, 5);
+    expect(Array.isArray(results)).toBe(true);
+    expect(results.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('close() does not throw', () => {
+    expect(() => store.close()).not.toThrow();
+  });
+
+  it('multiple graphs with different IDs', async () => {
+    await store.saveGraph(mg(['A']), { id: 'ga', method: 'pc', computedAt: 1, parameters: {}, confidence: 0.9 });
+    await store.saveGraph(mg(['B']), { id: 'gb', method: 'pc', computedAt: 1, parameters: {}, confidence: 0.9 });
+    const a = await store.loadGraph('ga');
+    const b = await store.loadGraph('gb');
+    expect(a?.nodes).toEqual(['A']);
+    expect(b?.nodes).toEqual(['B']);
   });
 });
