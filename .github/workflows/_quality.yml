@@ -23,7 +23,7 @@ jobs:
           cache: 'pnpm'
       - run: pnpm config set approve-builds true 2>/dev/null || true
       - run: pnpm install --frozen-lockfile
-      - run: echo "lint ok"
+      - run: pnpm -r lint
 
   build:
     runs-on: ubuntu-latest
