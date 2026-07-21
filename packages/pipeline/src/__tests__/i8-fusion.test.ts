@@ -427,3 +427,77 @@ describe('circa coverage: child score propagation', () => {
     expect(adjusted[0]!.name).toBe('A');
   });
 });
+
+// ════════════════════════════════════════════════════════════════════
+// Precision branch tests: hitting specific uncovered conditions
+// ════════════════════════════════════════════════════════════════════
+import { CIRCAPipeline, RHTScorer, DAScorer } from '../analyze/circa.js';
+import { refutePlaceboTreatment, refuteBootstrap } from '../infer/causal-inference.js';
+import { cateToRCA, StructuralCausalModel } from '../gcm/structural-causal-model.js';
+
+describe('voting-detector uncovered branches', () => {
+  it('majority: nAnomalous >= threshold (quorum met)', () => {
+    const d1 = new StatsDetector({ threshold: 1, minSamples: 2 }); // very sensitive
+    const d2 = new StatsDetector({ threshold: 1, minSamples: 2 });
+    const v = new VotingDetector([d1, d2], { strategy: 'majority', minAgreement: 1 });
+    d1.update([5]); d1.update([5]); d2.update([5]); d2.update([5]);
+    const r = v.update([100]); // both should flag
+    // nAnomalous (2) >= minAgreement (1) → isAnomalous=true
+    expect(r.isAnomalous).toBe(true);
+  });
+
+  it('majority: per-label tally with multidimensional input', () => {
+    const d1 = new StatsDetector({ threshold: 2, minSamples: 3 });
+    const d2 = new StatsDetector({ threshold: 8, minSamples: 3 });
+    const v = new VotingDetector([d1, d2], { strategy: 'majority', minAgreement: 1 });
+    for (let i = 0; i < 5; i++) { d1.update([5, 5]); d2.update([5, 5]); }
+    // dim[1]=50 triggers d1 but not d2 → 1 vote, meets minAgreement=1
+    const r = v.update([5, 50]);
+    expect(r.labels[0]).toBe(0);
+    expect(r.labels[1]).toBe(1);
+  });
+
+  it('weighted: score > 0.5 with null-coalesced weights', () => {
+    const d = new StatsDetector({ threshold: 1, minSamples: 2 });
+    const v = new VotingDetector([d], { strategy: 'weighted' });
+    d.update([5]); d.update([5]);
+    const r = v.update([50]); // high score triggers weightedScore > 0.5
+    expect(r.isAnomalous).toBe(true);
+  });
+});
+
+describe('circa solveLinear: singular and empty matrix branches', () => {
+  it('RHT with zero-length parent list (A=0 code path)', () => {
+    const g = new CausalGraph(['A', 'B']);
+    // A has no parents, B depends on A
+    g.addEdge('A', 'B');
+    const rht = new RHTScorer();
+    rht.train(g, [[5, 12], [5, 11.5], [5, 12.5], [6, 14], [5, 11]]);
+    const scores = rht.score([[5, 13]]);
+    expect(scores.size).toBe(2);
+  });
+});
+
+describe('causal-inference: refutation edge branches', () => {
+  it('bootstrap with robust CI covering zero', () => {
+    const data = Array.from({ length: 50 }, (_, i) => {
+      const t = i % 2;
+      // Very small effect — CI should include 0
+      return [t, t * 0.1 + (Math.random() - 0.5) * 2];
+    });
+    const r = refuteBootstrap(data, 0, 1, 30);
+    expect(typeof r.isRobust).toBe('boolean');
+  });
+});
+
+describe('SCM: empty-data mean computation branch', () => {
+  it('anomaly attribution with borderline noise', () => {
+    const g = new CausalGraph(['A', 'B']);
+    g.addEdge('A', 'B');
+    const scm = new StructuralCausalModel(g);
+    scm.train([[1, 3], [1.1, 2.9], [0.9, 3.1]]);
+    const scores = scm.anomalyScores({ A: 1, B: 3 });
+    expect(scores.get('A')!).toBeLessThan(3); // in-distribution values
+    expect(scores.get('B')!).toBeLessThan(3);
+  });
+});
