@@ -1,33 +1,61 @@
 /**
  * Neo4j integration tests — runs against a REAL Neo4j instance via Bolt.
  *
- * Requires NEO4J_BOLT_URI env var (e.g. bolt://localhost:7687).
- * Skipped when env var is absent (local dev without Docker).
+ * Requires NEO4J_BOLT_URI env var. Skipped when absent (local dev).
  *
- * These tests validate that RemoteGraphStore's Cypher queries,
- * UNWIND batching, versioned storage, and retry logic work against
- * an actual Neo4j server — closing the gap between BoltSessionMock
- * and production behavior.
+ * Two modes:
+ *   Plain:   NEO4J_BOLT_URI only → basic auth, no TLS
+ *   mTLS:    + NEO4J_MTLS_CERT_FILE → mutual TLS with client cert
+ *
+ * mTLS cert env vars:
+ *   NEO4J_MTLS_CA_FILE   — CA certificate PEM file (for trustStrategy)
+ *   NEO4J_MTLS_CERT_FILE — client certificate PEM file
+ *   NEO4J_MTLS_KEY_FILE  — client private key PEM file
  */
+import { readFileSync } from 'fs';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { RemoteGraphStore } from '../remote-graph-store.js';
+import type { RemoteGraphConfig } from '../remote-graph-store.js';
+import type { MtlsConfig } from '../types.js';
 import type { CausalGraph, GraphMetadata } from '@agentix-e/causality-analyzer-core';
 
 const BOLT_URI = process.env.NEO4J_BOLT_URI;
 const NEO4J_USER = process.env.NEO4J_USER || 'neo4j';
 const NEO4J_PASS = process.env.NEO4J_PASSWORD || 'password';
+const MTLS_CA_FILE = process.env.NEO4J_MTLS_CA_FILE;
+const MTLS_CERT_FILE = process.env.NEO4J_MTLS_CERT_FILE;
+const MTLS_KEY_FILE = process.env.NEO4J_MTLS_KEY_FILE;
 
 const describeIf = BOLT_URI ? describe : describe.skip;
+const mtlsEnabled = !!(MTLS_CERT_FILE && MTLS_KEY_FILE);
 
-describeIf('RemoteGraphStore (real Neo4j)', () => {
+function buildConfig(): RemoteGraphConfig {
+  const base: RemoteGraphConfig = {
+    uri: BOLT_URI!,
+    auth: { type: 'basic', user: NEO4J_USER, password: NEO4J_PASS },
+  };
+
+  if (mtlsEnabled) {
+    base.mtls = {
+      cert: readFileSync(MTLS_CERT_FILE!, 'utf8'),
+      key: readFileSync(MTLS_KEY_FILE!, 'utf8'),
+    };
+    if (MTLS_CA_FILE) {
+      base.mtls.ca = readFileSync(MTLS_CA_FILE, 'utf8');
+      base.trustedCertificates = [base.mtls.ca];
+      base.trustStrategy = 'TRUST_CUSTOM_CA_SIGNED_CERTIFICATES';
+    }
+  }
+
+  return base;
+}
+
+describeIf(`RemoteGraphStore (real Neo4j${mtlsEnabled ? ', mTLS' : ''})`, () => {
   let store: RemoteGraphStore;
 
   beforeAll(async () => {
-    store = new RemoteGraphStore({
-      uri: BOLT_URI!,
-      auth: { type: 'basic', user: NEO4J_USER, password: NEO4J_PASS },
-    });
-    // Clean slate: delete all nodes and relationships
+    store = new RemoteGraphStore(buildConfig());
+    // Clean slate
     const s = (store as any).driver.session();
     try {
       await s.run('MATCH (n) DETACH DELETE n');
@@ -37,7 +65,6 @@ describeIf('RemoteGraphStore (real Neo4j)', () => {
   });
 
   afterAll(async () => {
-    // Final cleanup
     const s = (store as any).driver.session();
     try {
       await s.run('MATCH (n) DETACH DELETE n');
@@ -131,12 +158,10 @@ describeIf('RemoteGraphStore (real Neo4j)', () => {
 
     const results = await store.findSimilarGraphs(g(['A', 'B', 'C']), 5);
     expect(results.length).toBeGreaterThanOrEqual(3);
-    // Perfect match should be first
     expect(results[0]!.nodes).toEqual(['A', 'B', 'C']);
   });
 
   it('UNWIND batch: large graph round-trip', async () => {
-    // 50 nodes, ~100 edges — exercises UNWIND batching
     const nodes = Array.from({ length: 50 }, (_, i) => `N${i}`);
     const edges: CausalGraph['edges'] = [];
     for (let i = 0; i < nodes.length - 1; i++) {
@@ -154,18 +179,12 @@ describeIf('RemoteGraphStore (real Neo4j)', () => {
 
   it('empty graph: no nodes, no edges', async () => {
     await store.saveGraph(g([], []), m('neo4j-empty'));
-    // Store returns the ID even for empty graphs
     const versions = await store.listGraphVersions('neo4j-empty');
     expect(versions.length).toBe(1);
   });
 
   it('close() disconnects cleanly', async () => {
-    // Create a separate store for this test to not interfere with afterAll
-    const s = new RemoteGraphStore({
-      uri: BOLT_URI!,
-      auth: { type: 'basic', user: NEO4J_USER, password: NEO4J_PASS },
-    });
+    const s = new RemoteGraphStore(buildConfig());
     await s.close();
-    // Should not throw
   });
 });
