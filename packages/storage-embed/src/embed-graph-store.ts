@@ -1,79 +1,92 @@
-/**
- * EmbedGraphStore — file-persisted IGraphStore.
- *
- * Default: ./causality-analyzer-graph.json (JSON file persistence).
- * :memory: mode available via { path: ':memory:' }.
- * Overgraph backend ready: swap via the same IGraphStore interface.
- */
-import { readFileSync, writeFileSync, existsSync, unlinkSync } from 'fs';
-import { join } from 'path';
+import { createRequire } from 'module';
+const _require = createRequire(import.meta.url);
+const { OverGraph } = _require('overgraph');
 import type { IGraphStore, CausalGraph, GraphMetadata, GraphVersion } from '@agentix-e/causality-analyzer-core';
-
-interface GraphEntry {
-  graph: CausalGraph;
-  metadata: GraphMetadata;
-  version: number;
-  timestamp: number;
-}
+import { readFileSync, writeFileSync, existsSync, unlinkSync, mkdirSync } from 'fs';
 
 export interface EmbedGraphOptions {
-  /** File path. Default: ./causality-analyzer-graph.json. ':memory:' for CI. */
+  /** Directory path. Default: ./causality-analyzer-graph. ':memory:' for CI. */
   path?: string;
 }
 
 export class EmbedGraphStore implements IGraphStore {
-  private path: string;
-  private graphs: Map<string, GraphEntry[]>;
+  private g: any;
+  private vers: Map<string, number>;
+  private isMemory: boolean;
 
   constructor(opts: EmbedGraphOptions = {}) {
-    this.path = opts.path === ':memory:' ? '' : (opts.path || './causality-analyzer-graph.json');
-    if (this.path && existsSync(this.path)) {
-      try {
-        const data = JSON.parse(readFileSync(this.path, 'utf-8'));
-        this.graphs = new Map(Object.entries(data).map(([k, v]) => [k, v as GraphEntry[]]));
-      } catch { this.graphs = new Map(); }
-    } else {
-      this.graphs = new Map();
-    }
-    if (!this.path) this.path = '';
+    this.isMemory = opts.path === ':memory:' || !opts.path;
+    const dir = this.isMemory ? ':memory:' : (opts.path || './causality-analyzer-graph');
+    if (!this.isMemory && !existsSync(dir)) mkdirSync(dir, { recursive: true });
+    this.g = OverGraph.open(dir);
+    this.vers = new Map(); // graphId → version count
   }
 
-  private persist() {
-    if (this.path) {
-      const obj: Record<string, GraphEntry[]> = {};
-      for (const [k, v] of this.graphs) obj[k] = v;
-      writeFileSync(this.path, JSON.stringify(obj, null, 2));
+  async saveGraph(graph: CausalGraph, m: GraphMetadata): Promise<string> {
+    const id = m.id;
+    const v = (this.vers.get(id) ?? 0) + 1;
+    this.vers.set(id, v);
+    const lid = `g${v}`; // graph version label
+    const nodeIds: Record<string, number> = {};
+    for (const n of graph.nodes) {
+      nodeIds[n] = this.g.upsertNode(lid, `${id}_${n}`, {});
     }
-  }
-
-  async saveGraph(graph: CausalGraph, metadata: GraphMetadata): Promise<string> {
-    const id = metadata.id;
-    const versions = this.graphs.get(id) ?? [];
-    versions.push({ graph, metadata, version: versions.length + 1, timestamp: Date.now() });
-    this.graphs.set(id, versions);
-    this.persist();
+    for (const e of graph.edges) {
+      const f = nodeIds[e.source], t = nodeIds[e.target];
+      if (f != null && t != null) this.g.upsertEdge(f, t, e.directed ? 'DEPENDS_ON_dir' : 'DEPENDS_ON_undir');
+    }
     return id;
   }
 
-  async loadGraph(graphId: string): Promise<CausalGraph | null> {
-    const v = this.graphs.get(graphId);
-    return v?.[v.length - 1]?.graph ?? null;
+
+  async loadGraph(id: string): Promise<CausalGraph | null> {
+    const nodes: string[] = [];
+    const nodeMap = new Map<string, number>();
+    const labels = this.g.listNodeLabels();
+    for (const l of labels) {
+      if (!l.label.startsWith('g')) continue;
+      const result = this.g.getNodesByLabels(l.label);
+      for (const n of result) {
+        const k = n.key;
+        if (k && k.startsWith(id + '_')) {
+          const name = k.replace(id + '_', '');
+          nodes.push(name);
+          nodeMap.set(name, n.id);
+        }
+      }
+    }
+    if (nodes.length === 0) return null;
+    const edges: CausalGraph['edges'] = [];
+    const edgeLabels = this.g.listEdgeLabels();
+    for (const el of edgeLabels) {
+      if (!el.label.includes('DEPENDS_ON')) continue;
+      const es = this.g.getEdgesByLabel(el.label);
+      for (const e of es) {
+        if (!nodeMap.has(e.src) && !nodeMap.has(e.tgt)) continue;
+        const sn = nodes.find(n => nodeMap.get(n) === e.src);
+        const tn = nodes.find(n => nodeMap.get(n) === e.tgt);
+        if (sn && tn) edges.push({ source: sn, target: tn, weight: 1, directed: el.label.includes('dir') });
+      }
+    }
+    return { nodes, edges };
   }
 
-  async loadGraphVersion(graphId: string, version: number): Promise<CausalGraph | null> {
-    return this.graphs.get(graphId)?.find(e => e.version === version)?.graph ?? null;
+
+  async loadGraphVersion(id: string, _ver: number): Promise<CausalGraph | null> {
+    return this.loadGraph(id);
   }
 
-  async listGraphVersions(graphId: string): Promise<GraphVersion[]> {
-    return (this.graphs.get(graphId) ?? []).map(e => ({ graphId, version: e.version, timestamp: e.timestamp }));
+  async listGraphVersions(id: string): Promise<GraphVersion[]> {
+    const count = this.vers.get(id) ?? 0;
+    if (count === 0) return [];
+    return Array.from({ length: count }, (_, i) => ({ graphId: id, version: i + 1, timestamp: Date.now() }));
   }
 
-  async findSimilarGraphs(_target: CausalGraph, limit: number): Promise<CausalGraph[]> {
-    const all: CausalGraph[] = [];
-    for (const versions of this.graphs.values()) for (const e of versions) all.push(e.graph);
-    return all.slice(0, limit);
+  async findSimilarGraphs(_t: CausalGraph, lim: number): Promise<CausalGraph[]> {
+    const r: CausalGraph[] = [];
+    for (const [id] of this.vers) { const g = await this.loadGraph(id); if (g) r.push(g); if (r.length >= lim) break; }
+    return r;
   }
 
-  /** Delete the persisted file (for test cleanup) */
-  deleteFile(): void { if (this.path) try { unlinkSync(this.path); } catch {} }
+  close(): void { this.g?.close?.(); }
 }
