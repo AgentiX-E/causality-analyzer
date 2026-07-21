@@ -67,6 +67,9 @@ importers:
       '@agentix-e/causality-analyzer-core':
         specifier: workspace:*
         version: link:../core
+      overgraph:
+        specifier: ^0.16.0
+        version: 0.16.0
     devDependencies:
       '@vitest/coverage-v8':
         specifier: ^3.0.0
@@ -862,6 +865,9 @@ packages:
 
   once@1.4.0:
     resolution: {integrity: sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w==}
+
+  overgraph@0.16.0:
+    resolution: {integrity: sha512-q0frTyqZCsm+Lib6c6RrFwLadkCi1WmrExMKIL9UWw5o7guYt+K4OZTrayScGPWGmhNrhKeOQ8NY0pz2Jsscjg==}
 
   package-json-from-dist@1.0.1:
     resolution: {integrity: sha512-UEZIS3/by4OC8vL3P2dTXRETpebLI2NiI5vIrjaD/5UtrkFX/tNbwjTSRAGC/+7CAo2pIcBaRgWmcBBHcsaCIw==}
@@ -1846,6 +1852,8 @@ snapshots:
     dependencies:
       wrappy: 1.0.2
     optional: true
+
+  overgraph@0.16.0: {}
 
   package-json-from-dist@1.0.1: {}
 
