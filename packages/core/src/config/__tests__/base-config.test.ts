@@ -32,6 +32,9 @@ class ConfigWithoutSchema extends BaseConfig {
     super();
     this.value = 42;
   }
+  protected override getSchema() {
+    return z.object({ value: z.number() }) as any;
+  }
 }
 
 describe('BaseConfig', () => {

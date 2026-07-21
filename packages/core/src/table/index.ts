@@ -163,7 +163,7 @@ export class ColumnarTable<S extends TableSchema = TableSchema> {
       return new ColumnarTable<S>(new Map(), [], 0);
     }
 
-    const colNames = Object.keys(rows[0]!) as ColumnNames<S>[];
+    const colNames = [...new Set(rows.flatMap(r => Object.keys(r)))] as ColumnNames<S>[];
     const nRows = rows.length;
     const columns = new Map<string, Float64Array>();
 

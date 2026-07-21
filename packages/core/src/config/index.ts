@@ -88,9 +88,7 @@ export abstract class BaseConfig {
    * Get the zod schema for this configuration.
    * Override in subclasses to enable validation.
    */
-  protected getSchema(): ZodType<this, ZodTypeDef, unknown> | null {
-    return null;
-  }
+  protected abstract getSchema(): ZodType<this, ZodTypeDef, unknown>;
 
   /**
    * Validate and throw if invalid.

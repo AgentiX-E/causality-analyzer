@@ -8,22 +8,46 @@
  * Every data point is self-describing — no implicit array-index alignment.
  */
 import type { CausalEdge, RootCause, RootCausePath } from '@agentix-e/causality-analyzer-core';
+import type {
+  GraphVizNode, GraphVisualizationData,
+  TimeSeriesDataPoint, AnomalyRegion, TimeSeriesChartData,
+  RCARankingData, PropagationPath,
+} from '@agentix-e/causality-analyzer-core';
 
-// ── Graph Visualization ──────────────────────────────────────────────
+// ── Pipeline-specific visualization types ──────────────────────────
 
-/** Node in a causal graph visualization */
-export interface GraphVizNode {
-  id: string; label: string;
-  type: 'root_cause' | 'anomaly' | 'intermediate' | 'healthy';
+/** Pipeline-specific evidence with richer metadata. */
+export interface RankingEvidence {
+  type: string;
+  description: string;
+  value: number;
+  metadata?: Record<string, unknown>;
+}
+
+/** Pipeline-specific ranking entry (extends core with RankingEvidence). */
+export interface RankingEntry {
+  rank: number;
+  name: string;
   score: number;
-  isAnomalous: boolean;
+  confidence: number;
+  evidence: RankingEvidence[];
 }
 
-/** Full causal graph visualization data */
-export interface GraphVisualizationData {
-  nodes: GraphVizNode[];
-  edges: Array<{ source: string; target: string; weight: number; directed: boolean }>;
+// Re-export shared types for convenience
+export type {
+  GraphVizNode, GraphVisualizationData,
+  TimeSeriesDataPoint, AnomalyRegion, TimeSeriesChartData,
+  RCARankingData, PropagationPath,
+};
+
+export interface ThresholdLine {
+  value: number;
+  label: string;
+  color: string;
+  style: 'solid' | 'dashed' | 'dotted';
 }
+
+// ── Builders ──────────────────────────────────────────────────────
 
 /** Convert a CausalGraph + RCA results to visualization data */
 export function buildGraphVizData(

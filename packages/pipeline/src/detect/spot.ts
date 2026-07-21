@@ -120,7 +120,7 @@ export class SPOTDetector {
  * Subtracts a local exponential moving average before comparison.
  */
 export class DSPOTDetector extends SPOTDetector {
-  declare readonly config: DSPOTConfig;
+  override config: DSPOTConfig;
   private driftValues: number[] = [];
   private ema = 0;
   private emaInitialized = false;

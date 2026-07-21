@@ -44,23 +44,34 @@ export class StatsDetector {
     this.means = new Float64Array(nMetrics);
     this.scales = new Float64Array(nMetrics);
     this.nSamples = data.length;
+    const n = data.length;
 
     for (let m = 0; m < nMetrics; m++) {
-      const vals = data.map(r => r[m]!);
-      const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
-      this.means![m] = mean;
-
       if (this.config.method === 'zscore') {
-        const variance = vals.reduce((s, v) => s + (v - mean) ** 2, 0) / vals.length;
-        this.scales![m] = Math.sqrt(variance) || 1;
-      } else if (this.config.method === 'mad') {
-        const absDevs = vals.map(v => Math.abs(v - mean)).sort((a, b) => a - b);
-        this.scales![m] = 1.4826 * (absDevs[Math.floor(absDevs.length / 2)]! || 1);
-      } else { // iqr
-        const sorted = [...vals].sort((a, b) => a - b);
-        const q1 = sorted[Math.floor(sorted.length * 0.25)]!;
-        const q3 = sorted[Math.floor(sorted.length * 0.75)]!;
-        this.scales![m] = (q3 - q1) || 1;
+        // Single-pass: sum + sum-of-squares → mean + std
+        let sum = 0, sumSq = 0;
+        for (let r = 0; r < n; r++) { const v = data[r]![m]!; sum += v; sumSq += v * v; }
+        const mean = sum / n;
+        this.means![m] = mean;
+        const variance = sumSq / n - mean * mean;
+        this.scales![m] = Math.sqrt(Math.max(0, variance)) || 1;
+      } else {
+        // Extract column (one pass), sort for mad/iqr
+        const vals = new Float64Array(n);
+        let sum = 0;
+        for (let r = 0; r < n; r++) { const v = data[r]![m]!; sum += v; vals[r] = v; }
+        const mean = sum / n;
+        this.means![m] = mean;
+
+        if (this.config.method === 'mad') {
+          const absDevs = Array.from(vals, v => Math.abs(v - mean)).sort((a, b) => a - b);
+          this.scales![m] = 1.4826 * (absDevs[Math.floor(absDevs.length / 2)]! || 1);
+        } else { // iqr
+          const sorted = Array.from(vals).sort((a, b) => a - b);
+          const q1 = sorted[Math.floor(sorted.length * 0.25)]!;
+          const q3 = sorted[Math.floor(sorted.length * 0.75)]!;
+          this.scales![m] = (q3 - q1) || 1;
+        }
       }
     }
     this.buffer = [];

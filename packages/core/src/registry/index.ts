@@ -63,6 +63,8 @@ export class PluginRegistry {
         return PluginRegistry.graphs.delete(name);
       case PluginCategory.ANALYZER:
         return PluginRegistry.analyzers.delete(name);
+      default:
+        return false;
     }
   }
 
