@@ -6,7 +6,8 @@
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
-    "clean": "pnpm -r clean"
+    "clean": "pnpm -r clean",
+    "build:ci": "pnpm run --filter @agentix-e/causality-analyzer-core build && pnpm run --filter @agentix-e/causality-analyzer-pipeline build"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
