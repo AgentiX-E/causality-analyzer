@@ -22,9 +22,9 @@ export class EmbedRelationalStore implements IRelationalStore {
   private q: Record<string,any> = {};
 
   constructor(opts: EmbedStoreOptions = {}) {
-    const path = opts.dbPath || "./causality-analyzer.db";
-    this.db = new Database(path);
-    this.db.pragma(path === ":memory:" ? "journal_mode = MEMORY" : "journal_mode = WAL");
+    const dbPath = opts.dbPath || "./causality-analyzer.db";
+    this.db = new Database(dbPath);
+    this.db.pragma(dbPath === ":memory:" ? "journal_mode = MEMORY" : "journal_mode = WAL");
     this.db.pragma("synchronous = NORMAL");
     for (const ddl of Object.values(DDL)) this.db.exec(ddl);
 

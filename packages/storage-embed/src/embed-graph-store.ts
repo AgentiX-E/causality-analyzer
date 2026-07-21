@@ -5,19 +5,16 @@ import type { IGraphStore, CausalGraph, GraphMetadata, GraphVersion } from '@age
 import { readFileSync, writeFileSync, existsSync, unlinkSync, mkdirSync } from 'fs';
 
 export interface EmbedGraphOptions {
-  /** Directory path. Default: ./causality-analyzer-graph. ':memory:' for CI. */
-  path?: string;
+  dbPath?: string;
 }
 
 export class EmbedGraphStore implements IGraphStore {
   private g: any;
   private vers: Map<string, number>;
-  private isMemory: boolean;
 
   constructor(opts: EmbedGraphOptions = {}) {
-    this.isMemory = opts.path === ':memory:' || !opts.path;
-    const dir = this.isMemory ? ':memory:' : (opts.path || './causality-analyzer-graph');
-    if (!this.isMemory && !existsSync(dir)) mkdirSync(dir, { recursive: true });
+    const dir = opts.dbPath || './causality-analyzer-graph';
+    if (!opts.dbPath && !existsSync(dir)) mkdirSync(dir, { recursive: true });
     this.g = OverGraph.open(dir);
     this.vers = new Map(); // graphId → version count
   }
