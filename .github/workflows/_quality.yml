@@ -41,6 +41,7 @@ jobs:
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq build-essential python3 2>/dev/null || true
       - run: pnpm config set approve-builds true
       - run: pnpm install --frozen-lockfile
+      - run: pnpm rebuild --filter @agentix-e/causality-analyzer-storage-embed 2>/dev/null || true
       - run: pnpm run --filter @agentix-e/causality-analyzer-core build
       - run: pnpm run --filter @agentix-e/causality-analyzer-pipeline typecheck
 
@@ -61,6 +62,7 @@ jobs:
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq build-essential python3 2>/dev/null || true
       - run: pnpm config set approve-builds true
       - run: pnpm install --frozen-lockfile
+      - run: pnpm rebuild --filter @agentix-e/causality-analyzer-storage-embed 2>/dev/null || true
       - run: pnpm run --filter @agentix-e/causality-analyzer-core build
       - run: pnpm -r test
       - name: Collect coverage

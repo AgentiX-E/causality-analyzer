@@ -20,7 +20,7 @@ jobs:
   quality:
     uses: ./.github/workflows/_quality.yml
     with:
-      node_version: '22'
+      node_version: '22' # Node 22 required for better-sqlite3 prebuilt binaries
 
   # ─── GitHub Pages ────────────────────────────────────────────────────
   deploy-pages:
