@@ -14,8 +14,9 @@
  * - _Driver DI for test injection (BoltSessionMock)
  */
 import type { IGraphStore, CausalGraph, GraphMetadata, GraphVersion } from '@agentix-e/causality-analyzer-core';
+import type { MtlsConfig, TrustStrategy } from './types.js';
 import { createRequire } from 'module';
-import { writeFileSync, unlinkSync, mkdtempSync } from 'fs';
+import { writeFileSync, mkdtempSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 const _require = createRequire(import.meta.url);
@@ -29,31 +30,6 @@ export type RemoteGraphAuth =
   | { type: 'kerberos'; ticket: string }
   | { type: 'custom'; principal: string; credentials: string; realm: string; scheme: string; parameters?: Record<string, unknown> }
   | { type: 'none' };
-
-/** Typed trust strategy. Mirrors neo4j-driver Config.TrustStrategy. */
-export type TrustStrategy =
-  | 'TRUST_ALL_CERTIFICATES'
-  | 'TRUST_CUSTOM_CA_SIGNED_CERTIFICATES'
-  | 'TRUST_SYSTEM_CA_SIGNED_CERTIFICATES';
-
-/**
- * Canonical mTLS configuration — PEM-string-based, backend-agnostic.
- *
- * Shared by both RemoteGraphStore (Bolt) and RemoteRelationalStore (PG-wire).
- * Each backend adapts to its native format:
- *   - Bolt: CA → trustedCertificates, cert+key → temp files → ClientCertificate
- *   - PG:  CA → ssl.ca, cert+key → ssl.cert + ssl.key (native PEM support)
- */
-export interface MtlsConfig {
-  /** PEM-encoded CA certificate(s). Omit to use system trust store. */
-  ca?: string | string[];
-  /** PEM-encoded client certificate (for mTLS). */
-  cert: string;
-  /** PEM-encoded client private key (for mTLS). */
-  key: string;
-  /** Private key passphrase. */
-  passphrase?: string;
-}
 
 /** Structured logger interface. Defaults to console. */
 export interface GraphLogger {

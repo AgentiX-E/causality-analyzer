@@ -1,6 +1,6 @@
 import { Client as PgClient } from 'pg';
 import type { IRelationalStore, MetricQuery, DetectionResult, ConditionalProbabilityTable, RegressionParams, RCAResult, ResultQuery, ColumnarTable, TableSchema } from '@agentix-e/causality-analyzer-core';
-import type { MtlsConfig } from './remote-graph-store.js';
+import type { MtlsConfig } from './types.js';
 
 const DDL = [
   "CREATE TABLE IF NOT EXISTS metrics (ts BIGINT NOT NULL, value REAL NOT NULL, metric_name TEXT NOT NULL, PRIMARY KEY (ts, metric_name))",

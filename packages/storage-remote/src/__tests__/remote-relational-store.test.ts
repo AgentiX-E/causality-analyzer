@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { newDb } from 'pg-mem';
 import { RemoteRelationalStore } from '../remote-relational-store.js';
-import type { MtlsConfig } from '../remote-graph-store.js';
+import type { MtlsConfig } from '../types.js';
 
 describe('RemoteRelationalStore via pg-mem adapter', () => {
   it('CPT save + load', async () => {
