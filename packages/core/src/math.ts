@@ -94,3 +94,33 @@ export function normalCDF(x: number): number {
 export function normalCDFTail(x: number): number {
   return 1 - normalCDF(Math.abs(x));
 }
+
+/**
+ * Compute the arithmetic mean of a specific column across all rows.
+ * Handles NaN and null values by skipping them.
+ */
+export function colMean(data: number[][], col: number): number {
+  let sum = 0, n = 0;
+  for (const row of data) {
+    const v = row[col];
+    if (v == null || Number.isNaN(v)) continue;
+    sum += v; n++;
+  }
+  return n > 0 ? sum / n : 0;
+}
+
+/**
+ * Seeded pseudo-random number generator (Linear Congruential Generator).
+ * Use for reproducible stochastic algorithms (Shapley, bootstrap, etc.).
+ *
+ * seed = null → uses Math.random() (non-deterministic).
+ * seed = number → deterministic reproducible sequence.
+ */
+export function createRNG(seed: number | null): () => number {
+  if (seed == null) return () => Math.random();
+  let s = seed >>> 0;
+  return () => {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    return s / 0x100000000;
+  };
+}

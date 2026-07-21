@@ -11,7 +11,7 @@
  * @packageDocumentation
  */
 import { StructuralCausalModel } from './structural-causal-model.js';
-import { solveLinear } from '@agentix-e/causality-analyzer-core';
+import { solveLinear, colMean } from '@agentix-e/causality-analyzer-core';
 import type { RootCause } from '@agentix-e/causality-analyzer-core';
 
 // ── Model Evaluation ──────────────────────────────────────────────────
@@ -116,12 +116,17 @@ export function evaluateMSE(
       const y = data[r]![nodeIdx]!;
       if (Number.isNaN(y)) continue;
       let pred = 0;
-      // Use mechanism if available, otherwise simple mean
-      const parents = graph.parents(node);
       if (parents.length === 0) {
-        // Root: predict as mean
+        // Root node: predict as observed mean
+        let sum = 0, cnt = 0;
+        for (let ri = 0; ri < n; ri++) {
+          const v = data[ri]![nodeIdx]!;
+          if (!Number.isNaN(v)) { sum += v; cnt++; }
+        }
+        pred = cnt > 0 ? sum / cnt : 0;
+      } else {
+        for (let i = 0; i < parents.length; i++) pred += (data[r]![pIdx[i]!] ?? 0) / parents.length;
       }
-      for (let i = 0; i < parents.length; i++) pred += (data[r]![pIdx[i]!] ?? 0) / Math.max(1, parents.length);
       ss += (y - pred) ** 2;
       valid++;
     }
@@ -284,14 +289,4 @@ function computeAnomalyZ(
   observation: Record<string, number>,
 ): Map<string, number> {
   return scm.anomalyScores(observation);
-}
-
-function colMean(data: number[][], col: number): number {
-  let sum = 0, n = 0;
-  for (const row of data) {
-    const v = row[col];
-    if (v == null || Number.isNaN(v)) continue;
-    sum += v; n++;
-  }
-  return n > 0 ? sum / n : 0;
 }

@@ -15,7 +15,7 @@
  * @packageDocumentation
  */
 import { CausalGraph } from '../graph/causal-graph.js';
-import { solveLinear } from '@agentix-e/causality-analyzer-core';
+import { solveLinear, colMean } from '@agentix-e/causality-analyzer-core';
 import type { IdentifiedEstimand } from '@agentix-e/causality-analyzer-core';
 
 // ── Backdoor Adjustment ───────────────────────────────────────────────
@@ -31,22 +31,20 @@ import type { IdentifiedEstimand } from '@agentix-e/causality-analyzer-core';
  */
 export function findBackdoorSet(graph: CausalGraph, treatment: string, outcome: string): string[] {
   const treatDescendants = collectDescendants(graph, treatment);
+  // Pearl's backdoor criterion: adjust for variables that block all
+  // backdoor paths without opening new ones. Simplification: use
+  // common causes (ancestors of both) that are not treatment descendants.
   const result: string[] = [];
 
   for (const node of graph.nodes) {
     if (node === treatment || node === outcome) continue;
     if (treatDescendants.has(node)) continue;
-    // Check if node blocks any backdoor path
-    const parents = graph.parents(node);
-    if (parents.some(p => p === treatment)) continue;
-    // All parents of treatment that are not descendants are valid adjustors
-    if (graph.parents(treatment).includes(node)) continue;
-    result.push(node);
+    // Node must be a common cause or block backdoor paths
+    const isCommonCause = hasDirectedPath(graph, node, treatment) && hasDirectedPath(graph, node, outcome);
+    if (isCommonCause) result.push(node);
   }
 
-  // For practical purposes, use all non-descendants of treatment
-  // that are parents of the outcome → this satisfies the backdoor criterion
-  return graph.parents(treatment).filter(p => !treatDescendants.has(p));
+  return result;
 }
 
 /**
@@ -314,13 +312,11 @@ export function estimatePropensityScore(
   for (let iter = 0; iter < maxIter; iter++) {
     // Compute p_i = sigmoid(X_i * β)
     const p = new Float64Array(n);
-    let logLik = 0;
     for (let r = 0; r < n; r++) {
       let dot = 0;
       for (let j = 0; j < k; j++) dot += X[r * k + j]! * beta[j]!;
       p[r] = 1 / (1 + Math.exp(-Math.min(Math.max(dot, -15), 15))); // clamp for stability
       const t = data[r]![treatmentIdx]! > 0.5 ? 1 : 0;
-      logLik += t * Math.log(Math.max(1e-10, p[r]!)) + (1 - t) * Math.log(Math.max(1e-10, 1 - p[r]!));
     }
 
     // IRLS update
@@ -490,6 +486,10 @@ export function estimateDoublyRobust(
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
+function hasDirectedPath(graph: CausalGraph, from: string, to: string): boolean {
+  return collectDescendants(graph, from).has(to) || from === to;
+}
+
 function collectDescendants(graph: CausalGraph, node: string): Set<string> {
   const result = new Set<string>();
   const stack = [node];
@@ -517,16 +517,6 @@ function pooledVar(
   const mean = rows.reduce((s, r) => s + (r[outcomeIdx] ?? 0), 0) / rows.length;
   for (const r of rows) ss += ((r[outcomeIdx] ?? 0) - mean) ** 2;
   return ss / (n - 1);
-}
-
-function colMean(data: number[][], col: number): number {
-  let sum = 0;
-  for (const row of data) sum += row[col] ?? 0;
-  return data.length > 0 ? sum / data.length : 0;
-}
-
-function val(data: number[][], row: number, col: number): number {
-  return data[row]?.[col] ?? 0;
 }
 
 function linearPredict(

@@ -6,6 +6,7 @@
  */
 import { Matrix } from 'ml-matrix';
 import type { DomainKnowledge } from '@agentix-e/causality-analyzer-core';
+import { solveLinear, erf, normalCDF } from '@agentix-e/causality-analyzer-core';
 import { CausalGraph } from './causal-graph.js';
 
 export interface PCConfig {
@@ -50,44 +51,29 @@ export function fisherZTest(
   return 2 * (1 - normalCDF(Math.abs(z)));
 }
 
-/** Compute partial correlation from covariance matrix */
+/** Compute partial correlation via precision matrix inversion using solveLinear */
 function partialCorrelation(cov: number[][], i: number, j: number): number {
   const m = cov.length;
   if (m === 2) return cov[i]![j]! / Math.sqrt(cov[i]![i]! * cov[j]![j]!);
-  // Invert covariance to get precision matrix
-  const prec = invertMatrix(cov);
-  const r = -prec[i]![j]! / Math.sqrt(prec[i]![i]! * prec[j]![j]!);
-  return Math.max(-1, Math.min(1, r));
-}
-
-function invertMatrix(m: number[][]): number[][] {
-  const n = m.length;
-  const aug = m.map((row, i) => [...row, ...Array.from({length: n}, (_, j) => i === j ? 1 : 0)]);
+  // Invert: prepend identity and solve column by column
+  const n = m;
+  const aug = cov.map((row, ri) => [...row, ...Array.from({length: n}, (_, ci) => ri === ci ? 1 : 0)]);
+  const inv: number[][] = [];
   for (let col = 0; col < n; col++) {
-    let pivot = col;
-    for (let row = col + 1; row < n; row++) if (Math.abs(aug[row]![col]!) > Math.abs(aug[pivot]![col]!)) pivot = row;
-    [aug[col], aug[pivot]] = [aug[pivot]!, aug[col]!];
-    const pv = aug[col]![col]!;
-    if (Math.abs(pv) < 1e-12) continue;
-    for (let j = col; j < 2 * n; j++) aug[col]![j]! /= pv;
-    for (let row = 0; row < n; row++) {
-      if (row === col) continue;
-      const factor = aug[row]![col]!;
-      for (let j = col; j < 2 * n; j++) aug[row]![j]! -= factor * aug[col]![j]!;
-    }
+    const b = aug.map(row => row[n + col]!);
+    const x = solveLinear(cov, b);
+    inv.push(x);
+    // Fix: transpose x into inv rows
   }
-  return aug.map(row => row.slice(n));
-}
-
-function normalCDF(x: number): number {
-  return 0.5 * (1 + erf(x / Math.sqrt(2)));
-}
-function erf(x: number): number {
-  const a1=0.254829592, a2=-0.284496736, a3=1.421413741, a4=-1.453152027, a5=1.061405429, p=0.3275911;
-  const sign = x < 0 ? -1 : 1; x = Math.abs(x);
-  const t = 1 / (1 + p * x);
-  const y = 1 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
-  return sign * y;
+  // Build proper inverse matrix row-by-row
+  const inverse: number[][] = Array.from({length: n}, () => new Array(n).fill(0));
+  for (let ci = 0; ci < n; ci++) {
+    const b = aug.map(row => row[n + ci]!);
+    const x = solveLinear(cov, b);
+    for (let ri = 0; ri < n; ri++) inverse[ri]![ci] = x[ri]!;
+  }
+  const r = -inverse[i]![j]! / Math.sqrt(inverse[i]![i]! * inverse[j]![j]!);
+  return Math.max(-1, Math.min(1, r));
 }
 
 /**
