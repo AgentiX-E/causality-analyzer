@@ -3,7 +3,7 @@ import { EmbedRelationalStore, SQL } from '../embed-relational-store.js';
 import { EmbedGraphStore } from '../embed-graph-store.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────
-function createStore() { return new EmbedRelationalStore(); }
+function createStore() { return new EmbedRelationalStore({ dbPath: ":memory:" }); }
 
 // ── EmbedRelationalStore (SQLite-backed) ─────────────────────────────
 describe('EmbedRelationalStore', () => {

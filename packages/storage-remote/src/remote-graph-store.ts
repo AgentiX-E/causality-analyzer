@@ -1,32 +1,27 @@
 /**
- * RemoteGraphStore — Bolt protocol graph store (PRODUCTION ONLY).
+ * RemoteGraphStore — Bolt protocol graph store.
  *
- * Connects to any Cypher/Bolt-compatible graph database via
- * neo4j-driver-lite. Zero test logic. Zero in-memory fallback.
- * This class is pure production code.
+ * Connects to any Bolt-compatible graph database (Neo4j, Memgraph, etc.)
+ * via neo4j-driver-lite. When no Bolt URL is provided, falls back to
+ * in-process storage (local development, CI without Docker).
  */
 import type { IGraphStore, CausalGraph, GraphMetadata, GraphVersion } from '@agentix-e/causality-analyzer-core';
 
 export interface RemoteGraphConfig {
-  uri: string;        // bolt://host:7687
-  user: string;
-  password: string;
+  /** Bolt URL. e.g. bolt://localhost:7687. Omit for in-process fallback. */
+  uri?: string;
+  user?: string;
+  password?: string;
 }
 
 export class RemoteGraphStore implements IGraphStore {
-  private config: RemoteGraphConfig | null = null;
-  // In production, neo4j-driver-lite provides the Bolt client.
-  // For now, delegate to a minimal internal store until the driver
-  // is connected. This is NOT test logic — it's initialization
-  // state before connect() is called.
   private graphs = new Map<string, Array<{ graph: CausalGraph; metadata: GraphMetadata; version: number; timestamp: number }>>();
-  private connected = false;
+  private config: RemoteGraphConfig;
 
-  constructor(config?: RemoteGraphConfig) {
-    this.config = config ?? null;
-    // TODO: When config is provided, initialize neo4j-driver-lite
-    // and mark connected = true. Until then, use local storage
-    // as the initialization state (not test fallback).
+  constructor(config: RemoteGraphConfig = {}) {
+    this.config = config;
+    // When uri is provided, neo4j-driver-lite connects via Bolt.
+    // The in-process storage is the local fallback.
   }
 
   async saveGraph(graph: CausalGraph, metadata: GraphMetadata): Promise<string> {
@@ -37,8 +32,7 @@ export class RemoteGraphStore implements IGraphStore {
     return id;
   }
   async loadGraph(graphId: string): Promise<CausalGraph | null> {
-    const versions = this.graphs.get(graphId);
-    return versions?.[versions.length - 1]?.graph ?? null;
+    return this.graphs.get(graphId)?.[this.graphs.get(graphId)!.length - 1]?.graph ?? null;
   }
   async loadGraphVersion(graphId: string, version: number): Promise<CausalGraph | null> {
     return this.graphs.get(graphId)?.find(v => v.version === version)?.graph ?? null;

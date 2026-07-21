@@ -1,62 +1,58 @@
-/**
- * Remote storage stubs — contract interface verification.
- */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { RemoteRelationalStore } from '../remote-relational-store.js';
 import { RemoteGraphStore } from '../remote-graph-store.js';
 
-describe('RemoteRelationalStore', () => {
-  it('implements IRelationalStore contract methods', async () => {
-    const store = new RemoteRelationalStore();
-    expect(await store.loadCPT('g', 'n')).toBeNull();
-    expect(await store.loadRegressionModel('g', 'n')).toBeNull();
-    expect((await store.queryHistoricalResults({})).length).toBe(0);
+describe('RemoteRelationalStore with PGlite', () => {
+  let store: RemoteRelationalStore;
+  beforeEach(() => { store = new RemoteRelationalStore(); });
+
+  it('CPT save + load', async () => {
+    await store.saveCPT('g1', 'CPU', { node:'CPU', parents:[], entries:{'0':0.1,'1':0.75} });
+    const cpt = await store.loadCPT('g1', 'CPU');
+    expect(cpt?.entries['0']).toBe(0.1);
+    expect(cpt?.entries['1']).toBe(0.75);
   });
 
-  it('throws on readMetrics (stub)', async () => {
-    const store = new RemoteRelationalStore();
-    await expect(store.readMetrics({ start: 0, end: 10 })).rejects.toThrow('Not implemented');
+  it('loadCPT returns null for unknown', async () => {
+    expect(await store.loadCPT('x', 'y')).toBeNull();
+  });
+
+  it('SAVEPOINT lifecycle', async () => {
+    await store.beginTransaction('s1');
+    await store.saveCPT('g2','A',{node:'A',parents:[],entries:{'0':0.5}});
+    await store.commitTransaction('s1');
+    expect(await store.loadCPT('g2','A')).not.toBeNull();
+
+    await store.beginTransaction('s2');
+    await store.setCheckpoint('s2','cp');
+    await store.saveCPT('g3','B',{node:'B',parents:[],entries:{'1':0.9}});
+    await store.rollbackToCheckpoint('s2','cp');
+    expect(await store.loadCPT('g3','B')).toBeNull();
+  });
+
+  it('regression model round-trip', async () => {
+    await store.saveRegressionModel('g1','B',{coefficients:[1.5,2.0],intercept:0.5,residualStdDev:0.1});
+    const m = await store.loadRegressionModel('g1','B');
+    expect(m?.coefficients).toEqual([1.5,2.0]);
+  });
+
+  it('RCA save + query', async () => {
+    await store.saveRCAResult('c1',{rootCauses:[],paths:[],metadata:{method:'x',analyzedAt:1,durationMs:1,extra:{}},toJSON:()=>({})});
+    expect((await store.queryHistoricalResults({})).length).toBe(1);
   });
 });
 
 describe('RemoteGraphStore', () => {
-  it('implements IGraphStore contract methods', async () => {
+  it('save + load graph', async () => {
     const store = new RemoteGraphStore();
-    expect(await store.loadGraph('x')).toBeNull();
-    expect(await store.loadGraphVersion('x', 1)).toBeNull();
-    expect((await store.listGraphVersions('x')).length).toBe(0);
-    expect((await store.findSimilarGraphs({ nodes: [], edges: [] }, 5)).length).toBe(0);
+    const id = await store.saveGraph({nodes:['A','B'],edges:[{source:'A',target:'B',weight:1,directed:true}]},{id:'g1',method:'pc',computedAt:1,parameters:{},confidence:0.9});
+    expect((await store.loadGraph(id))?.nodes).toEqual(['A','B']);
   });
 
-});
-
-describe('RemoteRelationalStore full contract', () => {
-  let store: any;
-  beforeEach(async () => {
-    const { RemoteRelationalStore } = await import('../remote-relational-store.js');
-    store = new RemoteRelationalStore();
+  it('versioned storage', async () => {
+    const store = new RemoteGraphStore();
+    const id = await store.saveGraph({nodes:['A'],edges:[]},{id:'g2',method:'pc',computedAt:1,parameters:{},confidence:0.9});
+    await store.saveGraph({nodes:['A','B'],edges:[]},{id:'g2',method:'pc',computedAt:2,parameters:{},confidence:0.9});
+    expect((await store.listGraphVersions(id)).length).toBe(2);
   });
-
-  it('writeDetections accepts empty array', async () => { await store.writeDetections([]); });
-  it('saveCPT callable', async () => { await store.saveCPT('g', 'n', { node:'n', parents:[], entries:{} }); });
-  it('saveRegressionModel callable', async () => { await store.saveRegressionModel('g', 'n', { coefficients:[], intercept:0, residualStdDev:0 }); });
-  it('loadRegressionModel returns null', async () => { expect(await store.loadRegressionModel('g','n')).toBeNull(); });
-  it('saveRCAResult callable', async () => { await store.saveRCAResult('c', { rootCauses:[], paths:[], metadata:{method:'x',analyzedAt:1,durationMs:1,extra:{}}, toJSON:()=>({}) }); });
-  it('queryHistoricalResults returns empty', async () => { expect(await store.queryHistoricalResults({})).toEqual([]); });
-  it('beginTransaction callable', async () => { await store.beginTransaction('s'); });
-  it('commitTransaction callable', async () => { await store.commitTransaction('s'); });
-  it('rollbackToCheckpoint callable', async () => { await store.rollbackToCheckpoint('s','c'); });
-  it('setCheckpoint callable', async () => { await store.setCheckpoint('s','n'); });
-});
-
-describe('RemoteGraphStore full contract', () => {
-  let store: any;
-  beforeEach(async () => {
-    const { RemoteGraphStore } = await import('../remote-graph-store.js');
-    store = new RemoteGraphStore();
-  });
-
-  it('loadGraph returns null', async () => { expect(await store.loadGraph('x')).toBeNull(); });
-  it('listGraphVersions returns empty', async () => { expect(await store.listGraphVersions('x')).toEqual([]); });
-  it('findSimilarGraphs returns empty', async () => { expect(await store.findSimilarGraphs({nodes:[],edges:[]},5)).toEqual([]); });
 });
