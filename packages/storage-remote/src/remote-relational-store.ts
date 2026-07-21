@@ -10,8 +10,8 @@ const DDL = [
 ];
 
 export interface RemoteRelationalConfig {
-  /** PG connection string. Default: postgresql://localhost:5432/postgres */
   connectionString?: string;
+  _Client?: new (...a: any[]) => any;
 }
 
 export class RemoteRelationalStore implements IRelationalStore {
@@ -19,7 +19,8 @@ export class RemoteRelationalStore implements IRelationalStore {
   private _ready: Promise<void>;
 
   constructor(config: RemoteRelationalConfig = {}) {
-    this.client = new PgClient(config.connectionString ? { connectionString: config.connectionString } : undefined);
+    const Ctor = config._Client || PgClient;
+    this.client = new Ctor(config.connectionString ? { connectionString: config.connectionString } : undefined);
     this._ready = this._init();
   }
 
