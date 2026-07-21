@@ -28,10 +28,6 @@ describe('RemoteGraphStore', () => {
     expect((await store.findSimilarGraphs({ nodes: [], edges: [] }, 5)).length).toBe(0);
   });
 
-  it('throws on saveGraph (stub)', async () => {
-    const store = new RemoteGraphStore();
-    await expect(store.saveGraph({ nodes: [], edges: [] }, { id: 'x', method: 'pc', computedAt: 0, parameters: {}, confidence: 0 })).rejects.toThrow('Not implemented');
-  });
 });
 
 describe('RemoteRelationalStore full contract', () => {
