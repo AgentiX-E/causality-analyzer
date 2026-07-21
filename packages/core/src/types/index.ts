@@ -257,6 +257,6 @@ export interface TimeSeriesDataPoint { ts: number; value: number; q10?: number; 
 export interface AnomalyRegion { start: number; end: number; severity: 'critical' | 'warning' | 'info'; rootCause?: string; }
 export interface TimeSeriesChartData { series: Array<{ name: string; data: TimeSeriesDataPoint[] }>; anomalyRegions: AnomalyRegion[]; }
 
-export interface RankingEntry { rank: number; name: string; score: number; confidence: number; evidence: ReadonlyArray<Evidence>; }
+export interface RankingEntry { rank: number; name: string; score: number; confidence: number; evidence: Evidence[]; }
 export interface PropagationPath { root: string; path: string[]; score: number; }
 export interface RCARankingData { rootCauses: RankingEntry[]; propagationPaths: PropagationPath[]; }

@@ -116,7 +116,7 @@ export interface RCARankingData { rootCauses: RankingEntry[]; propagationPaths: 
 /** Build ranking visualization data from RCA result */
 export function buildRankingVizData(rootCauses: RootCause[], paths: RootCausePath[]): RCARankingData {
   return {
-    rootCauses: rootCauses.map(rc => ({ ...rc })),
-    propagationPaths: paths.map(p => ({ root: p.nodes[0] ?? '', path: p.nodes, score: p.score })),
+    rootCauses: rootCauses.map(rc => ({ ...rc, evidence: rc.evidence as import('@agentix-e/causality-analyzer-core').Evidence[] })),
+    propagationPaths: paths.map(p => ({ root: p.nodes[0] ?? '', path: [...p.nodes], score: p.score })),
   };
 }
