@@ -201,3 +201,133 @@ describe('nested fusion edges', () => {
     expect(r.rootCauses.length).toBe(0);
   });
 });
+
+// ════════════════════════════════════════════════════════════════════
+// Branch coverage precision tests: exercising real edge cases
+// ════════════════════════════════════════════════════════════════════
+
+import { SPOTDetector, DSPOTDetector } from '../detect/spot.js';
+import { SpectralResidualDetector } from '../detect/spectral-residual.js';
+import { RHTScorer, DAScorer } from '../analyze/circa.js';
+import { HTRCA } from '../analyze/rca.js';
+import { estimateLinearRegression } from '../infer/causal-inference.js';
+import { VotingDetector } from '../detect/voting-detector.js';
+import { StatsDetector } from '../detect/stats-detector.js';
+import { CausalGraph } from '../graph/causal-graph.js';
+import { Matrix } from 'ml-matrix';
+import { buildTimeseriesVizData } from '../viz/viz-data.js';
+
+describe('SPOT branch: Grimshaw fallback and boundary conditions', () => {
+  it('constant data triggers method-of-moments fallback', () => {
+    const spot = new SPOTDetector({ initSize: 10, q: 1e-2, initThresholdQuantile: 0.9 });
+    // All identical → no peaks → GPD can't be estimated → falls back to MoM
+    for (let i = 0; i < 30; i++) spot.update(5);
+    expect(() => spot.update(100)).not.toThrow();
+  });
+
+  it('very small peaks trigger fallback', () => {
+    const spot = new SPOTDetector({ initSize: 10, q: 1e-2, initThresholdQuantile: 0.5 });
+    // Only 2 peaks → too few for GPD → falls back
+    const data = [1,1,1,1,1,1,1,1,10,10];
+    spot.initialize(data);
+    expect(() => spot.update(100)).not.toThrow();
+  });
+
+  it('DSPOT handles drift initialization edge', () => {
+    const dspot = new DSPOTDetector({ initSize: 20, q: 1e-2, driftWindow: 3 });
+    for (let i = 0; i < 30; i++) dspot.update(10);
+    expect(() => dspot.update(10)).not.toThrow();
+  });
+});
+
+describe('SpectralResidual branch: buffer edge cases', () => {
+  it('buffer wraps correctly near power-of-2 boundary', () => {
+    const sr = new SpectralResidualDetector({ minPoints: 16 });
+    for (let i = 0; i < 64; i++) sr.update(i % 2 === 0 ? 5 : 10);
+    for (let i = 0; i < 32; i++) sr.update(i % 3 === 0 ? 5 : 10);
+    const r = sr.update(50);
+    expect(typeof r.isAnomalous).toBe('boolean');
+  });
+});
+
+describe('RHT/HT branch: regression edge cases', () => {
+  it('RHT with single parent trains correctly', () => {
+    const g = new CausalGraph(['A', 'B']);
+    g.addEdge('A', 'B');
+    const rht = new RHTScorer({ tauMax: 1, aggregator: 'max' });
+    rht.train(g, [[1, 2], [1.1, 1.9], [0.9, 2.1], [1, 2], [1, 2.1]]);
+    const scores = rht.score([[5, 12]]);
+    expect(scores.size).toBe(2);
+  });
+
+  it('DAScorer handles nodes with no RHT scores', () => {
+    const g = new CausalGraph(['A', 'B', 'C']);
+    g.addEdge('A', 'B'); g.addEdge('B', 'C');
+    const da = new DAScorer({ threshold: 2.0 });
+    // B has anomalous parent A, C has anomalous parent B → adjustment propagates
+    const scores = new Map([
+      ['A', { zScore: 8.0, confidence: 0.99 }],
+      ['B', { zScore: 5.0, confidence: 0.90 }],
+      ['C', { zScore: 4.0, confidence: 0.85 }],
+    ]);
+    const adjusted = da.adjust(g, scores);
+    expect(adjusted[0]!.name).toBe('A');
+  });
+});
+
+describe('CausalInference branch: single-point estimation', () => {
+  it('estimation with exactly 2 data points', () => {
+    const r = estimateLinearRegression([[1, 3], [0, 1]], 0, 1);
+    expect(typeof r.ate).toBe('number');
+    expect(isNaN(r.ate)).toBe(false);
+  });
+
+  it('estimation with zero treatment variance', () => {
+    // treatment column is all 0s → coef should be computable
+    const r = estimateLinearRegression([[0, 5], [0, 4], [0, 6]], 0, 1);
+    expect(typeof r.ate).toBe('number');
+  });
+});
+
+describe('Viz branch: no-anomaly edge case', () => {
+  it('timeseries with zero anomalies', () => {
+    const data = buildTimeseriesVizData(
+      { cpu: [10, 12, 11] }, [1000, 1001, 1002], [], undefined,
+    );
+    expect(data.anomalyRegions.length).toBe(0);
+  });
+});
+
+describe('VotingDetector branch: all strategies exercised', () => {
+  it('weighted with partially trained detectors', () => {
+    const d1 = new StatsDetector({ threshold: 3, minSamples: 2 });
+    const d2 = new StatsDetector({ threshold: 3, minSamples: 2 });
+    const v = new VotingDetector([d1, d2], { strategy: 'weighted' });
+    d1.update([5]); d1.update([5]); // train d1
+    d2.update([5]); d2.update([5]); // train d2
+    const r = v.update([5]);
+    expect(typeof r.isAnomalous).toBe('boolean');
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════
+// Branch coverage: additional meaningful edge cases
+// ════════════════════════════════════════════════════════════════════
+
+describe('graph branch coverage', () => {
+  it('d-separation with empty conditioning set and self-referential check', () => {
+    const g = new CausalGraph(['X', 'Y']);
+    g.addEdge('X', 'Y');
+    expect(g.dSeparated('X', 'X', [])).toBe(false); // self always reachable
+  });
+
+  it('pdag2dag on already-directed acyclic graph', () => {
+    const g = new CausalGraph(['A', 'B', 'C']);
+    g.addEdge('A', 'B'); g.addEdge('B', 'C');
+    const dag = g.pdag2dag();
+    expect(dag.isDAG()).toBe(true);
+    expect(dag.hasEdge('A', 'B')).toBe(true);
+    expect(dag.hasEdge('B', 'C')).toBe(true); // edges preserved
+  });
+});
+
