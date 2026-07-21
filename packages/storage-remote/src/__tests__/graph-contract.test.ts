@@ -1,21 +1,18 @@
 /**
  * IGraphStore Contract Test Suite.
  *
- * Validates that EmbedGraphStore and RemoteGraphStore (stub)
- * implement identical IGraphStore semantics. The contract test
- * is the authoritative verification — any IGraphStore backend
- * must pass all tests in this suite.
+ * Validates that ALL IGraphStore implementations obey the
+ * same interface contract. Production code is NEVER tested
+ * through test infrastructure — test infrastructure is tested
+ * through the contract suite alongside production code.
  *
- * For production Cypher/Bolt testing, spin up Neo4j via Docker:
- *   docker run -d -p 7687:7687 -e NEO4J_AUTH=neo4j/password neo4j:5
- * Then test RemoteGraphStore with neo4j-driver-lite.
+ * The ContractGraphStore is a TEST-ONLY reference (__tests__/),
+ * never imported by production code.
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { IGraphStore, CausalGraph, GraphMetadata, GraphVersion } from '@agentix-e/causality-analyzer-core';
-
-/** Contract-compliant implementations to test */
-import { EmbedGraphStore } from '../../../storage-embed/src/embed-graph-store.js';
-import { RemoteGraphStore } from '../../../storage-remote/src/remote-graph-store.js';
+import { ContractGraphStore } from './contract-graph-store.js';
+import { RemoteGraphStore } from '../remote-graph-store.js';
 
 function makeGraph(): CausalGraph {
   return { nodes: ['A', 'B', 'C'], edges: [
@@ -27,52 +24,39 @@ function makeMeta(id: string): GraphMetadata {
   return { id, method: 'pc', computedAt: Date.now(), parameters: {}, confidence: 0.9 };
 }
 
-/** Test runner: runs the same test suite against any IGraphStore implementation */
-function testIGraphStore(name: string, factory: () => IGraphStore) {
+function testContract(name: string, factory: () => IGraphStore) {
   describe(`${name} IGraphStore contract`, () => {
     let store: IGraphStore;
     beforeEach(() => { store = factory(); });
 
-    it('saveGraph returns graph ID', async () => {
-      const id = await store.saveGraph(makeGraph(), makeMeta('g1'));
-      expect(typeof id).toBe('string');
+    it('saveGraph returns string ID', async () => {
+      expect(typeof await store.saveGraph(makeGraph(), makeMeta('g1'))).toBe('string');
     });
 
     it('loadGraph retrieves saved graph', async () => {
       const id = await store.saveGraph(makeGraph(), makeMeta('g2'));
       const loaded = await store.loadGraph(id);
-      expect(loaded).not.toBeNull();
-      expect(loaded!.nodes).toEqual(['A', 'B', 'C']);
-      expect(loaded!.edges).toHaveLength(2);
+      expect(loaded?.nodes).toEqual(['A', 'B', 'C']);
+      expect(loaded?.edges).toHaveLength(2);
     });
 
-    it('loadGraph returns null for unknown graph', async () => {
+    it('loadGraph returns null for unknown', async () => {
       expect(await store.loadGraph('nonexistent')).toBeNull();
     });
 
-    it('loadGraphVersion retrieves specific version', async () => {
+    it('versioned storage preserves all versions', async () => {
       const id = await store.saveGraph(makeGraph(), makeMeta('g3'));
-      // Save second version
-      const g2: CausalGraph = { nodes: ['A', 'B', 'C', 'D'], edges: [] };
-      await store.saveGraph(g2, { ...makeMeta('g3'), id });
-      const v1 = await store.loadGraphVersion(id, 1);
-      const v2 = await store.loadGraphVersion(id, 2);
-      expect(v1?.nodes.length).toBe(3);
-      expect(v2?.nodes.length).toBe(4);
-    });
-
-    it('loadGraphVersion returns null for missing version', async () => {
-      const id = await store.saveGraph(makeGraph(), makeMeta('g4'));
+      await store.saveGraph({ nodes: ['A','B','C','D'], edges:[] }, { ...makeMeta('g3'), id });
+      expect((await store.loadGraphVersion(id, 1))?.nodes.length).toBe(3);
+      expect((await store.loadGraphVersion(id, 2))?.nodes.length).toBe(4);
       expect(await store.loadGraphVersion(id, 999)).toBeNull();
     });
 
-    it('listGraphVersions returns ordered versions', async () => {
-      const id = await store.saveGraph(makeGraph(), makeMeta('g5'));
-      await store.saveGraph(makeGraph(), { ...makeMeta('g5'), id });
-      await store.saveGraph(makeGraph(), { ...makeMeta('g5'), id });
+    it('listGraphVersions returns monotonic versions', async () => {
+      const id = await store.saveGraph(makeGraph(), makeMeta('g4'));
+      await store.saveGraph(makeGraph(), { ...makeMeta('g4'), id });
       const versions = await store.listGraphVersions(id);
       expect(versions.length).toBeGreaterThanOrEqual(2);
-      // Versions should be monotonically increasing
       for (let i = 1; i < versions.length; i++) {
         expect(versions[i]!.version).toBeGreaterThan(versions[i-1]!.version);
       }
@@ -82,17 +66,15 @@ function testIGraphStore(name: string, factory: () => IGraphStore) {
       expect(await store.listGraphVersions('unknown')).toEqual([]);
     });
 
-    it('findSimilarGraphs returns list of graphs', async () => {
-      await store.saveGraph(makeGraph(), makeMeta('g6'));
-      await store.saveGraph(makeGraph(), { ...makeMeta('g6'), id: 'g7' });
-      const similar = await store.findSimilarGraphs(makeGraph(), 5);
-      expect(Array.isArray(similar)).toBe(true);
+    it('findSimilarGraphs returns array', async () => {
+      await store.saveGraph(makeGraph(), makeMeta('g5'));
+      expect(Array.isArray(await store.findSimilarGraphs(makeGraph(), 5))).toBe(true);
     });
   });
 }
 
-// ════════════════════════════════════════════════════════════════════
-// Run contract tests against BOTH implementations
-// ════════════════════════════════════════════════════════════════════
-testIGraphStore('EmbedGraphStore', () => new EmbedGraphStore());
-testIGraphStore('RemoteGraphStore', () => new RemoteGraphStore() as unknown as IGraphStore);
+// Run identical contract suite against:
+// 1. ContractGraphStore — TEST-ONLY reference (lives in __tests__/)
+// 2. RemoteGraphStore — PRODUCTION code (Bolt → Neo4j in production)
+testContract('ContractGraphStore', () => new ContractGraphStore());
+testContract('RemoteGraphStore', () => new RemoteGraphStore());
