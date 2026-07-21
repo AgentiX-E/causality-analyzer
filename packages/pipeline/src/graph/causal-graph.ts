@@ -180,23 +180,24 @@ export class CausalGraph {
   pdag2dag(): CausalGraph {
     const n = this.nodeCount;
     const adj = this.adj.clone();
-    const edgeSet = new Set<string>();
-    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
-      if (adj.get(i, j) === 1) edgeSet.add(`${i}-${j}`);
+    // Track undirected edges (both directions exist)
+    const undirected = new Set<string>();
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+      if (adj.get(i, j) === 1 && adj.get(j, i) === 1) undirected.add(`${i}-${j}`);
     }
-
     let changed = true;
     while (changed) {
       changed = false;
       for (let i = 0; i < n; i++) {
         let isSink = true;
         for (let j = 0; j < n; j++) {
-          if (edgeSet.has(`${i}-${j}`)) { isSink = false; break; }
+          if (undirected.has(`${Math.min(i, j)}-${Math.max(i, j)}`)) { isSink = false; break; }
         }
         if (isSink) {
           for (let j = 0; j < n; j++) {
-            if (edgeSet.has(`${j}-${i}`)) {
-              adj.set(j, i, 1); edgeSet.delete(`${j}-${i}`); changed = true;
+            const key = `${Math.min(i, j)}-${Math.max(i, j)}`;
+            if (undirected.has(key) && adj.get(j, i) === 1 && adj.get(i, j) === 1) {
+              adj.set(i, j, 0); undirected.delete(key); changed = true;
             }
           }
         }
