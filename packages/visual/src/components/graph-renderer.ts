@@ -87,7 +87,7 @@ export class Canvas2DRenderer implements GraphRenderer {
 
     const cx = w / 2, cy = h / 2;
     const maxR = Math.min(w, h) / 2 - 30;
-    allNodes.forEach((n, i) => {
+    allNodes.forEach((n: GraphVizNode, i: number) => {
       const angle = (i / allNodes.length) * Math.PI * 2 - Math.PI / 2;
       const r = i < rootNodes.length ? maxR * 0.3 : maxR * 0.7;
       layout.set(n.id, { x: cx + Math.cos(angle) * r, y: cy + Math.sin(angle) * r });

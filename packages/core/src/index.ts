@@ -62,3 +62,15 @@ export { BaseConfig } from './config/index.js';
 
 // ── DI ────────────────────────────────────────────────────────────
 export type { CausalityAnalyzerConfig } from './di/index.js';
+
+// ── Visualization Types ───────────────────────────────────────────
+export type {
+  GraphVizNode,
+  GraphVisualizationData,
+  TimeSeriesDataPoint,
+  AnomalyRegion,
+  TimeSeriesChartData,
+  RankingEntry,
+  PropagationPath,
+  RCARankingData,
+} from './types/index.js';

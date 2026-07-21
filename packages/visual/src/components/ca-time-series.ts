@@ -40,13 +40,13 @@ export class CaTimeSeries extends LitElement {
     const series = this.data.series;
     const ts = series[0]?.data.map(d => d.ts) ?? [];
     const aligned: AlignedData = [ts] as AlignedData;
-    for (const s of series) aligned.push(s.data.map(d => d.value));
+    for (const s of series) aligned.push(Float64Array.from(s.data.map(d => d.value)));
 
     const opts: uPlot.Options = {
       width: this.container.clientWidth,
       height: this.container.clientHeight,
-      series: [{}, ...series.map(s => ({ label: s.name, stroke: this._color(s.name) }))],
-      axes: [{}, { values: (_u, vals) => vals.map(v => v.toFixed(1)) }],
+      series: [{}, ...series.map((s: {name: string}) => ({ label: s.name, stroke: this._color(s.name) }))],
+      axes: [{}, { values: (_u: any, vals: number[]) => vals.map((v: number) => v.toFixed(1)) }],
       cursor: { show: true },
     };
 
