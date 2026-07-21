@@ -243,3 +243,20 @@ export interface RegressionParams {
   /** Standard deviation of residuals on training data */
   readonly residualStdDev: number;
 }
+
+// ── Visualization Data Types ───────────────────────────────────────────
+
+export interface GraphVizNode {
+  id: string; label: string;
+  type: 'root_cause' | 'anomaly' | 'intermediate' | 'healthy';
+  score: number; isAnomalous: boolean;
+}
+export interface GraphVisualizationData { nodes: GraphVizNode[]; edges: Array<{ source: string; target: string; weight: number; directed: boolean }>; }
+
+export interface TimeSeriesDataPoint { ts: number; value: number; q10?: number; q90?: number; }
+export interface AnomalyRegion { start: number; end: number; severity: 'critical' | 'warning' | 'info'; rootCause?: string; }
+export interface TimeSeriesChartData { series: Array<{ name: string; data: TimeSeriesDataPoint[] }>; anomalyRegions: AnomalyRegion[]; }
+
+export interface RankingEntry { rank: number; name: string; score: number; confidence: number; evidence: ReadonlyArray<Evidence>; }
+export interface PropagationPath { root: string; path: string[]; score: number; }
+export interface RCARankingData { rootCauses: RankingEntry[]; propagationPaths: PropagationPath[]; }
