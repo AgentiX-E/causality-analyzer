@@ -33,3 +33,34 @@ describe('RemoteGraphStore', () => {
     await expect(store.saveGraph({ nodes: [], edges: [] }, { id: 'x', method: 'pc', computedAt: 0, parameters: {}, confidence: 0 })).rejects.toThrow('Not implemented');
   });
 });
+
+describe('RemoteRelationalStore full contract', () => {
+  let store: any;
+  beforeEach(async () => {
+    const { RemoteRelationalStore } = await import('../remote-relational-store.js');
+    store = new RemoteRelationalStore();
+  });
+
+  it('writeDetections accepts empty array', async () => { await store.writeDetections([]); });
+  it('saveCPT callable', async () => { await store.saveCPT('g', 'n', { node:'n', parents:[], entries:{} }); });
+  it('saveRegressionModel callable', async () => { await store.saveRegressionModel('g', 'n', { coefficients:[], intercept:0, residualStdDev:0 }); });
+  it('loadRegressionModel returns null', async () => { expect(await store.loadRegressionModel('g','n')).toBeNull(); });
+  it('saveRCAResult callable', async () => { await store.saveRCAResult('c', { rootCauses:[], paths:[], metadata:{method:'x',analyzedAt:1,durationMs:1,extra:{}}, toJSON:()=>({}) }); });
+  it('queryHistoricalResults returns empty', async () => { expect(await store.queryHistoricalResults({})).toEqual([]); });
+  it('beginTransaction callable', async () => { await store.beginTransaction('s'); });
+  it('commitTransaction callable', async () => { await store.commitTransaction('s'); });
+  it('rollbackToCheckpoint callable', async () => { await store.rollbackToCheckpoint('s','c'); });
+  it('setCheckpoint callable', async () => { await store.setCheckpoint('s','n'); });
+});
+
+describe('RemoteGraphStore full contract', () => {
+  let store: any;
+  beforeEach(async () => {
+    const { RemoteGraphStore } = await import('../remote-graph-store.js');
+    store = new RemoteGraphStore();
+  });
+
+  it('loadGraph returns null', async () => { expect(await store.loadGraph('x')).toBeNull(); });
+  it('listGraphVersions returns empty', async () => { expect(await store.listGraphVersions('x')).toEqual([]); });
+  it('findSimilarGraphs returns empty', async () => { expect(await store.findSimilarGraphs({nodes:[],edges:[]},5)).toEqual([]); });
+});

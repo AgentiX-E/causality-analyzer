@@ -174,3 +174,36 @@ describe('RELATIONAL_SCHEMA', () => {
     }
   });
 });
+
+// ── Additional edge cases ─────────────────────────────────────────
+describe('EmbedRelationalStore edge cases', () => {
+  it('beginTransaction+commitTransaction lifecycle', async () => {
+    const store = new EmbedRelationalStore();
+    await store.beginTransaction('s1');
+    await store.commitTransaction('s1');
+  });
+  
+  it('setCheckpoint+rollback lifecycle', async () => {
+    const store = new EmbedRelationalStore();
+    await store.beginTransaction('s2');
+    await store.setCheckpoint('s2', 'cp1');
+    await store.rollbackToCheckpoint('s2', 'cp1');
+  });
+
+  it('writeDetections with empty array', async () => {
+    const store = new EmbedRelationalStore();
+    await store.writeDetections([]);
+  });
+
+  it('readMetrics with start=end returns empty', async () => {
+    const store = new EmbedRelationalStore();
+    const result = await store.readMetrics({ start: 100, end: 100 });
+    expect(result.rowCount).toBe(0);
+  });
+
+  it('saveCPT then load different node returns null', async () => {
+    const store = new EmbedRelationalStore();
+    await store.saveCPT('g1', 'X', { node: 'X', parents: [], entries: { root: 0.5 } });
+    expect(await store.loadCPT('g1', 'Y')).toBeNull();
+  });
+});
