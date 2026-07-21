@@ -7,7 +7,8 @@
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "clean": "pnpm -r clean",
-    "build:ci": "pnpm run --filter @agentix-e/causality-analyzer-core build && pnpm run --filter @agentix-e/causality-analyzer-pipeline build"
+    "build:ci": "pnpm run --filter @agentix-e/causality-analyzer-core build && pnpm run --filter @agentix-e/causality-analyzer-pipeline build",
+    "docs": "typedoc"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
@@ -20,6 +21,7 @@
     "eslint": "^10.7.0",
     "playwright": "^1.61.1",
     "prettier": "^3.9.6",
+    "typedoc": "^0.28.20",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
   },

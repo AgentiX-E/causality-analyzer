@@ -1,0 +1,29 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": [
+    "packages/core/src/index.ts",
+    "packages/pipeline/src/index.ts",
+    "packages/storage-embed/src/index.ts",
+    "packages/storage-remote/src/index.ts",
+    "packages/visual/src/index.ts"
+  ],
+  "entryPointStrategy": "packages",
+  "out": "docs/api",
+  "name": "Causality Analyzer",
+  "includeVersion": true,
+  "readme": "README.md",
+  "plugin": [],
+  "navigation": {
+    "includeCategories": true,
+    "includeGroups": true
+  },
+  "categorizeByGroup": true,
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeInternal": true,
+  "githubPages": true,
+  "cleanOutputDir": true,
+  "validation": {
+    "notDocumented": true
+  }
+}
