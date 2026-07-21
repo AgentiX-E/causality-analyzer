@@ -40,13 +40,19 @@ export class VotingDetector {
   }
 
   private combine(results: DetectionResult[]): DetectionResult {
+    if (results.length === 0) return { isAnomalous: false, labels: new Float64Array(0), scores: new Float64Array(0), timestamp: Date.now(), metadata: { method: 'voting_empty' } };
+    const nLabels = results[0]!.labels.length;
+    if (results.some(r => r.labels.length !== nLabels)) {
+      throw new Error(`VotingDetector: all detectors must have the same label length (got ${[...new Set(results.map(r => r.labels.length))].join(', ')})`);
+    }
     const { strategy } = this.config;
     if (strategy === 'majority') {
       const nAnomalous = results.filter(r => r.isAnomalous).length;
       const threshold = this.config.minAgreement ?? Math.ceil(results.length / 2);
       const isAnomalous = nAnomalous >= threshold;
       const labels = new Float64Array(results[0]?.labels.length ?? 0);
-      for (let i = 0; i < labels.length; i++) {
+      const n = labels.length;
+      for (let i = 0; i < n; i++) {
         let votes = 0;
         for (const r of results) { if (r.labels[i] === 1) votes++; }
         labels[i] = votes >= threshold ? 1 : 0;

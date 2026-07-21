@@ -229,7 +229,7 @@ export class DAScorer {
       if (Math.abs(b.score - a.score) > 0.001) return b.score - a.score;
       return (nodeLayer.get(a.name) ?? 0) - (nodeLayer.get(b.name) ?? 0);
     });
-    results.forEach((r, i) => (r as { rank: number }).rank = i + 1);
+    results.forEach((r, i) => Object.assign(r, { rank: i + 1 }));
 
     return results;
   }
@@ -274,7 +274,8 @@ export class CIRCAPipeline {
   }
 
   analyze(anomalyData: number[][], anomalousNodes: string[]): RCAResult {
-    if (!this.graph) return { rootCauses: [], paths: [], metadata: { method: 'circa', analyzedAt: Date.now(), durationMs: 0, extra: {} }, toJSON() { return { rootCauses: [], paths: [] }; } };
+    const t0 = Date.now();
+    if (!this.graph) return { rootCauses: [], paths: [], metadata: { method: 'circa', analyzedAt: Date.now(), durationMs: Date.now() - t0, extra: {} }, toJSON() { return { rootCauses: [], paths: [] }; } };
 
     const rhtScores = this.rht.score(anomalyData);
     const rootCauses = this.da.adjust(this.graph, rhtScores);
@@ -293,7 +294,7 @@ export class CIRCAPipeline {
     return {
       rootCauses: rootCauses.slice(0, 5),
       paths,
-      metadata: { method: 'circa', analyzedAt: Date.now(), durationMs: 0, extra: {} },
+      metadata: { method: 'circa', analyzedAt: Date.now(), durationMs: Date.now() - t0, extra: {} },
       toJSON() { return { rootCauses, paths, metadata: this.metadata }; },
     };
   }

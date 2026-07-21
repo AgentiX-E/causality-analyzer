@@ -25,6 +25,9 @@ export class FusionAnalyzer {
     if (this.config.strategy === 'nested') {
       return this.nestedFuse(metricRCA, traceRCA, logRCA);
     }
+    if (this.config.strategy === 'voting') {
+      return this.votingFuse(metricRCA, traceRCA, logRCA);
+    }
     return this.weightedFuse(metricRCA, traceRCA, logRCA);
   }
 
@@ -75,9 +78,44 @@ export class FusionAnalyzer {
         rootCauses: combined.slice(0, 5),
         paths: metricRCA.paths,
         metadata: { method: 'fusion_nested', analyzedAt: Date.now(), durationMs: 0, extra: { strategy: 'nested' } },
-        toJSON() { return { rootCauses: combined, paths: metricRCA.paths, metadata: this.metadata }; },
+        toJSON() { return { rootCauses: this.rootCauses, paths: metricRCA.paths, metadata: this.metadata }; },
       };
     }
     return metricRCA ?? traceRCA ?? { rootCauses: [], paths: [], metadata: { method: 'fusion_empty', analyzedAt: Date.now(), durationMs: 0, extra: {} }, toJSON() { return {} as any; } };
+  }
+
+  /** Voting: majority vote across RCA methods, tie-breaking by score. */
+  private votingFuse(
+    metricRCA: RCAResult | null, traceRCA: RCAResult | null, logRCA?: RCAResult | null,
+  ): RCAResult {
+    const votes = new Map<string, { count: number; maxScore: number; maxConfidence: number; evidence: import('@agentix-e/causality-analyzer-core').Evidence[] }>();
+    const tally = (rca: RCAResult | null) => {
+      if (!rca) return;
+      for (const rc of rca.rootCauses) {
+        const cur = votes.get(rc.name) ?? { count: 0, maxScore: 0, maxConfidence: 0, evidence: [] };
+        cur.count++;
+        cur.maxScore = Math.max(cur.maxScore, rc.score);
+        cur.maxConfidence = Math.max(cur.maxConfidence, rc.confidence);
+        cur.evidence.push(...rc.evidence);
+        votes.set(rc.name, cur);
+      }
+    };
+    tally(metricRCA);
+    tally(traceRCA);
+    if (logRCA) tally(logRCA);
+
+    const rootCauses: RootCause[] = [];
+    for (const [name, v] of votes) {
+      rootCauses.push({ name, score: v.maxScore, confidence: v.maxConfidence, rank: 0, evidence: v.evidence });
+    }
+    rootCauses.sort((a, b) => b.score - a.score);
+    rootCauses.forEach((r, i) => Object.assign(r, { rank: i + 1 }));
+
+    return {
+      rootCauses: rootCauses.slice(0, 5),
+      paths: [...(metricRCA?.paths ?? []), ...(traceRCA?.paths ?? [])],
+      metadata: { method: 'fusion_voting', analyzedAt: Date.now(), durationMs: 0, extra: { strategy: 'voting' } },
+      toJSON() { return { rootCauses: this.rootCauses, paths: this.paths, metadata: this.metadata }; },
+    };
   }
 }

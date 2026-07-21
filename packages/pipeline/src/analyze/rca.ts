@@ -135,6 +135,18 @@ function shortestPath(g: CausalGraph, from: string, to: string): string[] {
 export class RandomWalkRCA {
   private graph: CausalGraph | null = null;
   private edgeWeights = new Map<string, number>();
+  private seed: number | null = null;
+
+  constructor(seed?: number) {
+    this.seed = seed ?? null;
+  }
+
+  /** Simple LCG for reproducible random numbers. */
+  private nextRand(): number {
+    if (this.seed == null) return Math.random();
+    this.seed = (this.seed * 1664525 + 1013904223) % 0x100000000;
+    return (this.seed >>> 0) / 0x100000000;
+  }
 
   train(graph: CausalGraph): void {
     this.graph = graph;
@@ -159,7 +171,7 @@ export class RandomWalkRCA {
           // Walk upstream (toward root causes)
           const candidates = parents.length > 0 ? parents : children;
           if (candidates.length === 0) break;
-          const next = candidates[Math.floor(Math.random() * candidates.length)]!;
+          const next = candidates[Math.floor(this.nextRand() * candidates.length)]!;
           visitCounts.set(next, (visitCounts.get(next) ?? 0) + 1);
           current = next;
         }
