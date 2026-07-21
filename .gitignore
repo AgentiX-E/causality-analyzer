@@ -3,3 +3,9 @@ dist/
 *.tsbuildinfo
 coverage/
 .vite/
+:memory:
+*.db
+*.db-wal
+*.db-shm
+causality-analyzer*.db
+causality-analyzer-graph*
