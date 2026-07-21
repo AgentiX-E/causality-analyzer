@@ -2,6 +2,23 @@ import { Client as PgClient } from 'pg';
 import type { IRelationalStore, MetricQuery, DetectionResult, ConditionalProbabilityTable, RegressionParams, RCAResult, ResultQuery, ColumnarTable, TableSchema } from '@agentix-e/causality-analyzer-core';
 import type { MtlsConfig } from './types.js';
 
+// ── PgClientLike — minimal pg.Client interface for instance DI ─────────
+
+/**
+ * Minimal interface satisfied by `pg.Client` and pg-mem adapters.
+ *
+ * When `config.client` is provided, the Store uses it directly
+ * (no new() call). When absent, the Store creates its own `pg.Client`
+ * from `connectionString` / `mtls` / `ssl` config.
+ */
+export interface PgClientLike {
+  connect(): Promise<void>;
+  query(sql: string, params?: unknown[]): Promise<{ rows: unknown[] }>;
+  end(): Promise<void>;
+}
+
+// ── DDL ────────────────────────────────────────────────────────────────
+
 const DDL = [
   "CREATE TABLE IF NOT EXISTS metrics (ts BIGINT NOT NULL, value REAL NOT NULL, metric_name TEXT NOT NULL, PRIMARY KEY (ts, metric_name))",
   "CREATE TABLE IF NOT EXISTS cpt (graph_id TEXT NOT NULL, node TEXT NOT NULL, parent_state TEXT NOT NULL, prob REAL NOT NULL, PRIMARY KEY (graph_id, node, parent_state))",
@@ -10,52 +27,72 @@ const DDL = [
   "CREATE TABLE IF NOT EXISTS analysis_state (session_id TEXT NOT NULL, stage TEXT NOT NULL, checkpoint_name TEXT, progress JSONB, PRIMARY KEY (session_id, checkpoint_name))",
 ];
 
+// ── Config ─────────────────────────────────────────────────────────────
+
 export interface RemoteRelationalConfig {
+  /**
+   * PostgreSQL connection string.
+   * Ignored when `client` is provided (client takes precedence).
+   */
   connectionString?: string;
   /**
-   * PEM-string-based mTLS configuration (shared with Bolt store).
-   * Builds the pg.Client `ssl` object: ca → ssl.ca, cert → ssl.cert, key → ssl.key.
-   * When provided, TLS is always enabled (default: true, rejectUnauthorized: true).
+   * PEM-string-based mTLS configuration.
+   * Ignored when `client` is provided.
    */
   mtls?: MtlsConfig;
   /**
-   * Raw pg TLS options for advanced scenarios (e.g. custom ciphers, SNI overrides).
-   * When both `mtls` and `ssl` are provided, `ssl` takes precedence for overlapping keys.
+   * Raw pg TLS options for advanced scenarios.
+   * When both `mtls` and `ssl` are provided, `ssl` takes precedence.
+   * Ignored when `client` is provided.
    */
   ssl?: boolean | Record<string, unknown>;
-  _Client?: new (...a: any[]) => any;
+  /**
+   * Pre-built PG client instance (pg.Client, pg-mem adapter, etc).
+   * When provided, connectionString / mtls / ssl are ignored —
+   * the Store uses this client as-is and calls connect() on it.
+   */
+  client?: PgClientLike;
 }
 
+// ── Config builder (pure, testable without PG) ─────────────────────────
+
+/**
+ * Build the pg.Client constructor options from config.
+ * Extracted for testability — no DB connection needed to validate.
+ */
+export function buildPgClientOpts(config: RemoteRelationalConfig): Record<string, unknown> {
+  const opts: Record<string, unknown> = config.connectionString
+    ? { connectionString: config.connectionString }
+    : {};
+
+  if (config.mtls) {
+    const sslObj: Record<string, unknown> = { rejectUnauthorized: true };
+    if (config.mtls.ca) sslObj.ca = config.mtls.ca;
+    sslObj.cert = config.mtls.cert;
+    sslObj.key = config.mtls.key;
+    if (config.mtls.passphrase) sslObj.passphrase = config.mtls.passphrase;
+    opts.ssl = config.ssl && typeof config.ssl === 'object'
+      ? { ...sslObj, ...config.ssl }
+      : sslObj;
+  } else if (config.ssl !== undefined) {
+    opts.ssl = config.ssl;
+  }
+
+  return opts;
+}
+
+// ── Store ──────────────────────────────────────────────────────────────
+
 export class RemoteRelationalStore implements IRelationalStore {
-  private client: any;
+  private client: PgClientLike;
   private _ready: Promise<void>;
 
   constructor(config: RemoteRelationalConfig = {}) {
-    const Ctor = config._Client || PgClient;
-
-    // Build client options
-    const opts: Record<string, unknown> = config.connectionString
-      ? { connectionString: config.connectionString }
-      : {};
-
-    // mTLS: build pg ssl object from MtlsConfig
-    if (config.mtls) {
-      const sslObj: Record<string, unknown> = {
-        rejectUnauthorized: true,
-      };
-      if (config.mtls.ca) sslObj.ca = config.mtls.ca;
-      sslObj.cert = config.mtls.cert;
-      sslObj.key = config.mtls.key;
-      if (config.mtls.passphrase) sslObj.passphrase = config.mtls.passphrase;
-      // Merge with explicit ssl overrides
-      opts.ssl = config.ssl && typeof config.ssl === 'object'
-        ? { ...sslObj, ...config.ssl }
-        : sslObj;
-    } else if (config.ssl !== undefined) {
-      opts.ssl = config.ssl;
+    if (config.client) {
+      this.client = config.client;
+    } else {
+      this.client = new PgClient(buildPgClientOpts(config));
     }
-
-    this.client = new Ctor(opts);
     this._ready = this._init();
   }
 
