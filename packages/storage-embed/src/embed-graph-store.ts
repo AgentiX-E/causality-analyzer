@@ -2,7 +2,7 @@ import { createRequire } from 'module';
 const _require = createRequire(import.meta.url);
 const { OverGraph } = _require('overgraph');
 import type { IGraphStore, CausalGraph, GraphMetadata, GraphVersion } from '@agentix-e/causality-analyzer-core';
-import { readFileSync, writeFileSync, existsSync, unlinkSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync } from 'fs';
 
 export interface EmbedGraphOptions {
   dbPath?: string;
@@ -23,7 +23,7 @@ export class EmbedGraphStore implements IGraphStore {
     const id = m.id;
     const v = (this.vers.get(id) ?? 0) + 1;
     this.vers.set(id, v);
-    const lid = `g${v}`; // graph version label
+    const lid = `g_${id}_v${v}`; // graph+version-specific label
     const nodeIds: Record<string, number> = {};
     for (const n of graph.nodes) {
       nodeIds[n] = this.g.upsertNode(lid, `${id}_${n}`, {});
@@ -37,22 +37,27 @@ export class EmbedGraphStore implements IGraphStore {
 
 
   async loadGraph(id: string): Promise<CausalGraph | null> {
+    const v = this.vers.get(id) ?? 0;
+    if (v === 0) return null;
+    return this._loadGraphByLabel(`g_${id}_v${v}`);
+  }
+
+  private _loadGraphByLabel(label: string): CausalGraph | null {
+    const result = this.g.getNodesByLabels(label);
     const nodes: string[] = [];
     const nodeMap = new Map<string, number>();
-    const labels = this.g.listNodeLabels();
-    for (const l of labels) {
-      if (!l.label.startsWith('g')) continue;
-      const result = this.g.getNodesByLabels(l.label);
-      for (const n of result) {
-        const k = n.key;
-        if (k && k.startsWith(id + '_')) {
-          const name = k.replace(id + '_', '');
-          nodes.push(name);
-          nodeMap.set(name, n.id);
-        }
-      }
+    for (const n of result) {
+      const k = n.key as string;
+      if (!k) continue;
+      // Key format: {graphId}_{nodeName}
+      const sep = k.indexOf('_');
+      if (sep === -1) continue;
+      const name = k.slice(sep + 1);
+      nodes.push(name);
+      nodeMap.set(name, n.id);
     }
     if (nodes.length === 0) return null;
+
     const edges: CausalGraph['edges'] = [];
     const edgeLabels = this.g.listEdgeLabels();
     for (const el of edgeLabels) {
@@ -69,8 +74,8 @@ export class EmbedGraphStore implements IGraphStore {
   }
 
 
-  async loadGraphVersion(id: string, _ver: number): Promise<CausalGraph | null> {
-    return this.loadGraph(id);
+  async loadGraphVersion(id: string, ver: number): Promise<CausalGraph | null> {
+    return this._loadGraphByLabel(`g_${id}_v${ver}`);
   }
 
   async listGraphVersions(id: string): Promise<GraphVersion[]> {

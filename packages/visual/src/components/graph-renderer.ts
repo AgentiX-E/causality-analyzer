@@ -80,18 +80,49 @@ export class Canvas2DRenderer implements GraphRenderer {
 
   private computeLayout(data: GraphVisualizationData, w: number, h: number): Map<string, { x: number; y: number }> {
     const layout = new Map<string, { x: number; y: number }>();
-    // Simple radial layout for DAG
-    const rootNodes = data.nodes.filter(n => n.type === 'root_cause');
-    const others = data.nodes.filter(n => n.type !== 'root_cause');
-    const allNodes = [...rootNodes, ...others];
+    const { nodes, edges } = data;
 
-    const cx = w / 2, cy = h / 2;
-    const maxR = Math.min(w, h) / 2 - 30;
-    allNodes.forEach((n: GraphVizNode, i: number) => {
-      const angle = (i / allNodes.length) * Math.PI * 2 - Math.PI / 2;
-      const r = i < rootNodes.length ? maxR * 0.3 : maxR * 0.7;
-      layout.set(n.id, { x: cx + Math.cos(angle) * r, y: cy + Math.sin(angle) * r });
-    });
+    // Build adjacency maps
+    const children = new Map<string, string[]>();
+    const parents = new Map<string, string[]>();
+    for (const n of nodes) { children.set(n.id, []); parents.set(n.id, []); }
+    for (const e of edges) {
+      children.get(e.source)?.push(e.target);
+      parents.get(e.target)?.push(e.source);
+    }
+
+    // BFS layered layout: source nodes at top, sinks at bottom
+    const layers: string[][] = [];
+    const assigned = new Set<string>();
+    let frontier = nodes.filter(n => (parents.get(n.id)?.length ?? 0) === 0);
+    if (frontier.length === 0) frontier = [nodes[0]!]; // fallback for disconnected graphs
+
+    while (frontier.length > 0) {
+      layers.push(frontier);
+      for (const n of frontier) assigned.add(n.id);
+      const next: string[] = [];
+      for (const n of frontier) {
+        for (const c of children.get(n.id) ?? []) {
+          if (!assigned.has(c) && !next.includes(c)) next.push(c);
+        }
+      }
+      frontier = next;
+    }
+
+    // Position nodes by layer
+    const pad = 40;
+    const layerH = layers.length > 1 ? (h - pad * 2) / (layers.length - 1) : h - pad * 2;
+    for (let li = 0; li < layers.length; li++) {
+      const ln = layers[li]!;
+      const layerW = ln.length > 1 ? (w - pad * 2) / (ln.length - 1) : w - pad * 2;
+      for (let ni = 0; ni < ln.length; ni++) {
+        const n = ln[ni]!;
+        layout.set(n.id, {
+          x: pad + layerW * (ln.length > 1 ? ni : 0),
+          y: pad + layerH * li,
+        });
+      }
+    }
     return layout;
   }
 

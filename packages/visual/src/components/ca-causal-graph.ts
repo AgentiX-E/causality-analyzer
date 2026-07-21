@@ -19,6 +19,7 @@ export class CaCausalGraph extends LitElement {
   @property({ type: Object }) data: GraphVisualizationData | null = null;
   @property({ type: Object }) renderer: GraphRenderer = new Canvas2DRenderer();
   @state() private _canvas: HTMLCanvasElement | null = null;
+  private _resizeObserver: ResizeObserver | null = null;
 
   override updated() {
     if (this._canvas && this.data) {
@@ -28,10 +29,10 @@ export class CaCausalGraph extends LitElement {
 
   override firstUpdated() {
     this._canvas = this.renderRoot.querySelector('canvas');
-    const observer = new ResizeObserver(() => {
+    this._resizeObserver = new ResizeObserver(() => {
       if (this._canvas && this.data) this.renderer.render(this._canvas, this.data, this._readTheme());
     });
-    if (this._canvas) observer.observe(this._canvas);
+    if (this._canvas) this._resizeObserver.observe(this._canvas);
   }
 
   override render() {
@@ -56,5 +57,10 @@ export class CaCausalGraph extends LitElement {
     };
   }
 
-  override disconnectedCallback() { super.disconnectedCallback(); this.renderer.dispose(); }
+  override disconnectedCallback() {
+    super.disconnectedCallback();
+    this._resizeObserver?.disconnect();
+    this._resizeObserver = null;
+    this.renderer.dispose();
+  }
 }

@@ -29,7 +29,7 @@ export class EmbedRelationalStore implements IRelationalStore {
     for (const ddl of Object.values(DDL)) this.db.exec(ddl);
 
     this.q.mInsert = this.db.prepare("INSERT OR REPLACE INTO metrics VALUES (?, ?, ?)");
-    this.q.mRead   = this.db.prepare("SELECT ts, value FROM metrics WHERE ts >= ? AND ts <= ? ORDER BY ts");
+    this.q.mRead   = this.db.prepare("SELECT ts, metric_name, value FROM metrics WHERE ts >= ? AND ts <= ? ORDER BY ts");
     this.q.cSave   = this.db.prepare("INSERT OR REPLACE INTO cpt VALUES (?, ?, ?, ?)");
     this.q.cLoad   = this.db.prepare("SELECT parent_state, prob FROM cpt WHERE graph_id = ? AND node = ? ORDER BY parent_state");
     this.q.rSave   = this.db.prepare("INSERT OR REPLACE INTO regression_models VALUES (?, ?, ?, ?, ?)");
@@ -42,11 +42,13 @@ export class EmbedRelationalStore implements IRelationalStore {
   private esc(s: string): string { return s.replace(/"/g, '""'); }
 
   async readMetrics<S extends TableSchema>(query: MetricQuery): Promise<ColumnarTable<S>> {
-    const rows = this.q.mRead.all(query.start, query.end) as Array<{ts:number;value:number}>;
+    const rows = this.q.mRead.all(query.start, query.end) as Array<{ts:number;metric_name:string;value:number}>;
+    const metricFilter = query.metrics ? new Set(query.metrics) : null;
+    const filtered = metricFilter ? rows.filter(r => metricFilter.has(r.metric_name)) : rows;
     const { ColumnarTable } = await import("@agentix-e/causality-analyzer-core");
     return ColumnarTable.fromColumnar({
-      ts: new Float64Array(rows.map(r=>r.ts)),
-      value: new Float64Array(rows.map(r=>r.value)),
+      ts: new Float64Array(filtered.map(r=>r.ts)),
+      value: new Float64Array(filtered.map(r=>r.value)),
     }) as any;
   }
   async writeDetections(d: DetectionResult[]): Promise<void> {
