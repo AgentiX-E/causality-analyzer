@@ -16,7 +16,7 @@
 </div></section>
 <div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">RemoteGraphConfig</span> <span class="tsd-signature-symbol">{</span><br/>    <a class="tsd-kind-property" href="#_driver">_Driver</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-keyword">new</span> <span class="tsd-signature-symbol">(</span><br/>        <span class="tsd-kind-parameter">url</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">auth</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">unknown</span><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">config</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Record</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">unknown</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-signature-symbol">)</span> <span class="tsd-signature-symbol">=&gt;</span> <span class="tsd-signature-type">DriverLike</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#auth">auth</a><span class="tsd-signature-symbol">?:</span> <a href="../types/_agentix-e_causality-analyzer-storage-remote.RemoteGraphAuth.html" class="tsd-signature-type tsd-kind-type-alias">RemoteGraphAuth</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#clientcertificate">clientCertificate</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">{</span><br/>        <span class="tsd-kind-property">certfile</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br/>        <span class="tsd-kind-property">keyfile</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br/>        <span class="tsd-kind-property">password</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br/>    <span class="tsd-signature-symbol">}</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#connectionacquisitiontimeout">connectionAcquisitionTimeout</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#connectionlivenesschecktimeout">connectionLivenessCheckTimeout</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#logger">logger</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">GraphLogger</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#maxconnectionlifetime">maxConnectionLifetime</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#maxpoolsize">maxPoolSize</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#maxretries">maxRetries</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#maxtransactionretrytime">maxTransactionRetryTime</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#mtls">mtls</a><span class="tsd-signature-symbol">?:</span> <a href="_agentix-e_causality-analyzer-storage-remote.MtlsConfig.html" class="tsd-signature-type tsd-kind-interface">MtlsConfig</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#retrybasems">retryBaseMs</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#trustedcertificates">trustedCertificates</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#truststrategy">trustStrategy</a><span class="tsd-signature-symbol">?:</span> <a href="../types/_agentix-e_causality-analyzer-storage-remote.TrustStrategy.html" class="tsd-signature-type tsd-kind-type-alias">TrustStrategy</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#uri">uri</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br/><span class="tsd-signature-symbol">}</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/7c9a84e890f72beb0b012226c5c7058c628d4023/packages/storage-remote/src/remote-graph-store.ts#L71">remote-graph-store.ts:71</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/storage-remote/src/remote-graph-store.ts#L71">remote-graph-store.ts:71</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-accordion" open><summary class="tsd-accordion-summary tsd-index-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
@@ -49,14 +49,14 @@
 <div class="tsd-comment tsd-typography"><p>Test DI: custom Driver constructor. Underscore = internal/DI only.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/7c9a84e890f72beb0b012226c5c7058c628d4023/packages/storage-remote/src/remote-graph-store.ts#L108">remote-graph-store.ts:108</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/storage-remote/src/remote-graph-store.ts#L108">remote-graph-store.ts:108</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="auth"><code class="tsd-tag">Optional</code><span>auth</span><a href="#auth" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">auth</span><span class="tsd-signature-symbol">?:</span> <a href="../types/_agentix-e_causality-analyzer-storage-remote.RemoteGraphAuth.html" class="tsd-signature-type tsd-kind-type-alias">RemoteGraphAuth</a></div>
 <div class="tsd-comment tsd-typography"><p>Auth credentials (default: basic neo4j/password).</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/7c9a84e890f72beb0b012226c5c7058c628d4023/packages/storage-remote/src/remote-graph-store.ts#L75">remote-graph-store.ts:75</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/storage-remote/src/remote-graph-store.ts#L75">remote-graph-store.ts:75</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="clientcertificate"><code class="tsd-tag">Optional</code><span>client<wbr/>Certificate</span><a href="#clientcertificate" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">clientCertificate</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">{</span> <span class="tsd-kind-property">certfile</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span> <span class="tsd-kind-property">keyfile</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span> <span class="tsd-kind-property">password</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">}</span></div>
@@ -64,56 +64,56 @@
 Prefer <code>mtls</code> (PEM-string-based) unless you specifically need file paths.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/7c9a84e890f72beb0b012226c5c7058c628d4023/packages/storage-remote/src/remote-graph-store.ts#L92">remote-graph-store.ts:92</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/storage-remote/src/remote-graph-store.ts#L92">remote-graph-store.ts:92</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="connectionacquisitiontimeout"><code class="tsd-tag">Optional</code><span>connection<wbr/>Acquisition<wbr/>Timeout</span><a href="#connectionacquisitiontimeout" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">connectionAcquisitionTimeout</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>Connection acquisition timeout in ms (default: 60_000).</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/7c9a84e890f72beb0b012226c5c7058c628d4023/packages/storage-remote/src/remote-graph-store.ts#L102">remote-graph-store.ts:102</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/storage-remote/src/remote-graph-store.ts#L102">remote-graph-store.ts:102</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="connectionlivenesschecktimeout"><code class="tsd-tag">Optional</code><span>connection<wbr/>Liveness<wbr/>Check<wbr/>Timeout</span><a href="#connectionlivenesschecktimeout" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">connectionLivenessCheckTimeout</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>Connection liveness check timeout in ms (default: 30_000).</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/7c9a84e890f72beb0b012226c5c7058c628d4023/packages/storage-remote/src/remote-graph-store.ts#L104">remote-graph-store.ts:104</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/storage-remote/src/remote-graph-store.ts#L104">remote-graph-store.ts:104</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="logger"><code class="tsd-tag">Optional</code><span>logger</span><a href="#logger" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">logger</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">GraphLogger</span></div>
 <div class="tsd-comment tsd-typography"><p>Structured logger (default: console-based).</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/7c9a84e890f72beb0b012226c5c7058c628d4023/packages/storage-remote/src/remote-graph-store.ts#L106">remote-graph-store.ts:106</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/storage-remote/src/remote-graph-store.ts#L106">remote-graph-store.ts:106</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="maxconnectionlifetime"><code class="tsd-tag">Optional</code><span>max<wbr/>Connection<wbr/>Lifetime</span><a href="#maxconnectionlifetime" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">maxConnectionLifetime</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>Max connection lifetime in ms (default: 3_600_000 = 1 hour).</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/7c9a84e890f72beb0b012226c5c7058c628d4023/packages/storage-remote/src/remote-graph-store.ts#L100">remote-graph-store.ts:100</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/storage-remote/src/remote-graph-store.ts#L100">remote-graph-store.ts:100</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="maxpoolsize"><code class="tsd-tag">Optional</code><span>max<wbr/>Pool<wbr/>Size</span><a href="#maxpoolsize" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">maxPoolSize</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>Connection pool size (default: 4).</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/7c9a84e890f72beb0b012226c5c7058c628d4023/packages/storage-remote/src/remote-graph-store.ts#L77">remote-graph-store.ts:77</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/storage-remote/src/remote-graph-store.ts#L77">remote-graph-store.ts:77</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="maxretries"><code class="tsd-tag">Optional</code><span>max<wbr/>Retries</span><a href="#maxretries" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">maxRetries</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>Retry attempts on transient failures (default: 3).</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/7c9a84e890f72beb0b012226c5c7058c628d4023/packages/storage-remote/src/remote-graph-store.ts#L81">remote-graph-store.ts:81</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/storage-remote/src/remote-graph-store.ts#L81">remote-graph-store.ts:81</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="maxtransactionretrytime"><code class="tsd-tag">Optional</code><span>max<wbr/>Transaction<wbr/>Retry<wbr/>Time</span><a href="#maxtransactionretrytime" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">maxTransactionRetryTime</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>Max transaction retry time in ms (default: 15000).</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/7c9a84e890f72beb0b012226c5c7058c628d4023/packages/storage-remote/src/remote-graph-store.ts#L79">remote-graph-store.ts:79</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/storage-remote/src/remote-graph-store.ts#L79">remote-graph-store.ts:79</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="mtls"><code class="tsd-tag">Optional</code><span>mtls</span><a href="#mtls" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">mtls</span><span class="tsd-signature-symbol">?:</span> <a href="_agentix-e_causality-analyzer-storage-remote.MtlsConfig.html" class="tsd-signature-type tsd-kind-interface">MtlsConfig</a></div>
@@ -122,35 +122,35 @@ When provided, PEM certs are written to temp files for the Bolt driver.
 Mutually exclusive with <code>clientCertificate</code>.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/7c9a84e890f72beb0b012226c5c7058c628d4023/packages/storage-remote/src/remote-graph-store.ts#L98">remote-graph-store.ts:98</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/storage-remote/src/remote-graph-store.ts#L98">remote-graph-store.ts:98</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="retrybasems"><code class="tsd-tag">Optional</code><span>retry<wbr/>Base<wbr/>Ms</span><a href="#retrybasems" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">retryBaseMs</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>Retry backoff base in ms (default: 100).</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/7c9a84e890f72beb0b012226c5c7058c628d4023/packages/storage-remote/src/remote-graph-store.ts#L83">remote-graph-store.ts:83</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/storage-remote/src/remote-graph-store.ts#L83">remote-graph-store.ts:83</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="trustedcertificates"><code class="tsd-tag">Optional</code><span>trusted<wbr/>Certificates</span><a href="#trustedcertificates" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">trustedCertificates</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span></div>
 <div class="tsd-comment tsd-typography"><p>PEM-encoded CA certificates for TRUST_CUSTOM_CA_SIGNED_CERTIFICATES.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/7c9a84e890f72beb0b012226c5c7058c628d4023/packages/storage-remote/src/remote-graph-store.ts#L87">remote-graph-store.ts:87</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/storage-remote/src/remote-graph-store.ts#L87">remote-graph-store.ts:87</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="truststrategy"><code class="tsd-tag">Optional</code><span>trust<wbr/>Strategy</span><a href="#truststrategy" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">trustStrategy</span><span class="tsd-signature-symbol">?:</span> <a href="../types/_agentix-e_causality-analyzer-storage-remote.TrustStrategy.html" class="tsd-signature-type tsd-kind-type-alias">TrustStrategy</a></div>
 <div class="tsd-comment tsd-typography"><p>TLS trust strategy (default: TRUST_SYSTEM_CA_SIGNED_CERTIFICATES).</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/7c9a84e890f72beb0b012226c5c7058c628d4023/packages/storage-remote/src/remote-graph-store.ts#L85">remote-graph-store.ts:85</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/storage-remote/src/remote-graph-store.ts#L85">remote-graph-store.ts:85</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="uri"><span>uri</span><a href="#uri" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">uri</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
 <div class="tsd-comment tsd-typography"><p>REQUIRED: Bolt URI, e.g. neo4j+s://host:7687. Throws if absent.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/7c9a84e890f72beb0b012226c5c7058c628d4023/packages/storage-remote/src/remote-graph-store.ts#L73">remote-graph-store.ts:73</a></li></ul></aside></section></section></details></div>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/storage-remote/src/remote-graph-store.ts#L73">remote-graph-store.ts:73</a></li></ul></aside></section></section></details></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">

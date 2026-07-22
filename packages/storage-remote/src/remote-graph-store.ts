@@ -309,14 +309,15 @@ export class RemoteGraphStore implements IGraphStore {
         const latestVer = verRec.records[0]?.get('latestVer') as number | null;
         if (latestVer == null) return null;
 
-        const [nl, el] = await Promise.all([
-          s.run('MATCH (n:Node { graphId: $id, version: $ver }) RETURN n.name ORDER BY n.name', { id: graphId, ver: latestVer }),
-          s.run(
-            `MATCH (a:Node { graphId: $id, version: $ver })-[r:DEPENDS_ON]->(b:Node { graphId: $id, version: $ver })
-             RETURN a.name as source, b.name as target, r.weight as weight, r.directed as directed`,
-            { id: graphId, ver: latestVer },
-          ),
-        ]);
+        // Sequential: neo4j-driver v6 does not allow concurrent session.run() calls
+        const nl = await s.run(
+          'MATCH (n:Node { graphId: $id, version: $ver }) RETURN n.name ORDER BY n.name', { id: graphId, ver: latestVer },
+        );
+        const el = await s.run(
+          `MATCH (a:Node { graphId: $id, version: $ver })-[r:DEPENDS_ON]->(b:Node { graphId: $id, version: $ver })
+           RETURN a.name as source, b.name as target, r.weight as weight, r.directed as directed`,
+          { id: graphId, ver: latestVer },
+        );
 
         const nodes = nl.records.map((r: RecordLike) => r.get('n.name') as string);
         if (nodes.length === 0) return null;
@@ -337,14 +338,15 @@ export class RemoteGraphStore implements IGraphStore {
     return this.retry(async () => {
       const s = this.driver.session({ defaultAccessMode: 'READ' });
       try {
-        const [nl, el] = await Promise.all([
-          s.run('MATCH (n:Node { graphId: $id, version: $ver }) RETURN n.name ORDER BY n.name', { id: graphId, ver }),
-          s.run(
-            `MATCH (a:Node { graphId: $id, version: $ver })-[r:DEPENDS_ON]->(b:Node { graphId: $id, version: $ver })
-             RETURN a.name as source, b.name as target, r.weight as weight, r.directed as directed`,
-            { id: graphId, ver },
-          ),
-        ]);
+        // Sequential: neo4j-driver v6 does not allow concurrent s.run() on same session
+        const nl = await s.run(
+          'MATCH (n:Node { graphId: $id, version: $ver }) RETURN n.name ORDER BY n.name', { id: graphId, ver },
+        );
+        const el = await s.run(
+          `MATCH (a:Node { graphId: $id, version: $ver })-[r:DEPENDS_ON]->(b:Node { graphId: $id, version: $ver })
+           RETURN a.name as source, b.name as target, r.weight as weight, r.directed as directed`,
+          { id: graphId, ver },
+        );
 
         const nodes = nl.records.map((r: RecordLike) => r.get('n.name') as string);
         if (nodes.length === 0) return null;
