@@ -19,3 +19,10 @@ export {
   estimatePSMatching,
   estimateDoublyRobust,
 } from './effect-estimation.js';
+
+// Sensitivity + do-calculus (I13)
+export {
+  eValueSensitivity, partialRSensitivity, robustnessValue,
+} from './sensitivity.js';
+export { identifyByDoCalculus } from './do-calculus.js';
+export type { DoCalculusResult } from './do-calculus.js';
