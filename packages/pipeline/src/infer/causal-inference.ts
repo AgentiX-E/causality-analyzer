@@ -257,8 +257,6 @@ function shuffle<T>(arr: T[], rng: () => number): T[] {
   }
   return a;
 }
-  return a;
-}
 
 // ── CausalAnalysis Main Class ──────────────────────────────────────────
 
