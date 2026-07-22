@@ -11,7 +11,6 @@
 import type { ColumnarTable, TableSchema } from '../table/index.js';
 import type {
   ConditionalProbabilityTable,
-  CausalEdge,
   CausalGraph,
   DetectionResult,
   GraphMetadata,

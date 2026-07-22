@@ -8,7 +8,7 @@
  * @packageDocumentation
  */
 
-import { z, type ZodType, type ZodTypeDef } from 'zod';
+import type { ZodType, ZodTypeDef } from 'zod';
 
 /** Result of a configuration validation */
 export interface ValidationResult {
