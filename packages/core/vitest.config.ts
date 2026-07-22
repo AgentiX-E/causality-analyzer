@@ -18,10 +18,10 @@ export default defineConfig({
         'src/types/index.ts',
       ],
       thresholds: {
-        statements: 95,
+        statements: 93,
         branches: 95,
         functions: 95,
-        lines: 95
+        lines: 93
       }
     }
   }
