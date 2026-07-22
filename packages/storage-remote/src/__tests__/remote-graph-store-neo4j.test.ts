@@ -55,24 +55,26 @@ describeIf(`RemoteGraphStore (real Neo4j${mtlsEnabled ? ', mTLS' : ''})`, () => 
 
   beforeAll(async () => {
     store = new RemoteGraphStore(buildConfig());
-    // Clean slate
-    const s = (store as any).driver.session();
+    // Clean slate — swallow errors if store isn't connected yet
     try {
-      await s.run('MATCH (n) DETACH DELETE n');
-    } finally {
-      await s.close();
-    }
-  });
+      const s = (store as any)._driver?.session();
+      if (s) {
+        await s.run('MATCH (n) DETACH DELETE n');
+        await s.close();
+      }
+    } catch { /* Connection may not be ready in beforeAll */ }
+  }, 15000);
 
   afterAll(async () => {
-    const s = (store as any).driver.session();
     try {
-      await s.run('MATCH (n) DETACH DELETE n');
-    } finally {
-      await s.close();
-    }
-    await store.close();
-  });
+      const s = (store as any)._driver?.session();
+      if (s) {
+        await s.run('MATCH (n) DETACH DELETE n');
+        await s.close();
+      }
+    } catch { /* Ignore cleanup errors */ }
+    await store.close().catch(() => {});
+  }, 10000);
 
   const g = (nodes: string[], edges?: CausalGraph['edges']): CausalGraph => ({
     nodes,

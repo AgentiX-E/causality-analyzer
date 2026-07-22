@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { solveLinear, normalTail, normalCDF, normalCDFTail, erf } from '../math.js';
+import { solveLinear, normalTail, normalCDF, normalCDFTail, erf, colMean, createRNG } from '../math.js';
 
 // ── solveLinear ─────────────────────────────────────────────────────
 
@@ -166,5 +166,60 @@ describe('erf', () => {
       const fromErf = 0.5 * (1 + erf(x / Math.SQRT2));
       expect(fromErf).toBeCloseTo(normalCDF(x), 6);
     }
+  });
+});
+
+// ── colMean ─────────────────────────────────────────────────────────
+
+describe('colMean', () => {
+  it('computes column mean', () => {
+    expect(colMean([[1], [2], [3]], 0)).toBeCloseTo(2);
+  });
+
+  it('handles NaN values by skipping', () => {
+    expect(colMean([[1], [NaN], [3]], 0)).toBeCloseTo(2);
+  });
+
+  it('handles null/undefined values', () => {
+    const data: number[][] = [[1], [undefined as any], [3]];
+    expect(colMean(data, 0)).toBeCloseTo(2);
+  });
+
+  it('returns 0 for empty data', () => {
+    expect(colMean([], 0)).toBe(0);
+  });
+
+  it('handles multiple columns', () => {
+    expect(colMean([[1, 10], [2, 20], [3, 30]], 1)).toBeCloseTo(20);
+  });
+});
+
+// ── createRNG ───────────────────────────────────────────────────────
+
+describe('createRNG', () => {
+  it('produces values in [0,1]', () => {
+    const rng = createRNG(42);
+    for (let i = 0; i < 100; i++) {
+      const v = rng();
+      expect(v).toBeGreaterThanOrEqual(0);
+      expect(v).toBeLessThan(1);
+    }
+  });
+
+  it('is deterministic with seed', () => {
+    const a = createRNG(42);
+    const b = createRNG(42);
+    for (let i = 0; i < 20; i++) expect(a()).toBe(b());
+  });
+
+  it('different seeds produce different sequences', () => {
+    const a = createRNG(42)();
+    const b = createRNG(99)();
+    expect(a).not.toBe(b);
+  });
+
+  it('null seed uses Math.random', () => {
+    const rng = createRNG(null);
+    expect(typeof rng()).toBe('number');
   });
 });

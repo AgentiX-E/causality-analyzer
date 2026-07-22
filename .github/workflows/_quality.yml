@@ -164,14 +164,24 @@ jobs:
             -e NEO4J_ACCEPT_LICENSE_AGREEMENT=yes \
             neo4j:5-community
 
-          # Wait for Neo4j to be ready
-          for i in $(seq 1 30); do
+          # Wait for Neo4j to be ready (log message + Bolt port)
+          READY=0
+          for i in $(seq 1 45); do
             if docker logs neo4j-mtls 2>&1 | grep -q "Started"; then
-              echo "Neo4j ready after ${i}s"
-              exit 0
+              # Verify Bolt port is accepting connections
+              if timeout 3 bash -c "echo >/dev/tcp/localhost/7687" 2>/dev/null; then
+                echo "Neo4j ready after ${i}s (Bolt port open)"
+                READY=1
+                break
+              fi
             fi
             sleep 2
           done
+          if [ "$READY" -ne 1 ]; then
+            echo "Neo4j failed to start within 90s"
+            docker logs neo4j-mtls 2>&1 | tail -20
+            exit 1
+          fi
           echo "Neo4j failed to start"
           docker logs neo4j-mtls
           exit 1
