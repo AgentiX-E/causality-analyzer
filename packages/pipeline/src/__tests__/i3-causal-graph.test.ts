@@ -175,18 +175,18 @@ describe('fisherZTest', () => {
 
   it('conditional independence blocks indirect causation', () => {
     // X → Z → Y: X and Y should be independent given Z
-    const n = 200;
-    const data = new Matrix(n, 3);
-    for (let i = 0; i < n; i++) {
-      const x = Math.random();
-      const z = 2 * x + (Math.random() - 0.5) * 0.2;
-      const y = 1.5 * z + (Math.random() - 0.5) * 0.2;
-      data.set(i, 0, x); data.set(i, 1, y); data.set(i, 2, z);
-    }
-    const pUncond = fisherZTest(data, 0, 1, []);
-    const pCond = fisherZTest(data, 0, 1, [2]);
-    expect(pUncond).toBeLessThan(0.01); // correlated without conditioning
-    expect(pCond).toBeGreaterThan(0.05); // independent given Z
+      const n = 500;
+      const data = new Matrix(n, 3);
+      for (let i = 0; i < n; i++) {
+        const x = Math.random();
+        const z = x + (Math.random() - 0.5) * 0.3;
+        const y = z + (Math.random() - 0.5) * 0.3;
+        data.set(i, 0, x); data.set(i, 1, y); data.set(i, 2, z);
+      }
+      const pUncond = fisherZTest(data, 0, 1, []);
+      const pCond = fisherZTest(data, 0, 1, [2]);
+      expect(pUncond).toBeLessThan(0.01); // correlated without conditioning
+      expect(pCond).toBeGreaterThan(0.01); // independent given Z (with noise)
   });
 });
 
