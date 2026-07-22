@@ -1,20 +1,63 @@
 # Causality Analyzer
 
-> A production-grade causal AI platform for AIOps — causal discovery, root cause analysis, effect estimation, counterfactual reasoning, and visualization in pure TypeScript.
+> An embeddable causal AI library for Node.js — modular TypeScript packages for anomaly detection, causal discovery, root cause analysis, effect estimation, counterfactual reasoning, and visualization. Bring your own data, storage, and frontend.
 
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![CI](https://github.com/AgentiX-E/causality-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/AgentiX-E/causality-analyzer/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/badge/coverage-report-blue)](https://agentix-e.github.io/causality-analyzer/coverage/)
 
-## Overview
+## What Is This?
 
-Causality Analyzer combines a complete causal inference stack with AIOps-specific root cause analysis pipelines. It answers three critical questions for incident response:
+Causality Analyzer is **not a standalone application** — it is a collection of embeddable npm packages you integrate into your own Node.js or TypeScript project. Each package is independently installable, so you only pull in what you need.
 
-1. **What happened?** — Anomaly detection across metrics, traces, and logs
-2. **Why did it happen?** — Causal discovery + root cause analysis with confidence intervals
-3. **What if?** — Counterfactual reasoning and intervention simulation
+| Your Use Case | Packages You Need |
+|---------------|-------------------|
+| Add anomaly detection to a monitoring pipeline | `core` + `pipeline` |
+| Discover causal graphs from metric data | `core` + `pipeline` |
+| Run root cause analysis during incidents | `core` + `pipeline` |
+| Persist results to a database | `core` + `storage-embed` or `storage-remote` |
+| Render causal graphs in a browser dashboard | `core` + `pipeline` + `visual` |
+| Full-stack AIOps causality platform | all 5 packages |
 
-Built as a pnpm monorepo with dependency injection, it supports embedded storage (SQLite + OverGraph) and remote storage (PostgreSQL + Neo4j) with full mTLS for enterprise deployments.
+## Who Is This For?
+
+**SRE / Platform Engineers** — add causal RCA to your incident response workflow. Drop in `pipeline` alongside your existing monitoring, call `BayesianRCA.findRootCauses()` when anomalies fire.
+
+**Data Scientists** — discover causal structure from observational data using PC/FCI algorithms, estimate treatment effects with backdoor/IV/PS/DR, run sensitivity analysis to quantify confidence.
+
+**Frontend Developers** — render causal graphs and time-series anomaly charts using framework-agnostic Web Components (`<ca-causal-graph>`, `<ca-time-series>`, `<ca-root-cause-ranking>`).
+
+**Enterprise Architects** — deploy with full mTLS on PostgreSQL + Neo4j, deterministic reproducibility for audit trails, CI-verified quality gates (lint → typecheck → test → browser → Neo4j mTLS).
+
+## For Beginners: Your First 5 Minutes
+
+```bash
+npm install @agentix-e/causality-analyzer-core @agentix-e/causality-analyzer-pipeline
+```
+
+```typescript
+import { CausalGraph, BayesianRCA } from '@agentix-e/causality-analyzer-pipeline';
+import { Matrix } from 'ml-matrix';
+
+// 1. Define your system topology
+const graph = new CausalGraph(['Memory', 'CPU', 'Latency']);
+graph.addEdge('Memory', 'CPU');
+graph.addEdge('CPU', 'Latency');
+
+// 2. Load your metric data
+const data = new Matrix(100, 3);
+// ... fill with your actual metrics ...
+
+// 3. Find the root cause
+const rca = new BayesianRCA();
+rca.train(graph, new Set(['CPU', 'Latency']), data);
+const result = rca.findRootCauses(['CPU', 'Latency']);
+
+console.log(`Root cause: ${result.rootCauses[0].name}`);     // "Memory"
+console.log(`Confidence: ${result.rootCauses[0].score}`);    // posterior probability
+```
+
+That's it. No server, no config file, no database required. You're doing causal root cause analysis in 3 steps.
 
 ## Architecture
 
