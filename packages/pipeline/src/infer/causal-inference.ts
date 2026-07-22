@@ -282,8 +282,8 @@ export class CausalAnalysis {
 
   identify(): IdentifiedEstimand | null {
     if (!this.graph) return null;
-    const treatment = [...this.nodeMap.entries()].find(([, i]) => i === this.treatmentIdx)?.[0]!;
-    const outcome = [...this.nodeMap.entries()].find(([, i]) => i === this.outcomeIdx)?.[0]!;
+    const treatment = [...this.nodeMap.entries()].find(([, i]) => i === this.treatmentIdx)?.[0] ?? '';
+    const outcome = [...this.nodeMap.entries()].find(([, i]) => i === this.outcomeIdx)?.[0] ?? '';
     return identifyBackdoor(this.graph, treatment, outcome);
   }
 
