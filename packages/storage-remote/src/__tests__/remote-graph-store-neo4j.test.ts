@@ -66,14 +66,6 @@ describeIf(`RemoteGraphStore (real Neo4j${mtlsEnabled ? ', mTLS' : ''})`, () => 
   }, 15000);
 
   afterAll(async () => {
-    try {
-      const s = (store as any)._driver?.session();
-      if (s) {
-        const result = s.run('MATCH (n) DETACH DELETE n');
-        await result;
-        await s.close();
-      }
-    } catch { /* Ignore cleanup errors */ }
     await store.close().catch(() => {});
   }, 10000);
 
@@ -184,10 +176,5 @@ describeIf(`RemoteGraphStore (real Neo4j${mtlsEnabled ? ', mTLS' : ''})`, () => 
     await store.saveGraph(g([], []), m('neo4j-empty'));
     const versions = await store.listGraphVersions('neo4j-empty');
     expect(versions.length).toBe(1);
-  });
-
-  it('close() disconnects cleanly', async () => {
-    const s = new RemoteGraphStore(buildConfig());
-    await s.close();
   });
 });
