@@ -181,3 +181,44 @@ const result = circa.analyze(anomalyData, ['Latency']);
 | Multiple methods disagree → consensus | `FusionAnalyzer` |
 
 [← Back to User Guide](../user-guide.md)
+
+---
+
+## FusionAnalyzer
+
+**Family:** Ensemble / Multi-modal fusion
+
+Combines RCA results from multiple modalities (metric, trace, log) into a single consolidated analysis. Three strategies available for different use cases.
+
+### Strategies
+
+| Strategy | Behavior | Best For |
+|----------|----------|----------|
+| `weighted` | Weighted average by modality confidence | Balanced integration with domain weights |
+| `nested` | Metric RCA defines scope → Trace RCA refines within scope | Hierarchical analysis (coarse → fine) |
+| `voting` | Majority vote across modalities | Conservative — requires cross-modal agreement |
+
+### Scenario: Combine Metric + Trace RCA
+
+```typescript
+import { FusionAnalyzer } from '@agentix-e/causality-analyzer-pipeline';
+
+const fusion = new FusionAnalyzer({
+  strategy: 'weighted',
+  weights: { metric: 0.5, trace: 0.35, log: 0.15 },
+});
+
+const consolidated = fusion.fuse(metricRCA, traceRCA, logRCA);
+console.log(consolidated.rootCauses); // Top-5 across all modalities
+```
+
+### When to Use Each Strategy
+
+| Situation | Strategy |
+|-----------|----------|
+| All modalities equally reliable | `weighted` with equal weights |
+| Metric RCA is more trustworthy | `weighted` with high metric weight |
+| Want fine-grained trace analysis within metric scope | `nested` |
+| Require consensus across modalities | `voting` |
+
+[← Back to User Guide](../user-guide.md)

@@ -41,85 +41,85 @@ See the [Algorithm Reference](#algorithm-reference) for detailed documentation o
 
 | Scenario | Algorithm | Reference |
 |----------|-----------|-----------|
-| Normally distributed metrics | StatsDetector (`zscore`) | [StatsDetector →](../algorithms/anomaly-detection.md#statsdetector) |
-| Metrics with occasional spikes | StatsDetector (`mad`) | [StatsDetector →](../algorithms/anomaly-detection.md#statsdetector) |
-| Non-parametric, any distribution | StatsDetector (`iqr`) | [StatsDetector →](../algorithms/anomaly-detection.md#statsdetector) |
-| Periodic/seasonal patterns | SpectralResidualDetector | [SpectralResidual →](../algorithms/anomaly-detection.md#spectralresidualdetector) |
-| Rare extreme events (P99.9+) | SPOT / DSPOT | [SPOT/DSPOT →](../algorithms/anomaly-detection.md#spotdetector--dspotdetector) |
-| Ensemble consensus | VotingDetector | [VotingDetector →](../algorithms/anomaly-detection.md#votingdetector) |
+| Normally distributed metrics | StatsDetector (`zscore`) | [StatsDetector →](../reference/anomaly-detection.md#statsdetector) |
+| Metrics with occasional spikes | StatsDetector (`mad`) | [StatsDetector →](../reference/anomaly-detection.md#statsdetector) |
+| Non-parametric, any distribution | StatsDetector (`iqr`) | [StatsDetector →](../reference/anomaly-detection.md#statsdetector) |
+| Periodic/seasonal patterns | SpectralResidualDetector | [SpectralResidual →](../reference/anomaly-detection.md#spectralresidualdetector) |
+| Rare extreme events (P99.9+) | SPOT / DSPOT | [SPOT/DSPOT →](../reference/anomaly-detection.md#spotdetector--dspotdetector) |
+| Ensemble consensus | VotingDetector | [VotingDetector →](../reference/anomaly-detection.md#votingdetector) |
 
 #### Causal Discovery
 
 | Scenario | Algorithm | Reference |
 |----------|-----------|-----------|
-| No prior causal graph | PC algorithm | [PC Algorithm →](../algorithms/causal-discovery.md#pc-algorithm) |
-| Suspected hidden confounders | FCI algorithm | [FCI Algorithm →](../algorithms/causal-discovery.md#fci-algorithm) |
-| Only care about one metric's causes | Targeted Discovery | [Targeted →](../algorithms/causal-discovery.md#targeted-discovery) |
-| Variable selection / feature importance | Grow-Shrink | [Grow-Shrink →](../algorithms/causal-discovery.md#grow-shrink) |
+| No prior causal graph | PC algorithm | [PC Algorithm →](../reference/causal-discovery.md#pc-algorithm) |
+| Suspected hidden confounders | FCI algorithm | [FCI Algorithm →](../reference/causal-discovery.md#fci-algorithm) |
+| Only care about one metric's causes | Targeted Discovery | [Targeted →](../reference/causal-discovery.md#targeted-discovery) |
+| Variable selection / feature importance | Grow-Shrink | [Grow-Shrink →](../reference/causal-discovery.md#grow-shrink) |
 
 #### Root Cause Analysis
 
 | Scenario | Algorithm | Reference |
 |----------|-----------|-----------|
-| Known graph + need probabilities | BayesianRCA | [BayesianRCA →](../algorithms/root-cause-analysis.md#bayesianrca) |
-| Known graph + need per-node z-scores | HTRCA | [HTRCA →](../algorithms/root-cause-analysis.md#htrca-hypothesis-testing-rca) |
-| Known graph + quick screening | RandomWalkRCA | [RandomWalkRCA →](../algorithms/root-cause-analysis.md#randomwalkrca) |
-| Trace data with anomaly patterns | FPGrowthRCA | [FPGrowthRCA →](../algorithms/root-cause-analysis.md#fpgrowthrca) |
-| Uncertain graph + topological correction | CIRCA | [CIRCA →](../algorithms/root-cause-analysis.md#circa-pipeline) |
+| Known graph + need probabilities | BayesianRCA | [BayesianRCA →](../reference/root-cause-analysis.md#bayesianrca) |
+| Known graph + need per-node z-scores | HTRCA | [HTRCA →](../reference/root-cause-analysis.md#htrca-hypothesis-testing-rca) |
+| Known graph + quick screening | RandomWalkRCA | [RandomWalkRCA →](../reference/root-cause-analysis.md#randomwalkrca) |
+| Trace data with anomaly patterns | FPGrowthRCA | [FPGrowthRCA →](../reference/root-cause-analysis.md#fpgrowthrca) |
+| Uncertain graph + topological correction | CIRCA | [CIRCA →](../reference/root-cause-analysis.md#circa-pipeline) |
 
 #### Effect Estimation
 
 | Scenario | Algorithm | Reference |
 |----------|-----------|-----------|
-| Can observe all confounders | Backdoor adjustment | [Backdoor →](../algorithms/effect-estimation.md#backdoor-adjustment) |
-| Observable mediator available | Frontdoor adjustment | [Frontdoor →](../algorithms/effect-estimation.md#frontdoor-adjustment) |
-| Valid instrument available | IV (2SLS) | [IV →](../algorithms/effect-estimation.md#instrumental-variables-2sls) |
-| Binary treatment + many covariates | Propensity Score Matching | [PSM →](../algorithms/effect-estimation.md#propensity-score-matching) |
-| Model specification uncertainty | Doubly Robust | [DR →](../algorithms/effect-estimation.md#doubly-robust) |
-| Unbalanced treatment groups | IPW | [IPW →](../algorithms/effect-estimation.md#ipw-inverse-probability-weighting) |
-| Per-instance heterogeneous effects | CATE | [CATE →](../algorithms/effect-estimation.md#cate-conditional-ate) |
+| Can observe all confounders | Backdoor adjustment | [Backdoor →](../reference/effect-estimation.md#backdoor-adjustment) |
+| Observable mediator available | Frontdoor adjustment | [Frontdoor →](../reference/effect-estimation.md#frontdoor-adjustment) |
+| Valid instrument available | IV (2SLS) | [IV →](../reference/effect-estimation.md#instrumental-variables-2sls) |
+| Binary treatment + many covariates | Propensity Score Matching | [PSM →](../reference/effect-estimation.md#propensity-score-matching) |
+| Model specification uncertainty | Doubly Robust | [DR →](../reference/effect-estimation.md#doubly-robust) |
+| Unbalanced treatment groups | IPW | [IPW →](../reference/effect-estimation.md#ipw-inverse-probability-weighting) |
+| Per-instance heterogeneous effects | CATE | [CATE →](../reference/effect-estimation.md#cate-conditional-ate) |
 
 #### Sensitivity & Validation
 
 | Scenario | Algorithm | Reference |
 |----------|-----------|-----------|
-| How strong must confounder be? | E-value | [E-value →](../algorithms/sensitivity-refutation.md#e-value-sensitivity) |
-| What variance must confounder explain? | Partial R² | [Partial R² →](../algorithms/sensitivity-refutation.md#partial-r²-sensitivity) |
-| Single-number robustness score | Robustness Value | [Robustness →](../algorithms/sensitivity-refutation.md#robustness-value) |
-| Validate causal graph against data | Graph Falsification | [Falsification →](../algorithms/model-evaluation.md#graph-falsification) |
-| Per-node Markov condition check | LMC Falsification | [LMC →](../algorithms/model-evaluation.md#graph-falsification) |
+| How strong must confounder be? | E-value | [E-value →](../reference/sensitivity-refutation.md#e-value-sensitivity) |
+| What variance must confounder explain? | Partial R² | [Partial R² →](../reference/sensitivity-refutation.md#partial-r²-sensitivity) |
+| Single-number robustness score | Robustness Value | [Robustness →](../reference/sensitivity-refutation.md#robustness-value) |
+| Validate causal graph against data | Graph Falsification | [Falsification →](../reference/model-evaluation.md#graph-falsification) |
+| Per-node Markov condition check | LMC Falsification | [LMC →](../reference/model-evaluation.md#graph-falsification) |
 
 #### Counterfactuals
 
 | Scenario | Algorithm | Reference |
 |----------|-----------|-----------|
-| "What would have happened if..." | SCM Counterfactual | [SCM →](../algorithms/counterfactuals.md#structural-causal-model-scm) |
-| Fair attribution of anomaly | Shapley RCA | [Shapley →](../algorithms/counterfactuals.md#shapley-anomaly-attribution) |
-| Deployment vs data drift | Mechanism Change | [Change →](../algorithms/counterfactuals.md#mechanism-change-detection) |
+| "What would have happened if..." | SCM Counterfactual | [SCM →](../reference/counterfactuals.md#structural-causal-model-scm) |
+| Fair attribution of anomaly | Shapley RCA | [Shapley →](../reference/counterfactuals.md#shapley-anomaly-attribution) |
+| Deployment vs data drift | Mechanism Change | [Change →](../reference/counterfactuals.md#mechanism-change-detection) |
 
 
 #### Data Preprocessing
 
 | Scenario | Algorithm | Reference |
 |----------|-----------|-----------|
-| Normalize metrics before causal discovery | standardize (zscore) | [Standardize →](../algorithms/data-preprocessing.md#standardization) |
-| Bin continuous values for CPT | discretize | [Discretize →](../algorithms/data-preprocessing.md#discretization) |
-| Fill missing metric values | imputeMean | [Impute →](../algorithms/data-preprocessing.md#imputation) |
-| Time-series sliding windows | extractWindows | [Windows →](../algorithms/data-preprocessing.md#windowing) |
+| Normalize metrics before causal discovery | standardize (zscore) | [Standardize →](../reference/data-preprocessing.md#standardization) |
+| Bin continuous values for CPT | discretize | [Discretize →](../reference/data-preprocessing.md#discretization) |
+| Fill missing metric values | imputeMean | [Impute →](../reference/data-preprocessing.md#imputation) |
+| Time-series sliding windows | extractWindows | [Windows →](../reference/data-preprocessing.md#windowing) |
 
 #### Identification & Mediation
 
 | Scenario | Algorithm | Reference |
 |----------|-----------|-----------|
-| General identifiability check | do-Calculus / ID algorithm | [do-Calculus →](../algorithms/effect-estimation.md#do-calculus-identification) |
-| Decompose direct vs indirect effects | Mediation (NDE/NIE) | [Mediation →](../algorithms/effect-estimation.md#mediation-analysis) |
-| Quantify edge causal flow | Arrow Strength | [Arrow →](../algorithms/effect-estimation.md#arrow-strength) |
+| General identifiability check | do-Calculus / ID algorithm | [do-Calculus →](../reference/effect-estimation.md#do-calculus-identification) |
+| Decompose direct vs indirect effects | Mediation (NDE/NIE) | [Mediation →](../reference/effect-estimation.md#mediation-analysis) |
+| Quantify edge causal flow | Arrow Strength | [Arrow →](../reference/effect-estimation.md#arrow-strength) |
 
 #### Fairness
 
 | Scenario | Algorithm | Reference |
 |----------|-----------|-----------|
-| Check if RCA is biased against a group | Counterfactual Fairness | [Fairness →](../algorithms/counterfactuals.md#counterfactual-fairness) |
+| Check if RCA is biased against a group | Counterfactual Fairness | [Fairness →](../reference/counterfactuals.md#counterfactual-fairness) |
 
 
 ---
@@ -808,12 +808,12 @@ Detailed algorithm documentation with theory, parameters, and scenario-based exa
 
 | Category | Document |
 |----------|----------|
-| Anomaly Detection | [StatsDetector, SpectralResidual, SPOT/DSPOT, VotingDetector](../algorithms/anomaly-detection.md) |
-| Causal Discovery | [PC, FCI, Targeted Discovery, Grow-Shrink](../algorithms/causal-discovery.md) |
-| Root Cause Analysis | [BayesianRCA, HTRCA, RandomWalkRCA, FPGrowthRCA, CIRCA](../algorithms/root-cause-analysis.md) |
-| Effect Estimation | [Backdoor, Frontdoor, IV, PS, DR, IPW, CATE](../algorithms/effect-estimation.md) |
-| Sensitivity & Refutation | [E-value, Partial R², Robustness, Refutation](../algorithms/sensitivity-refutation.md) |
-| Counterfactuals | [SCM, Shapley RCA, Mechanism Change](../algorithms/counterfactuals.md) |
-| Model Evaluation | [R², MSE, Falsification, Bootstrap CI, Feature Importance](../algorithms/model-evaluation.md) |
-| Data Preprocessing | [Standardize, Discretize, Impute, Windowing](../algorithms/data-preprocessing.md) |
+| Anomaly Detection | [StatsDetector, SpectralResidual, SPOT/DSPOT, VotingDetector](../reference/anomaly-detection.md) |
+| Causal Discovery | [PC, FCI, Targeted Discovery, Grow-Shrink](../reference/causal-discovery.md) |
+| Root Cause Analysis | [BayesianRCA, HTRCA, RandomWalkRCA, FPGrowthRCA, CIRCA](../reference/root-cause-analysis.md) |
+| Effect Estimation | [Backdoor, Frontdoor, IV, PS, DR, IPW, CATE](../reference/effect-estimation.md) |
+| Sensitivity & Refutation | [E-value, Partial R², Robustness, Refutation](../reference/sensitivity-refutation.md) |
+| Counterfactuals | [SCM, Shapley RCA, Mechanism Change](../reference/counterfactuals.md) |
+| Model Evaluation | [R², MSE, Falsification, Bootstrap CI, Feature Importance](../reference/model-evaluation.md) |
+| Data Preprocessing | [Standardize, Discretize, Impute, Windowing](../reference/data-preprocessing.md) |
 | Data Storage | [Embedded (SQLite/OverGraph), Remote (PostgreSQL/Neo4j), mTLS](../storage.md) |
