@@ -63,7 +63,6 @@ jobs:
       - run: pnpm rebuild --filter @agentix-e/causality-analyzer-storage-embed 2>/dev/null || true
       - run: pnpm run --filter @agentix-e/causality-analyzer-core build
       - run: pnpm -r test
-        continue-on-error: true
       - name: Collect coverage
         if: always()
         run: node scripts/merge-coverage.js
@@ -94,7 +93,6 @@ jobs:
       - run: pnpm run --filter @agentix-e/causality-analyzer-core build
       - run: npx playwright install chromium --with-deps
       - run: pnpm run --filter @agentix-e/causality-analyzer-visual browser-test
-        continue-on-error: true
 
   neo4j-test:
     needs: [build]
@@ -140,8 +138,13 @@ jobs:
           cp "$CERT_DIR/ca.crt" "$CERT_DIR/trusted/"
           echo "Certificates generated in $CERT_DIR"
 
-      - name: Start Neo4j with mTLS
+      - name: Start Neo4j with mTLS (skip if no Docker)
         run: |
+          if ! command -v docker &>/dev/null; then
+            echo "Docker not available — skipping Neo4j test"
+            echo "SKIP_NEO4J=true" >> "$GITHUB_ENV"
+            exit 0
+          fi
           CERT_DIR=/tmp/neo4j-mtls-certs
           cat > "$CERT_DIR/neo4j.conf" << 'NEO4JCONF'
           dbms.ssl.policy.bolt.enabled=true
@@ -174,8 +177,8 @@ jobs:
           exit 1
 
       - name: Run Neo4j integration tests (mTLS)
+        if: env.SKIP_NEO4J != 'true'
         run: pnpm run --filter @agentix-e/causality-analyzer-storage-remote test:neo4j
-        continue-on-error: true
         env:
           NEO4J_BOLT_URI: neo4j+s://localhost:7687
           NEO4J_USER: neo4j
