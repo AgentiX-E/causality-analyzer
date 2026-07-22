@@ -65,32 +65,7 @@ jobs:
       - run: pnpm -r test
       - name: Collect coverage
         if: always()
-        run: |
-          mkdir -p coverage
-          node -e "
-          const { readFileSync, existsSync, writeFileSync, mkdirSync } = await import('node:fs');
-          mkdirSync('coverage', { recursive: true });
-          let merged = { total: { lines: { pct: 0, total: 0, covered: 0 }, statements: { pct: 0, total: 0, covered: 0 }, functions: { pct: 0, total: 0, covered: 0 }, branches: { pct: 0, total: 0, covered: 0 } } };
-          const pkgs = ['core', 'pipeline', 'storage-embed', 'storage-remote', 'visual'];
-          for (const pkg of pkgs) {
-            const path = 'packages/' + pkg + '/coverage/coverage-summary.json';
-            if (existsSync(path)) {
-              const cov = JSON.parse(readFileSync(path, 'utf8'));
-              for (const key of Object.keys(cov.total)) {
-                if (merged.total[key]) {
-                  merged.total[key].total += cov.total[key].total || 0;
-                  merged.total[key].covered += cov.total[key].covered || 0;
-                }
-              }
-            }
-          }
-          for (const key of Object.keys(merged.total)) {
-            const t = merged.total[key];
-            t.pct = t.total > 0 ? Number((t.covered / t.total * 100).toFixed(2)) : 0;
-          }
-          writeFileSync('coverage/coverage-summary.json', JSON.stringify(merged, null, 2));
-          console.log('Coverage merged from ' + pkgs.length + ' packages');
-          "
+        run: node scripts/merge-coverage.js
       - name: Upload coverage artifact
         if: always()
         uses: actions/upload-artifact@v7
