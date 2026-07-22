@@ -56,13 +56,11 @@ describeIf(`RemoteGraphStore (real Neo4j${mtlsEnabled ? ', mTLS' : ''})`, () => 
   beforeAll(async () => {
     store = new RemoteGraphStore(buildConfig());
     try {
-      const s = (store as any)._driver?.session();
-      if (s) {
-        const result = s.run('MATCH (n) DETACH DELETE n');
-        await result;
-        await s.close();
+      const drv = (store as any)._driver;
+      if (drv?.executeQuery) {
+        await drv.executeQuery('MATCH (n) DETACH DELETE n', {}, { database: 'neo4j' });
       }
-    } catch { /* Connection may not be ready in beforeAll */ }
+    } catch { /* Connection may not be ready */ }
   }, 15000);
 
   afterAll(async () => {

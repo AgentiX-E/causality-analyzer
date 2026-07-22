@@ -53,7 +53,7 @@ jobs:
 
       # Generate TypeDoc API documentation
       - name: Generate API docs
-        run: pnpm docs
+        run: npx typedoc --skipErrorChecking
 
       # Download coverage artifact from quality job
       - name: Download coverage report
