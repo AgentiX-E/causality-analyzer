@@ -8,7 +8,8 @@
     "typecheck": "pnpm -r typecheck",
     "clean": "pnpm -r clean",
     "build:ci": "pnpm run --filter @agentix-e/causality-analyzer-core build && pnpm run --filter @agentix-e/causality-analyzer-pipeline build",
-    "docs": "BROWSER=none typedoc --skipErrorChecking"
+    "docs": "BROWSER=none typedoc --skipErrorChecking",
+    "prepare-pages": "node scripts/prepare-pages.cjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",

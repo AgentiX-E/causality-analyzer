@@ -6,11 +6,11 @@
  * artifacts have been collected into docs/.
  */
 
-import { readdirSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
+const fs = require('node:fs');
+const path = require('node:path');
 
 const DOCS_DIR = 'docs';
-mkdirSync(DOCS_DIR, { recursive: true });
+fs.mkdirSync(DOCS_DIR, { recursive: true });
 
 const pages = {
   'API Reference': { path: 'api/', description: 'TypeDoc-generated API documentation for all packages' },
@@ -18,23 +18,20 @@ const pages = {
   Coverage: { path: 'coverage/', description: 'Per-package coverage reports (Istanbul + v8)' },
 };
 
-// Copy user guide into docs/guide/ so Pages can serve it
-const guideDir = join(DOCS_DIR, 'guide');
-mkdirSync(guideDir, { recursive: true });
-if (existsSync('README.md')) {
-  writeFileSync(join(guideDir, 'index.html'), wrapMarkdownToHtml('README.md', 'Causality Analyzer — User Guide'));
-}
+// Copy user guide into docs/guide/
+const guideDir = path.join(DOCS_DIR, 'guide');
+fs.mkdirSync(guideDir, { recursive: true });
 
 // Generate root index.html
-const sections = Object.entries(pages).map(([title, { path, description }]) => {
-  const exists = existsSync(join(DOCS_DIR, path));
+const sections = Object.entries(pages).map(([title, { path: p, description }]) => {
+  const exists = fs.existsSync(path.join(DOCS_DIR, p));
   const badge = exists ? '✅' : '⏳';
-  const link = exists ? `<a href="${path}">${title}</a>` : title;
+  const link = exists ? `<a href="${p}">${title}</a>` : title;
   return `
     <div class="card">
       <h3>${badge} ${link}</h3>
       <p>${description}</p>
-      <p class="path"><code>/${path.replace(/\/$/, '')}</code></p>
+      <p class="path"><code>/${p.replace(/\/$/, '')}</code></p>
     </div>`;
 }).join('');
 
@@ -76,16 +73,6 @@ const html = `<!DOCTYPE html>
 </body>
 </html>`;
 
-writeFileSync(join(DOCS_DIR, 'index.html'), html);
+fs.writeFileSync(path.join(DOCS_DIR, 'index.html'), html);
 console.log('[prepare-pages] Root index.html generated');
-console.log(`[prepare-pages] Sections: ${Object.keys(pages).length}`);
-
-// ── Helpers ──────────────────────────────────────────────────────────
-
-function wrapMarkdownToHtml(mdPath, title) {
-  // Simple: wrap with basic HTML for GitHub Pages serving
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
-<title>${title}</title>
-<meta http-equiv="refresh" content="0;url=https://github.com/AgentiX-E/causality-analyzer">
-</head><body><p>See <a href="https://github.com/AgentiX-E/causality-analyzer">GitHub README</a> for documentation.</p></body></html>`;
-}
+console.log('[prepare-pages] Sections: ' + Object.keys(pages).length);

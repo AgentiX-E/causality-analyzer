@@ -65,7 +65,7 @@ jobs:
 
       # Build landing page with links to all artifacts
       - name: Prepare pages
-        run: node scripts/prepare-pages.js
+        run: node scripts/prepare-pages.cjs
 
       - name: Setup Pages
         uses: actions/configure-pages@v6
