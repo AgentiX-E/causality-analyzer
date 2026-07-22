@@ -4,7 +4,7 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![CI](https://github.com/AgentiX-E/causality-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/AgentiX-E/causality-analyzer/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-functions%2096%25-brightgreen)](https://github.com/AgentiX-E/causality-analyzer)
+[![Coverage](https://img.shields.io/badge/coverage-report-blue)](https://agentix-e.github.io/causality-analyzer/coverage/)
 
 ## Overview
 
@@ -235,18 +235,6 @@ pnpm docs
 ```
 
 CI runs on every PR: lint → typecheck → unit tests → browser tests → Neo4j mTLS integration tests.
-
-## Coverage
-
-| Package | Statements | Branches | Functions | Lines |
-|---------|-----------|----------|-----------|-------|
-| core | 98% | 97% | 100% | 98% |
-| pipeline | 95% | 83% | 96% | 95% |
-| storage-embed | 97% | 95% | 96% | 97% |
-| storage-remote | 90% | 82% | 75% | 90% |
-| visual | 48%* | 70%* | 70%* | 48%* |
-
-*Visual thresholds are lower because Lit framework decorators are not unit-testable.
 
 ## Documentation
 
