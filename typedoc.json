@@ -1,11 +1,11 @@
 {
   "$schema": "https://typedoc.org/schema.json",
   "entryPoints": [
-    "packages/core/src/index.ts",
-    "packages/pipeline/src/index.ts",
-    "packages/storage-embed/src/index.ts",
-    "packages/storage-remote/src/index.ts",
-    "packages/visual/src/index.ts"
+    "packages/core",
+    "packages/pipeline",
+    "packages/storage-embed",
+    "packages/storage-remote",
+    "packages/visual"
   ],
   "entryPointStrategy": "packages",
   "out": "docs/api",
