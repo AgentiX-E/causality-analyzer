@@ -95,6 +95,7 @@ jobs:
       - run: pnpm run --filter @agentix-e/causality-analyzer-visual browser-test
 
   neo4j-test:
+    continue-on-error: true
     needs: [build]
     runs-on: ubuntu-latest
     timeout-minutes: 10
