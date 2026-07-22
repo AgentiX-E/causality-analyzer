@@ -1,0 +1,77 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Stage 1 — Quality Gates (lint + typecheck + test + browser + neo4j)
+  # ═══════════════════════════════════════════════════════════════════════════
+  quality:
+    uses: ./.github/workflows/_quality.yml
+    with:
+      node_version: '22'
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Stage 2 — Publish npm Packages (OIDC)
+  # npm 10.x (bundled with Node 22) uses .npmrc authToken instead of
+  # OIDC token for the PUT to registry, causing E404 after successful
+  # provenance signing.  npm 11.x (Node 24) natively supports OIDC.
+  # ═══════════════════════════════════════════════════════════════════════════
+  publish-npm:
+    needs: [quality]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'pnpm'
+
+      - run: pnpm config set approve-builds true 2>/dev/null || true
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run --filter @agentix-e/causality-analyzer-core build
+
+      - name: Publish to npm (OIDC)
+        run: |
+          for pkg in core pipeline storage-embed storage-remote visual; do
+            cd "packages/${pkg}"
+            PKG_NAME=$(node -p "require('./package.json').name")
+            PKG_VER=$(node -p "require('./package.json').version")
+            if npm view "${PKG_NAME}@${PKG_VER}" version >/dev/null 2>&1; then
+              echo "⚠ ${PKG_NAME}@${PKG_VER} already published — skipping"
+              cd ../..
+              continue
+            fi
+            npm publish --access public --provenance
+            cd ../..
+          done
+
+      - name: npm publish summary
+        run: |
+          echo "### 📦 npm Packages Published" >> $GITHUB_STEP_SUMMARY
+          echo "| Package | Version |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|---------|" >> $GITHUB_STEP_SUMMARY
+          for pkg in packages/core packages/pipeline packages/storage-embed packages/storage-remote packages/visual; do
+            name=$(node -p "require('./${pkg}/package.json').name")
+            version=$(node -p "require('./${pkg}/package.json').version")
+            echo "| \`${name}\` | ${version} |" >> $GITHUB_STEP_SUMMARY
+          done
