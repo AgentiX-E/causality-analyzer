@@ -2,7 +2,8 @@
  * I3 tests: CausalGraph + PC algorithm + synthetic DAG recovery.
  */
 import { describe, it, expect } from 'vitest';
-import { createRNG } from '@agentix-e/causality-analyzer-core';
+import { Matrix } from 'ml-matrix';
+import { CausalGraph, pcAlgorithm, fisherZTest } from '../graph/index.js';
 import { CausalGraph } from '../graph/causal-graph.js';
 import { pcAlgorithm, fisherZTest } from '../graph/pc.js';
 
@@ -174,21 +175,19 @@ describe('fisherZTest', () => {
   });
 
   it('conditional independence blocks indirect causation', () => {
-    // X → Z → Y: X and Y should be independent given Z
-    // Use deterministic data to avoid CI flakiness
-    const n = 200;
-    const data = new Matrix(n, 3);
-    const rng = createRNG(42); // deterministic
-    for (let i = 0; i < n; i++) {
-      const x = rng();
-      const z = x + (rng() - 0.5) * 0.3;
-      const y = z + (rng() - 0.5) * 0.3;
-      data.set(i, 0, x); data.set(i, 1, y); data.set(i, 2, z);
-    }
+    // X → Z → Y: X and Y should be approximately independent given Z
+      const n = 300;
+      const data = new Matrix(n, 3);
+      for (let i = 0; i < n; i++) {
+        const x = Math.random();
+        const z = x + (Math.random() - 0.5) * 0.2;
+        const y = z * 0.8 + (Math.random() - 0.5) * 0.3;
+        data.set(i, 0, x); data.set(i, 1, y); data.set(i, 2, z);
+      }
       const pUncond = fisherZTest(data, 0, 1, []);
       const pCond = fisherZTest(data, 0, 1, [2]);
-      // Conditioning on Z should increase independence between X and Y
-      expect(pCond).toBeGreaterThan(pUncond);
+      // Conditioning on Z should substantially increase p-value
+      expect(pCond).toBeGreaterThan(pUncond * 2);
   });
 });
 
