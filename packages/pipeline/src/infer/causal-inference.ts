@@ -11,7 +11,7 @@
  */
 import { CausalGraph } from '../graph/causal-graph.js';
 import type { IdentifiedEstimand, CausalEstimate, CausalEdge } from '@agentix-e/causality-analyzer-core';
-import { solveLinear, normalTail } from '@agentix-e/causality-analyzer-core';
+import { solveLinear, normalTail, createRNG } from '@agentix-e/causality-analyzer-core';
 
 // ── Estimand Identification ────────────────────────────────────────────
 
@@ -177,14 +177,16 @@ export interface RefutationResult {
 export function refutePlaceboTreatment(
   data: number[][], treatmentIdx: number, outcomeIdx: number,
   nSimulations: number = 50,
+  seed?: number,
 ): RefutationResult {
+  const rng = createRNG(seed ?? null);
   const original = estimateLinearRegression(data, treatmentIdx, outcomeIdx);
   const nullEstimates: number[] = [];
 
   for (let s = 0; s < nSimulations; s++) {
     const scrambled = data.map(row => {
       const newRow = [...row];
-      const randIdx = Math.floor(Math.random() * data.length);
+      const randIdx = Math.floor(rng() * data.length);
       newRow[treatmentIdx] = data[randIdx]![treatmentIdx]!;
       return newRow;
     });
@@ -202,13 +204,15 @@ export function refutePlaceboTreatment(
 export function refuteDataSubset(
   data: number[][], treatmentIdx: number, outcomeIdx: number,
   subsetFraction: number = 0.8, nSimulations: number = 20,
+  seed?: number,
 ): RefutationResult {
+  const rng = createRNG(seed ?? null);
   const full = estimateLinearRegression(data, treatmentIdx, outcomeIdx);
   const estimates: number[] = [];
   const subsetSize = Math.floor(data.length * subsetFraction);
 
   for (let s = 0; s < nSimulations; s++) {
-    const subset = shuffle(data).slice(0, subsetSize);
+    const subset = shuffle(data, rng).slice(0, subsetSize);
     estimates.push(estimateLinearRegression(subset, treatmentIdx, outcomeIdx).ate);
   }
 
@@ -223,7 +227,9 @@ export function refuteDataSubset(
 export function refuteBootstrap(
   data: number[][], treatmentIdx: number, outcomeIdx: number,
   nBootstraps: number = 100,
+  seed?: number,
 ): RefutationResult {
+  const rng = createRNG(seed ?? null);
   const full = estimateLinearRegression(data, treatmentIdx, outcomeIdx);
   const estimates: number[] = [];
   const n = data.length;
@@ -231,7 +237,7 @@ export function refuteBootstrap(
   for (let b = 0; b < nBootstraps; b++) {
     const sample: number[][] = [];
     for (let i = 0; i < n; i++) {
-      sample.push(data[Math.floor(Math.random() * n)]!);
+      sample.push(data[Math.floor(rng() * n)]!);
     }
     estimates.push(estimateLinearRegression(sample, treatmentIdx, outcomeIdx).ate);
   }
@@ -243,12 +249,14 @@ export function refuteBootstrap(
   return { method: 'bootstrap', originalEstimate: full.ate, newEstimate: (ciLow + ciHigh) / 2, pValue: ciLow * ciHigh > 0 ? 0.01 : 0.5, isRobust };
 }
 
-function shuffle<T>(arr: T[]): T[] {
+function shuffle<T>(arr: T[], rng: () => number): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rng() * (i + 1));
     [a[i], a[j]] = [a[j]!, a[i]!];
   }
+  return a;
+}
   return a;
 }
 
