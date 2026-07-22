@@ -152,13 +152,11 @@ jobs:
 
       - name: Start Neo4j with mTLS
         run: |
-          if ! command -v docker &>/dev/null; then
-            echo "SKIP_NEO4J=true" >> "$GITHUB_ENV"
-            exit 0
-          fi
+          echo "=== Checking Docker ==="
+          docker version 2>&1 || { echo "DOCKER_UNAVAILABLE=true" >> "$GITHUB_ENV"; exit 0; }
           CERT_DIR=/tmp/neo4j-mtls-certs
-          # Clean up any leftover container
           docker rm -f neo4j-mtls 2>/dev/null || true
+          echo "=== Starting Neo4j container ==="
           docker run -d --name neo4j-mtls \
             -p 7687:7687 \
             -v "$CERT_DIR:/certs:ro" \
@@ -171,8 +169,7 @@ jobs:
             -e NEO4J_dbms_ssl_policy_bolt_private__key=server.key \
             -e NEO4J_dbms_ssl_policy_bolt_public__certificate=server.crt \
             -e NEO4J_dbms_ssl_policy_bolt_trusted__dir=/certs/trusted \
-            neo4j:community
-          echo "Neo4j container started, waiting for readiness..."
+            neo4j:community 2>&1 || { echo "docker run failed"; docker logs neo4j-mtls 2>&1 | tail -30; exit 1; }
 
           # Wait for Neo4j to be ready (log message + Bolt port)
           READY=0
@@ -194,7 +191,7 @@ jobs:
           fi
 
       - name: Run Neo4j integration tests (mTLS)
-        if: env.SKIP_NEO4J != 'true'
+        if: env.DOCKER_UNAVAILABLE != 'true'
         run: pnpm run --filter @agentix-e/causality-analyzer-storage-remote test:neo4j
         env:
           NEO4J_BOLT_URI: neo4j+s://localhost:7687
