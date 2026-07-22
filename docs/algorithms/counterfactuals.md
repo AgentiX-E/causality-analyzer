@@ -96,3 +96,44 @@ for (const c of changes) {
 - `changed=false`: No evidence of mechanism change (likely data drift, not deployment issue)
 
 [← Back to User Guide](../user-guide.md)
+
+---
+
+## Counterfactual Fairness
+
+**Reference:** Kusner et al. (NeurIPS 2017). *Counterfactual Fairness*
+
+Ensures that RCA decisions are fair across protected groups (teams, regions, instance types). A decision is counterfactually fair if it would have been the same had the protected attribute been different, given all other observed variables.
+
+### Scenario: Is the RCA biased against a specific team?
+
+```typescript
+import { checkFairness } from '@agentix-e/causality-analyzer-pipeline';
+
+const rootCauses = [
+  { name: 'team-a-svc1', score: 0.9 },
+  { name: 'team-a-svc2', score: 0.85 },
+  { name: 'team-b-svc1', score: 0.3 },
+  { name: 'team-b-svc2', score: 0.2 },
+];
+
+const protectedGroups = {
+  'team-a': ['team-a-svc1', 'team-a-svc2'],
+  'team-b': ['team-b-svc1', 'team-b-svc2'],
+};
+
+const fairness = checkFairness(rootCauses, protectedGroups);
+console.log(fairness.fair);           // false — significant disparity
+console.log(fairness.disparity);      // > 0.5 — team-a services scored much higher
+console.log(fairness.explanation);    // Human-readable fairness report
+```
+
+### Interpreting Results
+
+| disparity | Interpretation |
+|-----------|---------------|
+| < 0.2 | Fair — no significant score disparity |
+| 0.2–0.5 | Moderate — warrants investigation |
+| > 0.5 | High — possible systematic bias, review RCA methodology |
+
+[← Back to User Guide](../user-guide.md)

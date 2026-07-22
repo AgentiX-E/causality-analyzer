@@ -97,6 +97,31 @@ See the [Algorithm Reference](#algorithm-reference) for detailed documentation o
 | Fair attribution of anomaly | Shapley RCA | [Shapley →](../algorithms/counterfactuals.md#shapley-anomaly-attribution) |
 | Deployment vs data drift | Mechanism Change | [Change →](../algorithms/counterfactuals.md#mechanism-change-detection) |
 
+
+#### Data Preprocessing
+
+| Scenario | Algorithm | Reference |
+|----------|-----------|-----------|
+| Normalize metrics before causal discovery | standardize (zscore) | [Standardize →](../algorithms/data-preprocessing.md#standardization) |
+| Bin continuous values for CPT | discretize | [Discretize →](../algorithms/data-preprocessing.md#discretization) |
+| Fill missing metric values | imputeMean | [Impute →](../algorithms/data-preprocessing.md#imputation) |
+| Time-series sliding windows | extractWindows | [Windows →](../algorithms/data-preprocessing.md#windowing) |
+
+#### Identification & Mediation
+
+| Scenario | Algorithm | Reference |
+|----------|-----------|-----------|
+| General identifiability check | do-Calculus / ID algorithm | [do-Calculus →](../algorithms/effect-estimation.md#do-calculus-identification) |
+| Decompose direct vs indirect effects | Mediation (NDE/NIE) | [Mediation →](../algorithms/effect-estimation.md#mediation-analysis) |
+| Quantify edge causal flow | Arrow Strength | [Arrow →](../algorithms/effect-estimation.md#arrow-strength) |
+
+#### Fairness
+
+| Scenario | Algorithm | Reference |
+|----------|-----------|-----------|
+| Check if RCA is biased against a group | Counterfactual Fairness | [Fairness →](../algorithms/counterfactuals.md#counterfactual-fairness) |
+
+
 ---
 
 ## 2. Installation & Setup
@@ -790,4 +815,5 @@ Detailed algorithm documentation with theory, parameters, and scenario-based exa
 | Sensitivity & Refutation | [E-value, Partial R², Robustness, Refutation](../algorithms/sensitivity-refutation.md) |
 | Counterfactuals | [SCM, Shapley RCA, Mechanism Change](../algorithms/counterfactuals.md) |
 | Model Evaluation | [R², MSE, Falsification, Bootstrap CI, Feature Importance](../algorithms/model-evaluation.md) |
-| Data Storage | [Embedded (SQLite/OverGraph), Remote (PostgreSQL/Neo4j), mTLS](../algorithms/storage.md) |
+| Data Preprocessing | [Standardize, Discretize, Impute, Windowing](../algorithms/data-preprocessing.md) |
+| Data Storage | [Embedded (SQLite/OverGraph), Remote (PostgreSQL/Neo4j), mTLS](../storage.md) |

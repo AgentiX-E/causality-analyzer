@@ -171,3 +171,78 @@ const effectLowCPU = cateFn([0.1, 0.5]);   // low CPU pod
 | Need per-instance effects | CATE |
 
 [← Back to User Guide](../user-guide.md)
+
+---
+
+## do-Calculus Identification
+
+**Family:** Graph-theoretic  
+**Reference:** Pearl (1995). *Causal diagrams for empirical research*
+
+When backdoor, frontdoor, and IV all fail, do-calculus provides the most general framework for determining if an effect is identifiable. Applies Pearl's three rules systematically via the ID algorithm (Tian & Pearl 2002, Shpitser & Pearl 2006).
+
+### Scenario: General identifiability check
+
+```typescript
+import { identifyByDoCalculus } from '@agentix-e/causality-analyzer-pipeline';
+
+const result = identifyByDoCalculus(graph, 'Treatment', 'Outcome');
+console.log(result.identifiable);      // true / false
+console.log(result.expressionType);    // 'backdoor' | 'frontdoor' | 'id_algorithm'
+console.log(result.adjustmentSet);     // variables needed for estimation
+```
+
+### How It Works
+
+1. Check backdoor criterion → adjust if satisfied
+2. Check frontdoor criterion → identify via mediators
+3. Apply ID algorithm — recursive graph manipulation to find identifiable decomposition
+4. Return `not_identifiable` if no method succeeds
+
+---
+
+## Mediation Analysis
+
+**Family:** Path-specific effect decomposition  
+**Reference:** Baron & Kenny (1986), Pearl (2001)
+
+Decomposes the total causal effect into Natural Direct Effect (NDE) and Natural Indirect Effect (NIE) through a mediator.
+
+### NDE / NIE
+
+NDE = E[Y(x, M(x*)) − Y(x*, M(x*))]  
+NIE = E[Y(x, M(x)) − Y(x, M(x*))]
+
+### Scenario: How much of Memory's effect on Latency goes through CPU?
+
+```typescript
+import { naturalDirectEffect } from '@agentix-e/causality-analyzer-pipeline';
+
+const result = naturalDirectEffect(data, memoryIdx, latencyIdx, cpuIdx);
+console.log(`NDE: ${result.nde.toFixed(3)} (direct path)`);
+console.log(`NIE: ${result.nie.toFixed(3)} (through CPU)`);
+console.log(`Proportion mediated: ${(result.proportionMediated * 100).toFixed(0)}%`);
+```
+
+### Arrow Strength
+
+Normalized edge strength: |β_edge| / Σ|β_incoming| — quantifies causal flow along each edge.
+
+```typescript
+import { arrowStrength } from '@agentix-e/causality-analyzer-pipeline';
+
+const strengths = arrowStrength(graph, data, nodeNames);
+// { 'Memory→CPU': 0.8, 'CPU→Latency': 0.6, 'Memory→Latency': 0.4 }
+```
+
+---
+
+## Choosing an Identification Strategy
+
+| Criteria | Method | Reference |
+|----------|--------|-----------|
+| Confounders observable | Backdoor adjustment | [↑ Backdoor](#backdoor-adjustment) |
+| Mediator observable, confounders not | Frontdoor | [↑ Frontdoor](#frontdoor-adjustment) |
+| Valid instrument available | IV (2SLS) | [↑ IV](#instrumental-variables-2sls) |
+| None of the above — check automatically | do-Calculus | [↑ do-Calculus](#do-calculus-identification) |
+| Decompose direct vs mediated effects | Mediation (NDE/NIE) | [↑ Mediation](#mediation-analysis) |
