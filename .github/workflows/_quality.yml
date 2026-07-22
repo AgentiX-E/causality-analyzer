@@ -119,49 +119,53 @@ jobs:
           CERT_DIR=/tmp/neo4j-mtls-certs
           rm -rf "$CERT_DIR" && mkdir -p "$CERT_DIR/trusted"
 
-          # Self-signed CA
-          openssl req -x509 -newkey rsa:2048 -keyout "$CERT_DIR/ca.key" -out "$CERT_DIR/ca.crt" \
+          # Self-signed CA (PKCS#8 key for Neo4j 5 compatibility)
+          openssl req -x509 -newkey rsa:2048 -keyout "$CERT_DIR/ca.key.tmp" -out "$CERT_DIR/ca.crt" \
             -days 1 -nodes -subj "/CN=Test CA" 2>/dev/null
+          openssl pkcs8 -topk8 -inform PEM -outform PEM -in "$CERT_DIR/ca.key.tmp" \
+            -out "$CERT_DIR/ca.key" -nocrypt 2>/dev/null
+          rm "$CERT_DIR/ca.key.tmp"
 
-          # Server cert (Neo4j)
-          openssl req -newkey rsa:2048 -keyout "$CERT_DIR/server.key" -out "$CERT_DIR/server.csr" \
+          # Server cert (Neo4j) — must use PKCS#8 key
+          openssl req -newkey rsa:2048 -keyout "$CERT_DIR/server.key.tmp" -out "$CERT_DIR/server.csr" \
             -nodes -subj "/CN=localhost" 2>/dev/null
+          openssl pkcs8 -topk8 -inform PEM -outform PEM -in "$CERT_DIR/server.key.tmp" \
+            -out "$CERT_DIR/server.key" -nocrypt 2>/dev/null
+          rm "$CERT_DIR/server.key.tmp"
           openssl x509 -req -in "$CERT_DIR/server.csr" -CA "$CERT_DIR/ca.crt" -CAkey "$CERT_DIR/ca.key" \
             -CAcreateserial -out "$CERT_DIR/server.crt" -days 1 2>/dev/null
 
-          # Client cert (our Store)
-          openssl req -newkey rsa:2048 -keyout "$CERT_DIR/client.key" -out "$CERT_DIR/client.csr" \
+          # Client cert (our Store) — PKCS#8 key for java/bolt compatibility
+          openssl req -newkey rsa:2048 -keyout "$CERT_DIR/client.key.tmp" -out "$CERT_DIR/client.csr" \
             -nodes -subj "/CN=test-client" 2>/dev/null
+          openssl pkcs8 -topk8 -inform PEM -outform PEM -in "$CERT_DIR/client.key.tmp" \
+            -out "$CERT_DIR/client.key" -nocrypt 2>/dev/null
+          rm "$CERT_DIR/client.key.tmp"
           openssl x509 -req -in "$CERT_DIR/client.csr" -CA "$CERT_DIR/ca.crt" -CAkey "$CERT_DIR/ca.key" \
             -CAcreateserial -out "$CERT_DIR/client.crt" -days 1 2>/dev/null
 
           cp "$CERT_DIR/ca.crt" "$CERT_DIR/trusted/"
+          # Set permissions: neo4j container user (7474) must be able to read
+          chmod 644 "$CERT_DIR"/*.crt
+          chmod 600 "$CERT_DIR"/*.key
           echo "Certificates generated in $CERT_DIR"
 
-      - name: Start Neo4j with mTLS (skip if no Docker)
+      - name: Start Neo4j with mTLS
+        if: env.SKIP_NEO4J != 'true'
         run: |
-          if ! command -v docker &>/dev/null; then
-            echo "Docker not available — skipping Neo4j test"
-            echo "SKIP_NEO4J=true" >> "$GITHUB_ENV"
-            exit 0
-          fi
           CERT_DIR=/tmp/neo4j-mtls-certs
-          cat > "$CERT_DIR/neo4j.conf" << 'NEO4JCONF'
-          dbms.ssl.policy.bolt.enabled=true
-          dbms.ssl.policy.bolt.client_auth=REQUIRE
-          dbms.ssl.policy.bolt.base_directory=/certs
-          dbms.ssl.policy.bolt.private_key=server.key
-          dbms.ssl.policy.bolt.public_certificate=server.crt
-          dbms.ssl.policy.bolt.trusted_dir=/certs/trusted
-          dbms.connector.bolt.tls_level=REQUIRED
-          NEO4JCONF
-
           docker run -d --name neo4j-mtls \
             -p 7687:7687 \
             -v "$CERT_DIR:/certs" \
-            -v "$CERT_DIR/neo4j.conf:/var/lib/neo4j/conf/neo4j.conf" \
             -e NEO4J_AUTH=neo4j/password \
             -e NEO4J_ACCEPT_LICENSE_AGREEMENT=yes \
+            -e NEO4J_server_bolt_tls__level=REQUIRED \
+            -e NEO4J_dbms_ssl_policy_bolt_enabled=true \
+            -e NEO4J_dbms_ssl_policy_bolt_client__auth=REQUIRE \
+            -e NEO4J_dbms_ssl_policy_bolt_base__directory=/certs \
+            -e NEO4J_dbms_ssl_policy_bolt_private__key=server.key \
+            -e NEO4J_dbms_ssl_policy_bolt_public__certificate=server.crt \
+            -e NEO4J_dbms_ssl_policy_bolt_trusted__dir=/certs/trusted \
             neo4j:5-community
 
           # Wait for Neo4j to be ready (log message + Bolt port)
