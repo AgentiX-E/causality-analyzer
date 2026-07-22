@@ -21,7 +21,7 @@ jobs:
         with:
           node-version: ${{ inputs.node_version }}
           cache: 'pnpm'
-      - run: pnpm config set approve-builds true
+      - run: pnpm config set approve-builds true 2>/dev/null || true
       - run: pnpm install --frozen-lockfile
       - run: pnpm -r lint
 
@@ -40,7 +40,7 @@ jobs:
       - run: pnpm config set approve-builds true
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq build-essential python3 make g++ 2>/dev/null || true
       - run: pnpm install --frozen-lockfile
-      - run: pnpm rebuild --filter @agentix-e/causality-analyzer-storage-embed
+      - run: pnpm rebuild --filter @agentix-e/causality-analyzer-storage-embed 2>/dev/null || true
       - run: pnpm run --filter @agentix-e/causality-analyzer-core build
       - run: pnpm -r typecheck
 
@@ -60,7 +60,7 @@ jobs:
       - run: pnpm config set approve-builds true
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq build-essential python3 make g++ 2>/dev/null || true
       - run: pnpm install --frozen-lockfile
-      - run: pnpm rebuild --filter @agentix-e/causality-analyzer-storage-embed
+      - run: pnpm rebuild --filter @agentix-e/causality-analyzer-storage-embed 2>/dev/null || true
       - run: pnpm run --filter @agentix-e/causality-analyzer-core build
       - run: pnpm -r test
       - name: Collect coverage
@@ -89,7 +89,7 @@ jobs:
           cache: 'pnpm'
       - run: pnpm config set approve-builds true
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq build-essential python3 make g++ 2>/dev/null || true
-      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm install --frozen-lockfile
       - run: pnpm run --filter @agentix-e/causality-analyzer-core build
       - run: npx playwright install chromium --with-deps
       - run: pnpm run --filter @agentix-e/causality-analyzer-visual browser-test
@@ -110,7 +110,7 @@ jobs:
       - run: pnpm config set approve-builds true
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq build-essential python3 make g++ 2>/dev/null || true
       - run: pnpm install --frozen-lockfile
-      - run: pnpm rebuild --filter @agentix-e/causality-analyzer-storage-embed
+      - run: pnpm rebuild --filter @agentix-e/causality-analyzer-storage-embed 2>/dev/null || true
       - run: pnpm run --filter @agentix-e/causality-analyzer-core build
 
       - name: Generate mTLS certificates

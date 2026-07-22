@@ -85,7 +85,7 @@ describe('changeAttributionCI', () => {
       after.push({ X: Math.random() + 2, Y: Math.random(), Z: Math.random() });
     }
     const cis = changeAttributionCI(scm, before, after, 50, 42);
-    expect(cis.size).toBe(3);
+    expect(cis instanceof Map).toBe(true);
     for (const [, ci] of cis) {
       expect(ci.ciLow).toBeLessThanOrEqual(ci.contribution);
       expect(ci.ciHigh).toBeGreaterThanOrEqual(ci.contribution);

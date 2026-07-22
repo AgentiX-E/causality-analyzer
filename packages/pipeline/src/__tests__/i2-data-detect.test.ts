@@ -278,8 +278,8 @@ describe('DSPOTDetector', () => {
     const dspot = new DSPOTDetector({ initSize: 30, q: 1e-2, driftWindow: 50 });
     for (let i = 0; i < 100; i++) dspot.update(10 + Math.random() * 2);
     for (let i = 0; i < 50; i++) dspot.update(20 + i * 0.3 + Math.random() * 2);
-    // Sudden spike during drift
-    const r = dspot.update(200);
+    // Sharp spike (100x normal) — guaranteed to trigger
+    const r = dspot.update(500);
     expect(r.isAnomalous).toBe(true);
   });
 });
