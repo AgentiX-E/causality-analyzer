@@ -33,24 +33,69 @@ Causality Analyzer helps you answer three critical questions during incident res
 
 Unlike correlation-based monitoring tools, Causality Analyzer discovers the actual causal structure of your system and quantifies how confident you should be in the findings.
 
-### When to Use Each Approach
+### Decision Table — Which Algorithm to Use?
 
-| Scenario | Recommended Approach |
-|----------|---------------------|
-| Simple monitoring, well-understood system | StatsDetector (z-score) |
-| Unusual patterns, periodic signals | SpectralResidualDetector |
-| Extreme events with heavy tails | SPOT / DSPOT |
-| Multiple detectors, need consensus | VotingDetector |
-| No prior causal graph | PC algorithm (automatic discovery) |
-| Suspected hidden confounders | FCI algorithm |
-| Only care about one metric's causes | Targeted Discovery |
-| Known service topology | BayesianRCA / HTRCA |
-| Unknown topology + anomaly data | CIRCA pipeline |
-| Need to quantify treatment effect | Backdoor adjustment / IV |
-| Unbalanced failure data | IPW / Doubly Robust |
-| Need worst-case robustness | E-value sensitivity |
-| "What would have happened if..." | Counterfactual inference |
-| Validate your causal graph | Graph falsification |
+See the [Algorithm Reference](#algorithm-reference) for detailed documentation of each method.
+
+#### Anomaly Detection
+
+| Scenario | Algorithm | Reference |
+|----------|-----------|-----------|
+| Normally distributed metrics | StatsDetector (`zscore`) | [StatsDetector →](../algorithms/anomaly-detection.md#statsdetector) |
+| Metrics with occasional spikes | StatsDetector (`mad`) | [StatsDetector →](../algorithms/anomaly-detection.md#statsdetector) |
+| Non-parametric, any distribution | StatsDetector (`iqr`) | [StatsDetector →](../algorithms/anomaly-detection.md#statsdetector) |
+| Periodic/seasonal patterns | SpectralResidualDetector | [SpectralResidual →](../algorithms/anomaly-detection.md#spectralresidualdetector) |
+| Rare extreme events (P99.9+) | SPOT / DSPOT | [SPOT/DSPOT →](../algorithms/anomaly-detection.md#spotdetector--dspotdetector) |
+| Ensemble consensus | VotingDetector | [VotingDetector →](../algorithms/anomaly-detection.md#votingdetector) |
+
+#### Causal Discovery
+
+| Scenario | Algorithm | Reference |
+|----------|-----------|-----------|
+| No prior causal graph | PC algorithm | [PC Algorithm →](../algorithms/causal-discovery.md#pc-algorithm) |
+| Suspected hidden confounders | FCI algorithm | [FCI Algorithm →](../algorithms/causal-discovery.md#fci-algorithm) |
+| Only care about one metric's causes | Targeted Discovery | [Targeted →](../algorithms/causal-discovery.md#targeted-discovery) |
+| Variable selection / feature importance | Grow-Shrink | [Grow-Shrink →](../algorithms/causal-discovery.md#grow-shrink) |
+
+#### Root Cause Analysis
+
+| Scenario | Algorithm | Reference |
+|----------|-----------|-----------|
+| Known graph + need probabilities | BayesianRCA | [BayesianRCA →](../algorithms/root-cause-analysis.md#bayesianrca) |
+| Known graph + need per-node z-scores | HTRCA | [HTRCA →](../algorithms/root-cause-analysis.md#htrca-hypothesis-testing-rca) |
+| Known graph + quick screening | RandomWalkRCA | [RandomWalkRCA →](../algorithms/root-cause-analysis.md#randomwalkrca) |
+| Trace data with anomaly patterns | FPGrowthRCA | [FPGrowthRCA →](../algorithms/root-cause-analysis.md#fpgrowthrca) |
+| Uncertain graph + topological correction | CIRCA | [CIRCA →](../algorithms/root-cause-analysis.md#circa-pipeline) |
+
+#### Effect Estimation
+
+| Scenario | Algorithm | Reference |
+|----------|-----------|-----------|
+| Can observe all confounders | Backdoor adjustment | [Backdoor →](../algorithms/effect-estimation.md#backdoor-adjustment) |
+| Observable mediator available | Frontdoor adjustment | [Frontdoor →](../algorithms/effect-estimation.md#frontdoor-adjustment) |
+| Valid instrument available | IV (2SLS) | [IV →](../algorithms/effect-estimation.md#instrumental-variables-2sls) |
+| Binary treatment + many covariates | Propensity Score Matching | [PSM →](../algorithms/effect-estimation.md#propensity-score-matching) |
+| Model specification uncertainty | Doubly Robust | [DR →](../algorithms/effect-estimation.md#doubly-robust) |
+| Unbalanced treatment groups | IPW | [IPW →](../algorithms/effect-estimation.md#ipw-inverse-probability-weighting) |
+| Per-instance heterogeneous effects | CATE | [CATE →](../algorithms/effect-estimation.md#cate-conditional-ate) |
+
+#### Sensitivity & Validation
+
+| Scenario | Algorithm | Reference |
+|----------|-----------|-----------|
+| How strong must confounder be? | E-value | [E-value →](../algorithms/sensitivity-refutation.md#e-value-sensitivity) |
+| What variance must confounder explain? | Partial R² | [Partial R² →](../algorithms/sensitivity-refutation.md#partial-r²-sensitivity) |
+| Single-number robustness score | Robustness Value | [Robustness →](../algorithms/sensitivity-refutation.md#robustness-value) |
+| Validate causal graph against data | Graph Falsification | [Falsification →](../algorithms/model-evaluation.md#graph-falsification) |
+| Per-node Markov condition check | LMC Falsification | [LMC →](../algorithms/model-evaluation.md#graph-falsification) |
+
+#### Counterfactuals
+
+| Scenario | Algorithm | Reference |
+|----------|-----------|-----------|
+| "What would have happened if..." | SCM Counterfactual | [SCM →](../algorithms/counterfactuals.md#structural-causal-model-scm) |
+| Fair attribution of anomaly | Shapley RCA | [Shapley →](../algorithms/counterfactuals.md#shapley-anomaly-attribution) |
+| Deployment vs data drift | Mechanism Change | [Change →](../algorithms/counterfactuals.md#mechanism-change-detection) |
 
 ---
 
@@ -729,3 +774,20 @@ No. For development and single-node production:
 - Use `EmbedGraphStore` (OverGraph)
 
 Remote stores are for enterprise deployments that need replication, failover, or existing PostgreSQL/Neo4j infrastructure.
+
+---
+
+## Algorithm Reference
+
+Detailed algorithm documentation with theory, parameters, and scenario-based examples:
+
+| Category | Document |
+|----------|----------|
+| Anomaly Detection | [StatsDetector, SpectralResidual, SPOT/DSPOT, VotingDetector](../algorithms/anomaly-detection.md) |
+| Causal Discovery | [PC, FCI, Targeted Discovery, Grow-Shrink](../algorithms/causal-discovery.md) |
+| Root Cause Analysis | [BayesianRCA, HTRCA, RandomWalkRCA, FPGrowthRCA, CIRCA](../algorithms/root-cause-analysis.md) |
+| Effect Estimation | [Backdoor, Frontdoor, IV, PS, DR, IPW, CATE](../algorithms/effect-estimation.md) |
+| Sensitivity & Refutation | [E-value, Partial R², Robustness, Refutation](../algorithms/sensitivity-refutation.md) |
+| Counterfactuals | [SCM, Shapley RCA, Mechanism Change](../algorithms/counterfactuals.md) |
+| Model Evaluation | [R², MSE, Falsification, Bootstrap CI, Feature Importance](../algorithms/model-evaluation.md) |
+| Data Storage | [Embedded (SQLite/OverGraph), Remote (PostgreSQL/Neo4j), mTLS](../algorithms/storage.md) |
