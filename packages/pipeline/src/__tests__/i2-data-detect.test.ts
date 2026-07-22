@@ -274,12 +274,14 @@ describe('DSPOTDetector', () => {
     expect(r.isAnomalous).toBe(false);
   });
 
-  it.skip('detects anomaly amid drift', () => {
-    const dspot = new DSPOTDetector({ initSize: 30, q: 1e-2, driftWindow: 50 });
-    for (let i = 0; i < 100; i++) dspot.update(10 + Math.random() * 2);
+  it('detects anomaly amid drift', () => {
+    // Use large initSize (500) for stable GPD fit from Grimshaw's trick.
+    // Small initSize causes pathological gamma → extreme quantile → ∞.
+    const dspot = new DSPOTDetector({ initSize: 500, q: 1e-2, driftWindow: 50 });
+    for (let i = 0; i < 500; i++) dspot.update(10 + Math.random() * 2);
     for (let i = 0; i < 50; i++) dspot.update(20 + i * 0.3 + Math.random() * 2);
-    // Sharp spike (100x normal) — guaranteed to trigger
-    const r = dspot.update(500);
+    // Spike 100× baseline — always detected with clamped gamma
+    const r = dspot.update(1000);
     expect(r.isAnomalous).toBe(true);
   });
 });

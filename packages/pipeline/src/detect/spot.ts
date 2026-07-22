@@ -199,6 +199,15 @@ function estimateGPD(peaks: number[]): GPDParams {
     if (bestSigma <= 0) bestSigma = 1;
   }
 
+  // Safety: clamp gamma to realistic range [-0.5, 0.5].
+  // Unbounded positive gamma produces extreme quantiles that
+  // approach infinity, causing the detector to miss genuine
+  // anomalies. Negative gamma <-0.5 is also unrealistic for
+  // most real-world heavy-tailed distributions.
+  if (bestGamma > 0.5) bestGamma = 0.5;
+  if (bestGamma < -0.5) bestGamma = -0.5;
+  if (bestSigma <= 0) bestSigma = 1;
+
   return { gamma: bestGamma, sigma: bestSigma };
 }
 
