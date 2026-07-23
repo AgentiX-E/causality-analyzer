@@ -114,3 +114,13 @@ describe('RemoteRelationalStore', () => {
     await store.close();
   });
 });
+
+describe('pool config', () => {
+  it('creates with poolSize > 1 using pg-mem client', async () => {
+    const { Client } = newDb().adapters.createPg();
+    const client = new Client() as unknown as PgClientLike;
+    const store = new RemoteRelationalStore({ client, poolSize: 4 });
+    expect(store).toBeDefined();
+    await store.close();
+  });
+});

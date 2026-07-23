@@ -1,4 +1,4 @@
-import { Client as PgClient } from 'pg';
+import { Client as PgClient, Pool as PgPool } from 'pg';
 import type { IRelationalStore, MetricQuery, DetectionResult, ConditionalProbabilityTable, RegressionParams, RCAResult, ResultQuery, ColumnarTable, TableSchema } from '@agentix-e/causality-analyzer-core';
 import type { MtlsConfig } from './types.js';
 
@@ -52,6 +52,27 @@ export interface RemoteRelationalConfig {
    * the Store uses this client as-is and calls connect() on it.
    */
   client?: PgClientLike;
+  /**
+   * Connection pool size. When > 1, uses pg.Pool instead of pg.Client
+   * for concurrent query execution. Ignored when `client` is provided.
+   * @default 1
+   */
+  poolSize?: number;
+}
+
+// ── Retry ──────────────────────────────────────────────────────────────
+
+async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3, baseMs = 100): Promise<T> {
+  let last: unknown;
+  for (let a = 0; a <= maxRetries; a++) {
+    try { return await fn(); } catch (e: any) {
+      last = e; if (a === maxRetries) break;
+      const ok = e?.code === 'ECONNREFUSED' || e?.code === 'ETIMEDOUT' || /connection/.test(e?.message ?? '');
+      if (!ok) throw e;
+      await new Promise(r => setTimeout(r, baseMs * Math.pow(2, a)));
+    }
+  }
+  throw last;
 }
 
 // ── Config builder (pure, testable without PG) ─────────────────────────
@@ -90,10 +111,15 @@ export class RemoteRelationalStore implements IRelationalStore {
   constructor(config: RemoteRelationalConfig = {}) {
     if (config.client) {
       this.client = config.client;
+    } else if ((config.poolSize ?? 1) > 1) {
+      this.client = new PgPool({
+        ...buildPgClientOpts(config),
+        max: config.poolSize ?? 4,
+      }) as unknown as PgClientLike;
     } else {
       this.client = new PgClient(buildPgClientOpts(config)) as unknown as PgClientLike;
     }
-    this._ready = this._init();
+    this._ready = withRetry(() => this._init());
   }
 
   private async _init(): Promise<void> {
