@@ -105,3 +105,35 @@ describe('parallelBootstrap', () => {
     expect(result.se).toBeGreaterThanOrEqual(0);
   });
 });
+
+describe('bootstrap edge cases', () => {
+  it('bootstrapATE with empty data', () => {
+    const data: number[][] = [];
+    const est = (d: number[][]) => d.length;
+    const result = bootstrapATE(data, est, 10, 0.05, 42);
+    expect(result.ate).toBe(0);
+    expect(result.se).toBeGreaterThanOrEqual(0);
+  });
+
+  it('bootstrapATE with single observation', () => {
+    const data = [[1, 5]];
+    const est = (d: number[][]) => { let s = 0; for (const r of d) s += r[1]!; return s / d.length; };
+    const result = bootstrapATE(data, est, 20, 0.05, 42);
+    expect(typeof result.ate).toBe('number');
+  });
+
+  it('bootstrapATEParallel with single thread', async () => {
+    const data = Array.from({ length: 10 }, () => [Math.random() > 0.5 ? 1 : 0, Math.random()]);
+    const est = (d: number[][]) => { let s = 0; for (const r of d) s += r[1]!; return s / d.length; };
+    const result = await bootstrapATEParallel(data, est, 20, 1, 0.05, 42);
+    expect(result.ciLow).toBeLessThanOrEqual(result.ate);
+  });
+});
+
+describe('bootstrap edge cases', () => {
+  it('bootstrapATE with n=2 data', () => {
+    const est = (d: number[][]) => { let s = 0; for (const r of d) s += r[1]!; return s / d.length; };
+    const result = bootstrapATE([[0, 1], [1, 3]], est, 10, 0.05, 42);
+    expect(typeof result.ate).toBe('number');
+  });
+});
