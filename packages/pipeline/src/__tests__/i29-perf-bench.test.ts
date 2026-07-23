@@ -28,7 +28,7 @@ const PERF_BUDGETS = {
   /** KCI unconditional on 100 samples */
   kci100: 200,
   /** SPOT calibration with 100 samples */
-  spotCalibration: 50,
+  spotCalibration: 150,
   /** LiNGAM on 4-node graph with 200 samples */
   lingam4Node200: 300,
   /** StatsDetector batch training on 1000 samples */

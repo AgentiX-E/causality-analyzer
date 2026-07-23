@@ -8,6 +8,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text','json','lcov'],
       include: ['src/**/*.ts'],
+      exclude: ['src/**/*.test.ts', 'src/**/index.ts', 'src/cli.ts'],
       exclude: [
         'src/**/*.test.ts',
         'src/**/index.ts',    // barrel exports — no executable logic
