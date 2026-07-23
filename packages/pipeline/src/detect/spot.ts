@@ -236,10 +236,10 @@ function bisectGrimshaw(a: number, b: number, peaks: number[]): GPDParams | null
 }
 
 function gpdLogLikelihood(peaks: number[], gamma: number, sigma: number): number {
-  if (sigma <= 0) return -Infinity;
+  if (sigma <= 1e-10) return -Infinity;
   const n = peaks.length;
-  if (Math.abs(gamma) < 1e-10) return -n * Math.log(sigma) - peaks.reduce((s, y) => s + y, 0) / sigma;
-  const terms = peaks.map(y => 1 + gamma * y / sigma);
-  if (terms.some(t => t <= 0)) return -Infinity;
-  return -n * Math.log(sigma) - (1 + 1 / gamma) * terms.reduce((s, t) => s + Math.log(t), 0);
+  if (Math.abs(gamma) < 1e-10) return -n * Math.log(Math.max(sigma, 1e-10)) - peaks.reduce((s, y) => s + y, 0) / Math.max(sigma, 1e-10);
+  const t = peaks.filter(y => 1 + gamma * y / sigma > 0);
+  if (t.length < n) return -Infinity;
+  return -n * Math.log(Math.max(sigma, 1e-10)) - (1 + 1 / gamma) * t.reduce((s, y) => s + Math.log(1 + gamma * y / sigma), 0);
 }

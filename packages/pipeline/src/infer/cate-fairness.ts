@@ -16,7 +16,16 @@ import { CONSTANTS } from "../constants.js";
  */
 import { solveLinear } from '@agentix-e/causality-analyzer-core';
 
-// ── IRLS Logistic Regression (shared utility) ────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────────
+
+/** Sigmoid clamp: prevents overflow in exp() */
+const sigmoid = (dot: number): number => 1 / (1 + Math.exp(clip(dot, 15)));
+/** Clip value to [-limit, limit] */
+const clip = (v: number, limit: number): number => v < -limit ? -limit : v > limit ? limit : v;
+/** Safe positive floor */
+const safeFloor = (v: number): number => v < 1e-10 ? 1e-10 : v;
+
+// ── IRLS Logistic Regression ────────────────────────────────────────────
 
 /**
  * Fit a logistic regression model using Iterative Reweighted Least Squares.
@@ -56,16 +65,16 @@ function fitLogistic(
     for (let r = 0; r < n; r++) {
       let dot = 0;
       for (let j = 0; j < k; j++) dot += X[r * k + j]! * beta[j]!;
-      prob[r] = 1 / (1 + Math.exp(-Math.min(Math.max(dot, -15), 15)));
+      prob[r] = 1 / (1 + Math.exp(-clip(dot, 15)));
     }
 
     // IRLS update: β_new = (XᵀWX)⁻¹ XᵀWz
     const XtWX = new Float64Array(k * k);
     const XtWz = new Float64Array(k);
     for (let r = 0; r < n; r++) {
-      const w = Math.max(1e-10, prob[r]! * (1 - prob[r]!));
+      const w = safeFloor(prob[r]! * (1 - prob[r]!));
       const t = (data[r]![treatmentIdx] ?? 0) > 0.5 ? 1 : 0;
-      const workingResponse = Math.log(Math.max(1e-10, prob[r]! / (1 - prob[r]!))) +
+      const workingResponse = Math.log(safeFloor(prob[r]! / (1 - prob[r]!))) +
         (t - prob[r]!) / w;
 
       for (let i = 0; i < k; i++) {
@@ -113,7 +122,7 @@ function computePropensityScores(
     for (let i = 0; i < p; i++) {
       dot += (beta[i + 1] ?? 0) * (data[r]![covariateIndices[i]!] ?? 0);
     }
-    scores[r] = Math.max(0.05, Math.min(0.95, 1 / (1 + Math.exp(-Math.min(Math.max(dot, -15), 15)))));
+    scores[r] = Math.max(0.05, Math.min(0.95, 1 / (1 + Math.exp(-clip(dot, 15)))));
   }
   return scores;
 }
