@@ -113,6 +113,32 @@ describe('RemoteRelationalStore', () => {
     expect(store).toBeDefined();
     await store.close();
   });
+
+  it('healthCheck returns boolean', async () => {
+    const store = new RemoteRelationalStore({ client });
+    const ok = await store.healthCheck();
+    expect(typeof ok).toBe('boolean');
+    await store.close();
+  });
+
+  it('gracefulShutdown closes cleanly', async () => {
+    const store = new RemoteRelationalStore({ client });
+    await store.gracefulShutdown(1000);
+    expect(store).toBeDefined();
+  });
+
+  it('reads empty metrics successfully', async () => {
+    const store = new RemoteRelationalStore({ client });
+    const result = await store.readMetrics({ start: 0, end: 1 });
+    expect(result).toBeDefined();
+    await store.close();
+  });
+
+  it('loads null CPT for unknown graph', async () => {
+    const store = new RemoteRelationalStore({ client });
+    expect(await store.loadCPT('nonexistent', 'X')).toBeNull();
+    await store.close();
+  });
 });
 
 describe('pool config', () => {
