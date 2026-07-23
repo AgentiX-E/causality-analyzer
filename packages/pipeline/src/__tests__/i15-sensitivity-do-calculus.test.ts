@@ -120,4 +120,48 @@ describe('identifyByDoCalculus', () => {
     const result = identifyByDoCalculus(g, 'A', 'B');
     expect(typeof result.identifiable).toBe('boolean');
   });
+
+  it('identifies via ID algorithm for non-trivial graph', () => {
+    // X → W → Y, X → Y (no confounding)
+    const g = new CausalGraph(['X', 'W', 'Y']);
+    g.addEdge('X', 'W'); g.addEdge('W', 'Y'); g.addEdge('X', 'Y');
+    const result = identifyByDoCalculus(g, 'X', 'Y');
+    // X and Y are directly connected — backdoor set exists (W or empty)
+    // Actually X has no parents, so backdoor should find no confounders
+    expect(result.identifiable).toBe(true);
+  });
+
+  it('explanation is provided for identifiable results', () => {
+    const g = confoundedDAG();
+    const result = identifyByDoCalculus(g, 'X', 'Y');
+    expect(result.explanation.length).toBeGreaterThan(0);
+  });
+
+  it('explanation is provided for non-identifiable results', () => {
+    const g = new CausalGraph(['X', 'Y', 'U1', 'U2']);
+    g.addEdge('U1', 'X'); g.addEdge('U1', 'Y'); g.addEdge('U2', 'X'); g.addEdge('U2', 'Y');
+    const result = identifyByDoCalculus(g, 'X', 'Y');
+    expect(result.explanation.length).toBeGreaterThan(0);
+  });
+
+  it('c-component decomposition handles bidirected edges', () => {
+    // X ↔ M ← Y  (X and M share latent, Y causes M)
+    const g = new CausalGraph(['X', 'M', 'Y']);
+    g.undirectedEdge('X', 'M'); // bidirected = undirected in our repr
+    g.addEdge('Y', 'M');
+    const result = identifyByDoCalculus(g, 'X', 'Y');
+    // Y→M creates a frontdoor-like structure with X—M bidirected
+    // The ID algorithm should handle this
+    expect(typeof result.identifiable).toBe('boolean');
+  });
+
+  it('ID algorithm identifies via non-descendant parents', () => {
+    // Z → X → Y, Z → Y (Z is confounder, parent of both)
+    const g = new CausalGraph(['Z', 'X', 'Y']);
+    g.addEdge('Z', 'X'); g.addEdge('Z', 'Y'); g.addEdge('X', 'Y');
+    const result = identifyByDoCalculus(g, 'X', 'Y');
+    expect(result.identifiable).toBe(true);
+    // Z is the confounder — should be identified as backdoor
+    expect(result.adjustmentSet).toContain('Z');
+  });
 });
