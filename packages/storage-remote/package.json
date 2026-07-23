@@ -1,6 +1,6 @@
 {
   "name": "@agentix-e/causality-analyzer-storage-remote",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Remote storage: PG-wire relational + Bolt graph",
   "type": "module",
   "main": "./dist/index.js",
@@ -12,7 +12,7 @@
     "test:neo4j": "vitest run --config vitest.neo4j.config.ts"
   },
   "dependencies": {
-    "@agentix-e/causality-analyzer-core": "workspace:*",
+    "@agentix-e/causality-analyzer-core": "^1.0.0",
     "@electric-sql/pglite": "^0.5.4",
     "neo4j-driver-lite": "^6.2.0",
     "pg-mem": "^3.0.14"
