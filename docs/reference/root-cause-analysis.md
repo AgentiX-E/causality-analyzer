@@ -1,39 +1,46 @@
 # Root Cause Analysis
 
-## BayesianRCA
+## HeuristicPathRCA
 
-**Family:** Probabilistic graphical model  
-**Method:** Variable elimination (exact inference)
+**Family:** Heuristic graph search  
+**Method:** Path-based likelihood scoring (heuristic, not Bayesian inference)
 
-Models the system as a Bayesian network. During training, estimates Conditional Probability Tables (CPT) from data using data-driven anomaly thresholds (>2.5σ). During inference, computes posterior probability P(root=1 | anomalous evidence) via simplified likelihood propagation.
+This is a lightweight heuristic for root cause ranking. It estimates conditional probability tables from data and scores root nodes using: `score = P(root) × 0.8^connected × 0.5^disconnected`, where "connected" means a causal path exists from the root to the anomalous node. **This is NOT proper Bayesian inference** — for rigorous probabilistic reasoning, consider using the StructuralCausalModel or a dedicated Bayesian network library.
 
 ### When to Use
 
 - Known causal graph topology
-- Need probabilistic confidence scores
-- System fits well with linear relationships
+- Need quick, approximate root cause ranking
+- Acceptable to trade accuracy for speed
+
+### When NOT to Use
+
+- Require proper probabilistic confidence (use SCM anomaly attribution instead)
+- Need exact Bayesian posteriors (use a dedicated BN engine)
+- Complex graph with many cycles or confounders
 
 ### Scenario: Memory → CPU → Latency chain
 
 ```typescript
-import { CausalGraph, BayesianRCA } from '@agentix-e/causality-analyzer-pipeline';
+import { CausalGraph, HeuristicPathRCA } from '@agentix-e/causality-analyzer-pipeline';
 
 const graph = new CausalGraph(['Memory', 'CPU', 'Latency']);
 graph.addEdge('Memory', 'CPU');
 graph.addEdge('CPU', 'Latency');
 
-const rca = new BayesianRCA();
+const rca = new HeuristicPathRCA();
 rca.train(graph, new Set(['CPU', 'Latency']), data); // CPTs from data
 const result = rca.findRootCauses(['CPU', 'Latency']);
 
 // result.rootCauses[0].name === 'Memory' (only root node)
-// result.rootCauses[0].score — posterior probability
+// result.rootCauses[0].score — heuristic score (not a true posterior)
 ```
 
 ### Key Characteristics
 
-- **Strengths:** Exact probabilistic inference, calibrated confidence scores
-- **Limitations:** Requires CPT estimation from data; linear CPT for root nodes
+- **Strengths:** Fast, simple, works with small graphs
+- **Limitations:** Heuristic scoring is not calibrated; does not handle confounders; score is not a valid probability
+- **Note:** This algorithm was previously named `BayesianRCA` (legacy name, now removed)
 
 ---
 
@@ -173,7 +180,7 @@ const result = circa.analyze(anomalyData, ['Latency']);
 
 | Criteria | Recommended |
 |----------|------------|
-| Known graph + need probabilities | BayesianRCA |
+| Known graph + need path-based scoring | HeuristicPathRCA |
 | Known graph + need per-node z-scores | HTRCA |
 | Known graph + quick screening | RandomWalkRCA |
 | Trace data with anomaly patterns | FPGrowthRCA |

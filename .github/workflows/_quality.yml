@@ -172,3 +172,21 @@ jobs:
       - name: Stop Neo4j
         if: always()
         run: docker stop neo4j-mtls 2>/dev/null; docker rm neo4j-mtls 2>/dev/null; true
+
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: 'pnpm'
+      - run: pnpm config set approve-builds true
+      - run: pnpm install --frozen-lockfile
+      - name: Audit dependencies
+        run: pnpm audit --audit-level high
+

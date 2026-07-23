@@ -61,7 +61,7 @@ See the [Algorithm Reference](#algorithm-reference) for detailed documentation o
 
 | Scenario | Algorithm | Reference |
 |----------|-----------|-----------|
-| Known graph + need probabilities | BayesianRCA | [BayesianRCA →](../reference/root-cause-analysis.md#bayesianrca) |
+| Known graph + need path-based scoring | HeuristicPathRCA | [HeuristicPathRCA →](../reference/root-cause-analysis.md#heuristicpathrca) |
 | Known graph + need per-node z-scores | HTRCA | [HTRCA →](../reference/root-cause-analysis.md#htrca-hypothesis-testing-rca) |
 | Known graph + quick screening | RandomWalkRCA | [RandomWalkRCA →](../reference/root-cause-analysis.md#randomwalkrca) |
 | Trace data with anomaly patterns | FPGrowthRCA | [FPGrowthRCA →](../reference/root-cause-analysis.md#fpgrowthrca) |
@@ -338,12 +338,12 @@ const blanket = growShrink(data, 2/*CPU*/, nodeNames);
 
 ### When You Have a Known Causal Graph
 
-**BayesianRCA** — exact inference via variable elimination:
+**HeuristicPathRCA** — heuristic path-based scoring:
 
 ```typescript
-import { BayesianRCA } from '@agentix-e/causality-analyzer-pipeline';
+import { HeuristicPathRCA } from '@agentix-e/causality-analyzer-pipeline';
 
-const rca = new BayesianRCA();
+const rca = new HeuristicPathRCA();
 rca.train(graph, new Set(['CPU', 'Latency']), data);
 const result = rca.findRootCauses(['CPU', 'Latency']);
 
@@ -810,7 +810,7 @@ Detailed algorithm documentation with theory, parameters, and scenario-based exa
 |----------|----------|
 | Anomaly Detection | [StatsDetector, SpectralResidual, SPOT/DSPOT, VotingDetector](../reference/anomaly-detection.md) |
 | Causal Discovery | [PC, FCI, Targeted Discovery, Grow-Shrink](../reference/causal-discovery.md) |
-| Root Cause Analysis | [BayesianRCA, HTRCA, RandomWalkRCA, FPGrowthRCA, CIRCA](../reference/root-cause-analysis.md) |
+| Root Cause Analysis | [HeuristicPathRCA, HTRCA, RandomWalkRCA, FPGrowthRCA, CIRCA](../reference/root-cause-analysis.md) |
 | Effect Estimation | [Backdoor, Frontdoor, IV, PS, DR, IPW, CATE](../reference/effect-estimation.md) |
 | Sensitivity & Refutation | [E-value, Partial R², Robustness, Refutation](../reference/sensitivity-refutation.md) |
 | Counterfactuals | [SCM, Shapley RCA, Mechanism Change](../reference/counterfactuals.md) |

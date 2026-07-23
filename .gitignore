@@ -9,3 +9,4 @@ coverage/
 *.db-shm
 causality-analyzer*.db
 causality-analyzer-graph*
+.env

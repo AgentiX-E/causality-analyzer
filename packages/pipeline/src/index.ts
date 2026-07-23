@@ -14,7 +14,7 @@ export { CausalGraph, pcAlgorithm, fisherZTest } from './graph/index.js';
 export type { PCConfig } from './graph/index.js';
 
 // Analyze (RCA)
-export { HeuristicPathRCA, BayesianRCA, RandomWalkRCA, HTRCA, FPGrowthRCA } from './analyze/index.js';
+export { HeuristicPathRCA, RandomWalkRCA, HTRCA, FPGrowthRCA } from './analyze/index.js';
 export { RHTScorer, DAScorer, CIRCAPipeline } from './analyze/index.js';
 export type { RHTConfig, DAConfig } from './analyze/index.js';
 
@@ -47,6 +47,29 @@ export type {
 } from './viz/index.js';
 export { FusionAnalyzer } from './viz/index.js';
 export type { FusionConfig, FusionStrategy } from './viz/index.js';
+
+// ── Bayesian Network Inference (all engines + factor algebra) ──
+export {
+  cptToFactor, factorMultiply, factorMarginalize,
+  factorReduce, factorNormalize,
+  variableElimination, junctionTreeInference,
+  loopyBeliefPropagation, likelihoodWeighting, gibbsSampling,
+  estimateCPTs, bruteForceOracle,
+  DirichletLearner,
+} from './infer/index.js';
+export type { Factor, CPT, Evidence, JunctionTreeResult, CredibleInterval } from './infer/index.js';
+
+// ── Audit Trail ────────────────────────────────────────────────
+export { AuditTrail } from './audit-trail.js';
+export type { AuditEntryType, AuditVerifyResult } from './audit-trail.js';
+
+// ── NL Explainer ───────────────────────────────────────────────
+export {
+  explainRCA, explainSensitivity, explainEstimate, explainDetection,
+} from './explainer.js';
+export type {
+  RCAExplanation, SensitivityExplanation, EstimateExplanation,
+} from './explainer.js';
 
 // ── Observability ──────────────────────────────────────────────
 export { AuditLogger, MetricsRegistry } from './observability.js';

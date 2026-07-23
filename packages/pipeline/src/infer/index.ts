@@ -37,3 +37,21 @@ export type { ColliderBiasWarning } from './collider-bias.js';
 export { CausalForest } from './causal-forest.js';
 export type { CausalForestConfig } from './causal-forest.js';
 export { doubleMLATE, doubleMLCATE } from './double-ml.js';
+
+// ── Bayesian Network Inference ─────────────────────────────────
+export {
+  cptToFactor,
+  factorMultiply,
+  factorMarginalize,
+  factorReduce,
+  factorNormalize,
+  variableElimination,
+  junctionTreeInference,
+  loopyBeliefPropagation,
+  likelihoodWeighting,
+  gibbsSampling,
+  estimateCPTs,
+  bruteForceOracle,
+  DirichletLearner,
+} from './bayesian-network.js';
+export type { Factor, CPT, Evidence, JunctionTreeResult, CredibleInterval } from './bayesian-network.js';

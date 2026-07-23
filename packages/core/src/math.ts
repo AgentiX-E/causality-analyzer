@@ -11,8 +11,11 @@
 /**
  * Gaussian elimination with partial pivoting.
  *
- * Solves Ax = b for x. Handles n=0 (returns []), near-singular matrices
- * (continues via partial pivoting), and non-square augmented matrices.
+ * Solves Ax = b for x. Handles n=0 (returns []).
+ *
+ * **WARNING**: Near-singular pivots (< 1e-12) are skipped, which can produce
+ * unreliable results for ill-conditioned matrices. Prefer `solveLinearSafe`
+ * for production use, which detects singularity explicitly.
  *
  * Complexity: O(n³) worst case.
  */
@@ -28,7 +31,8 @@ export function solveLinear(A: number[][], b: number[]): number[] {
       if (Math.abs(aug[row]![col]!) > Math.abs(aug[pivot]![col]!)) pivot = row;
     }
     [aug[col], aug[pivot]] = [aug[pivot]!, aug[col]!];
-    if (Math.abs(aug[col]![col]!) < 1e-12) continue; // near-singular — skip
+    // Near-singular: skip this column (produces NaN in solution — consider solveLinearSafe)
+    if (Math.abs(aug[col]![col]!) < 1e-12) continue;
     for (let row = col + 1; row < n; row++) {
       const f = aug[row]![col]! / aug[col]![col]!;
       for (let j = col; j <= n; j++) aug[row]![j]! -= f * aug[col]![j]!;
@@ -42,6 +46,38 @@ export function solveLinear(A: number[][], b: number[]): number[] {
     x[i] = sum / aug[i]![i]!;
   }
   return x;
+}
+
+/**
+ * Safe version of solveLinear that detects and reports singular matrices.
+ *
+ * @returns {{ solution: number[] | null; singular: boolean }}
+ *   - singular: true if the matrix is near-singular (no reliable solution)
+ *   - solution: the solution vector if non-singular, null if singular
+ */
+export function solveLinearSafe(A: number[][], b: number[]): { solution: number[] | null; singular: boolean } {
+  const n = A.length;
+  if (n === 0) return { solution: [], singular: false };
+  const aug = A.map((row, i) => [...row, b[i] ?? 0]);
+  for (let col = 0; col < n; col++) {
+    let pivot = col;
+    for (let row = col + 1; row < n; row++) {
+      if (Math.abs(aug[row]![col]!) > Math.abs(aug[pivot]![col]!)) pivot = row;
+    }
+    [aug[col], aug[pivot]] = [aug[pivot]!, aug[col]!];
+    if (Math.abs(aug[col]![col]!) < 1e-12) return { solution: null, singular: true };
+    for (let row = col + 1; row < n; row++) {
+      const f = aug[row]![col]! / aug[col]![col]!;
+      for (let j = col; j <= n; j++) aug[row]![j]! -= f * aug[col]![j]!;
+    }
+  }
+  const x = new Array<number>(n).fill(0);
+  for (let i = n - 1; i >= 0; i--) {
+    let sum = aug[i]![n]!;
+    for (let j = i + 1; j < n; j++) sum -= aug[i]![j]! * (x[j] ?? 0);
+    x[i] = sum / aug[i]![i]!;
+  }
+  return { solution: x, singular: false };
 }
 
 /**
@@ -98,6 +134,7 @@ export function normalCDFTail(x: number): number {
 /**
  * Compute the arithmetic mean of a specific column across all rows.
  * Handles NaN and null values by skipping them.
+ * Returns NaN for empty data.
  */
 export function colMean(data: number[][], col: number): number {
   let sum = 0, n = 0;
@@ -106,7 +143,7 @@ export function colMean(data: number[][], col: number): number {
     if (v == null || Number.isNaN(v)) continue;
     sum += v; n++;
   }
-  return n > 0 ? sum / n : 0;
+  return n > 0 ? sum / n : NaN;
 }
 
 /**

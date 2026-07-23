@@ -274,7 +274,7 @@ function findMediators(graph: CausalGraph, treatment: string, outcome: string): 
 }
 
 function isFrontdoorIdentifiable(
-  graph: CausalGraph, treatment: string, _outcome: string, mediators: string[],
+  graph: CausalGraph, treatment: string, outcome: string, mediators: string[],
 ): boolean {
   // All mediators must be on directed paths from treatment to outcome
   // and there must be no backdoor path from treatment to any mediator
@@ -300,15 +300,18 @@ function hasPathTo(graph: CausalGraph, from: string, to: string): boolean {
 }
 
 function removeIncomingEdges(graph: CausalGraph, nodes: string[]): CausalGraph {
-  // Create a copy with incoming edges removed for specified nodes
+  // Create a copy with incoming edges removed for specified nodes (do-operator)
   const nodeNames = [...graph.nodes];
   const copy = new CausalGraph(nodeNames);
-  for (const node of nodeNames) {
-    for (const child of graph.children(node)) {
-      if (nodes.includes(child)) continue; // skip incoming edges to intervened nodes
-      if (!graph.hasEdge(node, child)) continue;
-      copy.addEdge(node, child);
+  const nodeSet = new Set(nodes);
+
+  for (const src of nodeNames) {
+    for (const tgt of graph.children(src)) {
+      // Skip edges where target is intervened (incoming edge removed)
+      if (nodeSet.has(tgt)) continue;
+      copy.addEdge(src, tgt);
     }
   }
+
   return copy;
 }

@@ -25,7 +25,7 @@ function syntheticData(n: number): Matrix {
   return data;
 }
 
-// ── BayesianRCA ────────────────────────────────────────────────────
+// ── HeuristicPathRCA ───────────────────────────────────────────────
 describe('HeuristicPathRCA', () => {
   it('trains and identifies root causes', () => {
     const g = smallGraph();

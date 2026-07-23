@@ -3,6 +3,8 @@
  *
  * Built on uPlot 1.6 for high-performance Canvas rendering.
  * Accepts TimeSeriesChartData. Emits 'region-select' for anomaly range.
+ *
+ * Accessibility: Includes sr-only region for anomaly descriptions.
  */
 import { LitElement, html, css, type PropertyValues } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
@@ -15,23 +17,43 @@ export class CaTimeSeries extends LitElement {
   static override styles = css`
     :host { display: block; width: 100%; height: 240px; }
     .uplot-wrap { width: 100%; height: 100%; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
   `;
 
   @property({ type: Object }) data: TimeSeriesChartData | null = null;
+  @property({ type: String }) accessibleLabel = 'Time series anomaly chart';
+
   private plot: uPlot | null = null;
   private container: HTMLDivElement | null = null;
 
   override firstUpdated() {
     this.container = this.renderRoot.querySelector('.uplot-wrap');
+    if (this.container) {
+      this.container.setAttribute('role', 'img');
+      this.container.setAttribute('aria-label', this.accessibleLabel);
+    }
     this._render();
-    new ResizeObserver(() => this._render()).observe(this.container!);
+    if (this.container) {
+      new ResizeObserver(() => this._render()).observe(this.container);
+    }
   }
 
   override updated(changed: PropertyValues) {
     if (changed.has('data')) this._render();
+    if (changed.has('accessibleLabel') && this.container) {
+      this.container.setAttribute('aria-label', this.accessibleLabel);
+    }
   }
 
-  override render() { return html`<div class="uplot-wrap"></div>`; }
+  override render() {
+    const anomalyDesc = this.data?.anomalyRegions?.length
+      ? `Anomaly regions: ${this.data.anomalyRegions.length} detected`
+      : 'No anomalies detected';
+    return html`
+      <div class="uplot-wrap"></div>
+      <span class="sr-only" aria-live="polite">${anomalyDesc}</span>
+    `;
+  }
 
   private _render() {
     if (!this.container || !this.data || this.data.series.length === 0) return;
@@ -44,7 +66,7 @@ export class CaTimeSeries extends LitElement {
     for (const s of series) for (const d of s.data) tsSet.add(d.ts);
     const ts = Array.from(tsSet).sort((a, b) => a - b);
 
-    // Align each series to unified time axis (NaN for missing points → gap)
+    // Align each series to unified time axis (NaN for missing points -> gap)
     const aligned: AlignedData = [ts] as AlignedData;
     for (const s of series) {
       const valueMap = new Map(s.data.map(d => [d.ts, d.value]));
@@ -60,7 +82,6 @@ export class CaTimeSeries extends LitElement {
       hooks: {
         draw: [
           (u: uPlot) => {
-            // Render anomaly regions as shaded bands
             const ctx = u.ctx;
             const regions = this.data!.anomalyRegions;
             if (!regions || regions.length === 0) return;
@@ -81,7 +102,9 @@ export class CaTimeSeries extends LitElement {
 
   private _color(name: string): string {
     const colors = ['#2563eb', '#f59e0b', '#22c55e', '#dc2626', '#8b5cf6'];
-    const idx = name.charCodeAt(0) % colors.length;
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = ((hash << 5) - hash + name.charCodeAt(i)) | 0;
+    const idx = Math.abs(hash) % colors.length;
     return colors[idx] ?? '#2563eb';
   }
 

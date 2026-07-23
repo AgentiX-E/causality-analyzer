@@ -64,7 +64,7 @@ export { BaseConfig } from './config/index.js';
 export type { CausalityAnalyzerConfig } from './di/index.js';
 
 // ── Math ─────────────────────────────────────────────────────────
-export { solveLinear, normalTail, normalCDFTail, normalCDF, erf, colMean, createRNG, combinations } from './math.js';
+export { solveLinear, solveLinearSafe, normalTail, normalCDFTail, normalCDF, erf, colMean, createRNG, combinations } from './math.js';
 
 // ── Visualization Types ───────────────────────────────────────────
 export type {

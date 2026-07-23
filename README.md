@@ -21,7 +21,7 @@ Causality Analyzer is **not a standalone application** — it is a collection of
 
 ## Who Is This For?
 
-**SRE / Platform Engineers** — add causal RCA to your incident response workflow. Drop in `pipeline` alongside your existing monitoring, call `BayesianRCA.findRootCauses()` when anomalies fire.
+**SRE / Platform Engineers** — add causal RCA to your incident response workflow. Drop in `pipeline` alongside your existing monitoring, call `HeuristicPathRCA.findRootCauses()` when anomalies fire.
 
 **Data Scientists** — discover causal structure from observational data using PC/FCI algorithms, estimate treatment effects with backdoor/IV/PS/DR, run sensitivity analysis to quantify confidence.
 
@@ -36,7 +36,7 @@ npm install @agentix-e/causality-analyzer-core @agentix-e/causality-analyzer-pip
 ```
 
 ```typescript
-import { CausalGraph, BayesianRCA } from '@agentix-e/causality-analyzer-pipeline';
+import { CausalGraph, HeuristicPathRCA } from '@agentix-e/causality-analyzer-pipeline';
 import { Matrix } from 'ml-matrix';
 
 // 1. Define your system topology
@@ -49,7 +49,7 @@ const data = new Matrix(100, 3);
 // ... fill with your actual metrics ...
 
 // 3. Find the root cause
-const rca = new BayesianRCA();
+const rca = new HeuristicPathRCA();
 rca.train(graph, new Set(['CPU', 'Latency']), data);
 const result = rca.findRootCauses(['CPU', 'Latency']);
 
@@ -84,7 +84,7 @@ Data Flow:
 ## Key Features
 
 - **Causal Discovery** — PC algorithm (stable variant), FCI with R1-R4 orientation rules
-- **Root Cause Analysis** — BayesianRCA, RandomWalkRCA, HTRCA, FPGrowthRCA, CIRCA pipeline
+- **Root Cause Analysis** — HeuristicPathRCA, RandomWalkRCA, HTRCA, FPGrowthRCA, CIRCA pipeline
 - **Causal Effect Estimation** — Backdoor adjustment, Frontdoor, IV/2SLS, Propensity Score, Doubly Robust
 - **Sensitivity Analysis** — E-value, partial R², robustness value with plain-English interpretation
 - **do-Calculus** — Pearl's identification rules + ID algorithm (Tian & Pearl, Shpitser & Pearl)
@@ -149,13 +149,13 @@ console.log(graph.edges);
 ### Basic Usage: Root Cause Analysis
 
 ```typescript
-import { CausalGraph, BayesianRCA } from '@agentix-e/causality-analyzer-pipeline';
+import { CausalGraph, HeuristicPathRCA } from '@agentix-e/causality-analyzer-pipeline';
 
 const graph = new CausalGraph(['Memory', 'CPU', 'Latency']);
 graph.addEdge('Memory', 'CPU');
 graph.addEdge('CPU', 'Latency');
 
-const rca = new BayesianRCA();
+const rca = new HeuristicPathRCA();
 rca.train(graph, new Set(['CPU', 'Latency']), data);
 const result = rca.findRootCauses(['CPU', 'Latency']);
 
@@ -216,7 +216,7 @@ causality-analyzer/
 │   │       ├── graph/causal-graph.ts     # Graph data structure (DAG/PDAG/CPDAG)
 │   │       ├── graph/pc.ts              # PC algorithm (constraint-based)
 │   │       ├── graph/advanced-discovery.ts # FCI, Grow-Shrink, targeted discovery
-│   │       ├── analyze/rca.ts            # BayesianRCA, RandomWalkRCA, HTRCA, FPGrowthRCA
+│   │       ├── analyze/rca.ts            # HeuristicPathRCA, RandomWalkRCA, HTRCA, FPGrowthRCA
 │   │       ├── analyze/circa.ts          # CIRCA pipeline: RHTScorer + DAScorer
 │   │       ├── infer/causal-inference.ts # Backdoor/frontdoor ID, refutation
 │   │       ├── infer/effect-estimation.ts # Backdoor, frontdoor, IV, PS, DR estimators

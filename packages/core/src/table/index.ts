@@ -17,9 +17,8 @@
 
 // ── Types ───────────────────────────────────────────────────────────────
 
-/** Schema type: maps column names to their value types */
-// deno-lint-ignore no-explicit-any
-export type TableSchema = Record<string, any>;
+/** Schema type: maps column names to their value types (always number for ColumnarTable) */
+export type TableSchema = Record<string, number>;
 
 /** Extract column names from a schema type */
 export type ColumnNames<S extends TableSchema> = Extract<keyof S, string>;

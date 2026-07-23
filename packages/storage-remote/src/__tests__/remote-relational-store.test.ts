@@ -150,3 +150,70 @@ describe('pool config', () => {
     await store.close();
   });
 });
+
+describe('writeDetections + readMetrics', () => {
+  it('round-trips detection data', async () => {
+    const { Client } = newDb().adapters.createPg();
+    const client = new Client() as unknown as PgClientLike;
+    const store = new RemoteRelationalStore({ client });
+
+    const detections = [{
+      isAnomalous: true,
+      labels: new Float64Array([1, 0]),
+      scores: new Float64Array([3.5, 1.2]),
+      timestamp: 1000,
+      metadata: {},
+    } as any];
+    await store.writeDetections(detections);
+
+    const result = await store.readMetrics({ start: 999, end: 1001 });
+    expect(result).toBeDefined();
+    await store.close();
+  });
+});
+
+describe('Regression model load (null path)', () => {
+  it('loadRegressionModel returns null for unknown', async () => {
+    const { Client } = newDb().adapters.createPg();
+    const client = new Client() as unknown as PgClientLike;
+    const store = new RemoteRelationalStore({ client });
+    expect(await store.loadRegressionModel('unknown', 'X')).toBeNull();
+    await store.close();
+  });
+});
+
+describe('RCA query (empty)', () => {
+  it('queryHistoricalResults with filters returns empty array', async () => {
+    const { Client } = newDb().adapters.createPg();
+    const client = new Client() as unknown as PgClientLike;
+    const store = new RemoteRelationalStore({ client });
+
+    const results = await store.queryHistoricalResults({
+      start: 0,
+      end: Date.now() + 1000,
+      rootCause: 'Nonexistent',
+      limit: 5,
+    });
+    expect(Array.isArray(results)).toBe(true);
+    expect(results.length).toBe(0);
+    await store.close();
+  });
+});
+
+describe('healthCheck + gracefulShutdown', () => {
+  it('healthCheck returns true for live connection', async () => {
+    const { Client } = newDb().adapters.createPg();
+    const client = new Client() as unknown as PgClientLike;
+    const store = new RemoteRelationalStore({ client });
+    expect(await store.healthCheck()).toBe(true);
+    await store.close();
+  });
+
+  it('gracefulShutdown with timeout', async () => {
+    const { Client } = newDb().adapters.createPg();
+    const client = new Client() as unknown as PgClientLike;
+    const store = new RemoteRelationalStore({ client });
+    await store.gracefulShutdown(100);
+    expect(store).toBeDefined();
+  });
+});

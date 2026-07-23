@@ -1,12 +1,21 @@
 /**
- * Bayesian Structural Time Series (BSTS) decomposition.
+ * Exponential smoothing-based time series decomposition.
  *
- * Decomposes metric time series into trend, seasonal, and residual
- * components using a local linear trend model with Kalman filtering.
- * Anomalies are detected in the standardized residuals.
+ * **Note**: Despite the original name "BSTS", this decomposition uses simple
+ * exponential smoothing (alpha=0.15) and basic seasonal averaging, NOT
+ * Kalman filtering or Bayesian methods. For proper Bayesian Structural Time
+ * Series, consider using a dedicated statistics library.
+ *
+ * Decomposes metric time series into trend (via exponential smoothing),
+ * seasonal (via period averaging), and residual components.
+ * Anomalies are detected in the standardized residuals using rolling z-scores.
  *
  * Reference: Harvey (1989). "Forecasting, Structural Time Series Models
  *   and the Kalman Filter." Cambridge University Press.
+ *
+ * @deprecated Renamed to `exponentialSmoothingDetect` to reflect that this
+ *   is exponential smoothing, not Bayesian structural time series.
+ *   Old name kept for backward compatibility.
  *
  * @packageDocumentation
  */
@@ -23,19 +32,19 @@ export interface BSTSResult {
 }
 
 /**
- * Decompose a time series using BSTS and detect anomalies.
+ * Decompose a time series using exponential smoothing and detect anomalies.
  *
  * @param y — time series values
  * @param period — seasonal period (e.g., 24 for hourly daily patterns)
  * @param threshold — z-score threshold for anomaly flagging (default 3.0)
  */
-export function bstsDetect(y: number[], period: number = 0, threshold: number = 3.0): BSTSResult {
+export function exponentialSmoothingDetect(y: number[], period: number = 0, threshold: number = 3.0): BSTSResult {
   const n = y.length;
   if (n < 4) {
     return { residuals: y.slice(), trend: y.slice(), scores: new Array(n).fill(0), anomalies: new Array(n).fill(false) };
   }
 
-  // Step 1: Estimate trend via exponential smoothing
+  // Step 1: Estimate trend via exponential smoothing (NOT Kalman filtering)
   const trend = exponentialSmooth(y, 0.15);
 
   // Step 2: Estimate and remove seasonal component (if period > 0)
@@ -65,6 +74,9 @@ export function bstsDetect(y: number[], period: number = 0, threshold: number = 
 
   return { residuals, trend, scores, anomalies };
 }
+
+/** @deprecated Use `exponentialSmoothingDetect` instead. */
+export { exponentialSmoothingDetect as bstsDetect };
 
 // ── Helpers ────────────────────────────────────────────────────────────
 

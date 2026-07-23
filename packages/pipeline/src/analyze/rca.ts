@@ -25,22 +25,18 @@ function buildResult(rootCauses: RootCause[], paths: RootCausePath[], method: st
 // ── Heuristic Path-based RCA ──────────────────────────────────────────
 
 /**
- * Heuristic path-based root cause analysis.
+ * Heuristic Path-based RCA.
  *
- * **Note**: This is NOT a proper Bayesian network inference engine.
+ * **IMPORTANT**: This is NOT a proper Bayesian network inference engine.
  * It uses a heuristic scoring formula:
  *   score = P(root) × 0.8^connected × 0.5^not_connected
  * where "connected" means a path exists from root to anomalous node.
- * For rigorous Bayesian inference, use a library with variable elimination
- * or belief propagation.
  *
- * @deprecated Use `HeuristicPathRCA` instead. `BayesianRCA` is kept
- *   as a backward-compatible alias and will be removed in v1.0.0.
+ * For rigorous Bayesian inference with variable elimination or belief
+ * propagation, use a dedicated probabilistic graphical model library
+ * or the StructuralCausalModel for counterfactual reasoning.
  */
 interface CPT { [parentState: string]: number; }
-
-/** @deprecated Use `HeuristicPathRCA` instead. */
-export { HeuristicPathRCA as BayesianRCA };
 
 export class HeuristicPathRCA {
   private graph: CausalGraph | null = null;

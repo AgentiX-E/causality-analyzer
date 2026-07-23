@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { solveLinear, normalTail, normalCDF, normalCDFTail, erf, colMean, createRNG } from '../math.js';
+import { solveLinear, solveLinearSafe, normalTail, normalCDF, normalCDFTail, erf, colMean, createRNG, combinations } from '../math.js';
 
 // ── solveLinear ─────────────────────────────────────────────────────
 
@@ -185,8 +185,8 @@ describe('colMean', () => {
     expect(colMean(data, 0)).toBeCloseTo(2);
   });
 
-  it('returns 0 for empty data', () => {
-    expect(colMean([], 0)).toBe(0);
+  it('returns NaN for empty data', () => {
+    expect(colMean([], 0)).toBeNaN();
   });
 
   it('handles multiple columns', () => {
@@ -221,5 +221,102 @@ describe('createRNG', () => {
   it('null seed uses Math.random', () => {
     const rng = createRNG(null);
     expect(typeof rng()).toBe('number');
+  });
+});
+
+// ── solveLinearSafe ──────────────────────────────────────────────────
+
+describe('solveLinearSafe', () => {
+  it('solves a non-singular system', () => {
+    const { solution, singular } = solveLinearSafe([[2, 1], [1, 3]], [5, 6]);
+    expect(singular).toBe(false);
+    expect(solution).not.toBeNull();
+    expect(solution![0]).toBeCloseTo(1.8, 6);
+    expect(solution![1]).toBeCloseTo(1.4, 6);
+  });
+
+  it('detects singular matrix', () => {
+    const { solution, singular } = solveLinearSafe([[1, 1], [2, 2]], [3, 6]);
+    expect(singular).toBe(true);
+    expect(solution).toBeNull();
+  });
+
+  it('handles near-singular matrix', () => {
+    const { singular } = solveLinearSafe([[1, 1], [1, 1 + 1e-14]], [2, 2]); 
+    expect(singular).toBe(true);
+  });
+
+  it('handles n=0', () => {
+    const { solution, singular } = solveLinearSafe([], []);
+    expect(singular).toBe(false);
+    expect(solution).toEqual([]);
+  });
+
+  it('solves 3×3 identity', () => {
+    const { solution, singular } = solveLinearSafe([[1, 0, 0], [0, 1, 0], [0, 0, 1]], [1, 2, 3]);
+    expect(singular).toBe(false);
+    expect(solution).toEqual([1, 2, 3]);
+  });
+
+  it('handles partially defined b array', () => {
+    const { solution, singular } = solveLinearSafe([[1, 0], [0, 1]], [1] as number[]);
+    expect(singular).toBe(false);
+    expect(solution).not.toBeNull();
+    expect(solution![0]).toBeCloseTo(1);
+    expect(solution![1]).toBeCloseTo(0);
+  });
+
+  it('requires pivoting for unsorted rows', () => {
+    const { solution, singular } = solveLinearSafe([[1, 3], [2, 1]], [6, 5]);
+    expect(singular).toBe(false);
+    expect(solution).not.toBeNull();
+  });
+});
+
+// ── combinations ─────────────────────────────────────────────────────
+
+describe('combinations', () => {
+  it('returns [[]] for k=0', () => {
+    expect(combinations([1, 2, 3], 0)).toEqual([[]]);
+  });
+
+  it('returns empty for k>n', () => {
+    expect(combinations([1, 2], 3)).toEqual([]);
+  });
+
+  it('returns single-elements for k=1', () => {
+    const result = combinations(['a', 'b', 'c'], 1);
+    expect(result).toHaveLength(3);
+    expect(result).toContainEqual(['a']);
+    expect(result).toContainEqual(['b']);
+    expect(result).toContainEqual(['c']);
+  });
+
+  it('returns all elements for k=n', () => {
+    const result = combinations([1, 2], 2);
+    expect(result).toEqual([[1, 2]]);
+  });
+
+  it('generates correct C(4,2)=6 combinations', () => {
+    const result = combinations([1, 2, 3, 4], 2);
+    expect(result).toHaveLength(6);
+    expect(result).toContainEqual([1, 2]);
+    expect(result).toContainEqual([1, 3]);
+    expect(result).toContainEqual([1, 4]);
+    expect(result).toContainEqual([2, 3]);
+    expect(result).toContainEqual([2, 4]);
+    expect(result).toContainEqual([3, 4]);
+  });
+
+  it('handles empty array', () => {
+    expect(combinations([], 0)).toEqual([[]]);
+    expect(combinations([], 1)).toEqual([]);
+  });
+
+  it('preserves element order within each combination', () => {
+    const result = combinations([1, 2, 3], 2);
+    for (const combo of result) {
+      expect(combo[0]).toBeLessThan(combo[1]!);
+    }
   });
 });

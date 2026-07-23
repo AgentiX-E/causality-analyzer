@@ -50,24 +50,37 @@ export class SpectralResidualDetector {
     return { isAnomalous: isAnomaly, labels: new Float64Array([isAnomaly ? 1 : 0]), scores: new Float64Array([score]), timestamp: Date.now(), metadata: { method: 'spectral_residual' } };
   }
 
+  private _cachedScores: Float64Array | null = null;
+  private _cachedBufferLen = -1;
+
   private computeSEM(): number {
-    // Compute standard error of the mean from recent scores
-    const recent = this.buffer.slice(-10).map((_, i) => {
-      const sub = this.buffer.slice(Math.max(0, i - 5), i + 5);
-      return this.computeScoreForWindow(sub);
-    });
-    if (recent.length < 5) return 0.1;
+    // Compute scores for full buffer once, reuse cached scores
+    const scores = this.computeAllScores();
+    if (scores.length < 5) return 0.1;
+    // SEM = stdev of last min(scores.length, 20) scores
+    const recent = scores.slice(-Math.min(scores.length, 20));
     let sum = 0; for (const v of recent) sum += v;
     const mean = sum / recent.length;
     let ss = 0; for (const v of recent) ss += (v - mean) ** 2;
-    return Math.sqrt(ss / recent.length) || 0.1;
+    return Math.sqrt(ss / Math.max(1, recent.length)) || 0.1;
+  }
+
+  private computeAllScores(): Float64Array {
+    // Cache: if buffer length unchanged, return cached scores
+    if (this._cachedScores && this._cachedBufferLen === this.buffer.length) {
+      return this._cachedScores;
+    }
+    this._cachedScores = this._computeScoresForBuffer(this.buffer);
+    this._cachedBufferLen = this.buffer.length;
+    return this._cachedScores;
   }
 
   private computeAnomalyScore(): number {
-    return this.computeScoreForWindow(this.buffer);
+    const scores = this.computeAllScores();
+    return Math.abs(scores[scores.length - 1]!);
   }
 
-  private computeScoreForWindow(data: number[]): number {
+  private _computeScoresForBuffer(data: number[]): Float64Array {
     const n = data.length;
     // Pad to next power of 2
     const N = nextPowerOf2(n);
@@ -128,8 +141,13 @@ export class SpectralResidualDetector {
       scores[i] = localAvg > 0 ? (saliency[i]! - localAvg) / localAvg : 0;
     }
 
-    // Return anomaly score for last point
-    return Math.abs(scores[n - 1]!);
+    return scores;
+  }
+
+  /** @deprecated Use `_computeScoresForBuffer` instead. Kept for backward compat. */
+  private computeScoreForWindow(_data: number[]): number {
+    const scores = this._computeScoresForBuffer(this.buffer);
+    return Math.abs(scores[scores.length - 1]!);
   }
 
   /** Batch detection — processes data without resetting streaming state. */

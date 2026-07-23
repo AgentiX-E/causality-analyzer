@@ -78,16 +78,20 @@ export class EmbedRelationalStore implements IRelationalStore {
     return rows.map(r=>JSON.parse(r.result_json));
   }
   async beginTransaction(sid: string): Promise<void> {
-    this.db.exec('SAVEPOINT "'+this.esc(sid)+'"'); this.q.sUpsert.run(sid,'started',null,null);
+    this.db.exec('BEGIN');
+    this.db.exec('SAVEPOINT "'+this.esc(sid)+'"');
+    this.q.sUpsert.run(sid,'started',null,null);
   }
   async commitTransaction(sid: string): Promise<void> {
     this.db.exec('RELEASE SAVEPOINT "'+this.esc(sid)+'"');
+    this.db.exec('COMMIT');
   }
   async rollbackToCheckpoint(sid: string, cp: string): Promise<void> {
     this.db.exec('ROLLBACK TO SAVEPOINT "'+this.esc(cp)+'"');
   }
   async setCheckpoint(sid: string, name: string): Promise<void> {
-    this.db.exec('SAVEPOINT "'+this.esc(name)+'"'); this.q.sUpsert.run(sid,'checkpoint',name,null);
+    this.db.exec('SAVEPOINT "'+this.esc(name)+'"');
+    this.q.sUpsert.run(sid,'checkpoint',name,null);
   }
   close(): void { this.db.close(); }
   healthCheck(): boolean { try { this.db.prepare('SELECT 1').get(); return true; } catch { return false; } }

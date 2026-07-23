@@ -422,7 +422,17 @@ export class RemoteGraphStore implements IGraphStore {
 
   /** Health check: verifies Neo4j connectivity */
   async healthCheck(): Promise<boolean> {
-    try { await (this.driver as any).getServerInfo?.(); return true; } catch { return false; }
+    try {
+      const driver = this.driver as any;
+      if (typeof driver.getServerInfo === 'function') {
+        await driver.getServerInfo();
+      } else {
+        // Fallback: execute a simple Cypher query to verify connectivity
+        const session = driver.session?.() ?? this.driver.session();
+        try { await session.run('RETURN 1'); } finally { await session.close(); }
+      }
+      return true;
+    } catch { return false; }
   }
 
   /** Graceful shutdown with timeout */
