@@ -28,7 +28,7 @@ export interface DSPOTConfig extends SPOTConfig {
 }
 
 /** GPD parameter estimate */
-interface GPDParams { gamma: number; sigma: number; }
+export interface GPDParams { gamma: number; sigma: number; }
 
 /**
  * SPOT detector — models upper-tail exceedances via GPD.

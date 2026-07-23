@@ -12,7 +12,7 @@
 <li><a href="" aria-current="page">CausalGraph</a></li></ul>
 <h1>Class CausalGraph</h1></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/pipeline/src/graph/causal-graph.ts#L10">pipeline/src/graph/causal-graph.ts:10</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/pipeline/src/graph/causal-graph.ts#L13">pipeline/src/graph/causal-graph.ts:13</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-accordion" open><summary class="tsd-accordion-summary tsd-index-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
@@ -35,12 +35,15 @@
 <section class="tsd-index-section">
 <h3 class="tsd-index-heading tsd-anchor-link" id="methods">Methods<a href="#methods" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-index-list"><a href="#addedge" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>add<wbr/>Edge</span></a>
+<a href="#ancestors" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>ancestors</span></a>
 <a href="#applydomainknowledge" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>apply<wbr/>Domain<wbr/>Knowledge</span></a>
 <a href="#children" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>children</span></a>
 <a href="#clone" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>clone</span></a>
+<a href="#descendants" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>descendants</span></a>
 <a href="#do" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>do</span></a>
 <a href="#dseparated" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>d<wbr/>Separated</span></a>
 <a href="#hascycle" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>has<wbr/>Cycle</span></a>
+<a href="#hasdirectedpath" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>has<wbr/>Directed<wbr/>Path</span></a>
 <a href="#hasedge" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>has<wbr/>Edge</span></a>
 <a href="#isdag" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>is<wbr/>DAG</span></a>
 <a href="#neighbors" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>neighbors</span></a>
@@ -71,7 +74,7 @@
 <li><span><code class="tsd-tag">Optional</code><span class="tsd-kind-parameter">adjacency</span>: <span class="tsd-signature-type">Matrix</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <a href="" class="tsd-signature-type tsd-kind-class">CausalGraph</a></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/pipeline/src/graph/causal-graph.ts#L15">pipeline/src/graph/causal-graph.ts:15</a></li></ul></aside></div></li></ul></section></section></details>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/pipeline/src/graph/causal-graph.ts#L18">pipeline/src/graph/causal-graph.ts:18</a></li></ul></aside></div></li></ul></section></section></details>
 <details class="tsd-panel-group tsd-member-group tsd-accordion" open><summary class="tsd-accordion-summary" data-key="section-Properties"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
 <h2 class="tsd-anchor-link" id="properties-1">Properties<a href="#properties-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h2></summary>
 <section>
@@ -79,7 +82,7 @@
 <h3 class="tsd-anchor-link" id="nodes"><code class="tsd-tag">Readonly</code><span>nodes</span><a href="#nodes" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">nodes</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-keyword">readonly</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/pipeline/src/graph/causal-graph.ts#L11">pipeline/src/graph/causal-graph.ts:11</a></li></ul></aside></section></section></details>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/pipeline/src/graph/causal-graph.ts#L14">pipeline/src/graph/causal-graph.ts:14</a></li></ul></aside></section></section></details>
 <details class="tsd-panel-group tsd-member-group tsd-accordion" open><summary class="tsd-accordion-summary" data-key="section-Accessors"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
 <h2 class="tsd-anchor-link" id="accessors-1">Accessors<a href="#accessors-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h2></summary>
 <section>
@@ -91,7 +94,7 @@
 <div class="tsd-description">
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Matrix</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/pipeline/src/graph/causal-graph.ts#L227">pipeline/src/graph/causal-graph.ts:227</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/pipeline/src/graph/causal-graph.ts#L441">pipeline/src/graph/causal-graph.ts:441</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="edges"><span>edges</span><a href="#edges" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -100,7 +103,7 @@
 <div class="tsd-description">
 <h4 class="tsd-returns-title">Returns <a href="../interfaces/_agentix-e_causality-analyzer-core.types.CausalEdge.html" class="tsd-signature-type tsd-kind-interface">CausalEdge</a><span class="tsd-signature-symbol">[]</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/pipeline/src/graph/causal-graph.ts#L54">pipeline/src/graph/causal-graph.ts:54</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/pipeline/src/graph/causal-graph.ts#L71">pipeline/src/graph/causal-graph.ts:71</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="nodecount"><span>node<wbr/>Count</span><a href="#nodecount" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -109,7 +112,7 @@
 <div class="tsd-description">
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">number</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/pipeline/src/graph/causal-graph.ts#L20">pipeline/src/graph/causal-graph.ts:20</a></li></ul></aside></div></li></ul></section></section></details>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/pipeline/src/graph/causal-graph.ts#L23">pipeline/src/graph/causal-graph.ts:23</a></li></ul></aside></div></li></ul></section></section></details>
 <details class="tsd-panel-group tsd-member-group tsd-accordion" open><summary class="tsd-accordion-summary" data-key="section-Methods"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
 <h2 class="tsd-anchor-link" id="methods-1">Methods<a href="#methods-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h2></summary>
 <section>
@@ -126,7 +129,23 @@
 <li><span><span class="tsd-kind-parameter">to</span>: <span class="tsd-signature-type">string</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/pipeline/src/graph/causal-graph.ts#L34">pipeline/src/graph/causal-graph.ts:34</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/pipeline/src/graph/causal-graph.ts#L43">pipeline/src/graph/causal-graph.ts:43</a></li></ul></aside></div></li></ul></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="ancestors"><span>ancestors</span><a href="#ancestors" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="">
+<div class="tsd-signature tsd-anchor-link" id="ancestors-1"><span class="tsd-kind-call-signature">ancestors</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">nodes</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><a href="#ancestors-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-description">
+<div class="tsd-comment tsd-typography"><p>All ancestors of the given nodes (including the nodes themselves).
+Uses iterative DFS on the transpose graph for stack-safety.</p>
+</div>
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li><span><span class="tsd-kind-parameter">nodes</span>: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span></span></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/pipeline/src/graph/causal-graph.ts#L129">pipeline/src/graph/causal-graph.ts:129</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="applydomainknowledge"><span>apply<wbr/>Domain<wbr/>Knowledge</span><a href="#applydomainknowledge" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -139,20 +158,22 @@
 <li><span><span class="tsd-kind-parameter">dk</span>: <a href="../interfaces/_agentix-e_causality-analyzer-core.types.DomainKnowledge.html" class="tsd-signature-type tsd-kind-interface">DomainKnowledge</a></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/pipeline/src/graph/causal-graph.ts#L240">pipeline/src/graph/causal-graph.ts:240</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/pipeline/src/graph/causal-graph.ts#L456">pipeline/src/graph/causal-graph.ts:456</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="children"><span>children</span><a href="#children" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="">
 <div class="tsd-signature tsd-anchor-link" id="children-1"><span class="tsd-kind-call-signature">children</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">node</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span><a href="#children-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
+<div class="tsd-comment tsd-typography"><p>Direct children of <code>node</code> (nodes with an edge node →).</p>
+</div>
 <div class="tsd-parameters">
 <h4 class="tsd-parameters-title">Parameters</h4>
 <ul class="tsd-parameter-list">
 <li><span><span class="tsd-kind-parameter">node</span>: <span class="tsd-signature-type">string</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/pipeline/src/graph/causal-graph.ts#L79">pipeline/src/graph/causal-graph.ts:79</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/pipeline/src/graph/causal-graph.ts#L103">pipeline/src/graph/causal-graph.ts:103</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="clone"><span>clone</span><a href="#clone" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -161,14 +182,30 @@
 <div class="tsd-description">
 <h4 class="tsd-returns-title">Returns <a href="" class="tsd-signature-type tsd-kind-class">CausalGraph</a></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/pipeline/src/graph/causal-graph.ts#L251">pipeline/src/graph/causal-graph.ts:251</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/pipeline/src/graph/causal-graph.ts#L467">pipeline/src/graph/causal-graph.ts:467</a></li></ul></aside></div></li></ul></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="descendants"><span>descendants</span><a href="#descendants" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="">
+<div class="tsd-signature tsd-anchor-link" id="descendants-1"><span class="tsd-kind-call-signature">descendants</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">node</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><a href="#descendants-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-description">
+<div class="tsd-comment tsd-typography"><p>All descendants of <code>node</code> (including the node itself).
+Uses iterative DFS for stack-safety.</p>
+</div>
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li><span><span class="tsd-kind-parameter">node</span>: <span class="tsd-signature-type">string</span></span></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/pipeline/src/graph/causal-graph.ts#L153">pipeline/src/graph/causal-graph.ts:153</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="do"><span>do</span><a href="#do" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="">
 <div class="tsd-signature tsd-anchor-link" id="do-1"><span class="tsd-kind-call-signature">do</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">node</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <a href="" class="tsd-signature-type tsd-kind-class">CausalGraph</a><a href="#do-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
-<div class="tsd-comment tsd-typography"><p>Do-surgery: remove all incoming edges to the specified node</p>
+<div class="tsd-comment tsd-typography"><p>Do-surgery: return a new graph with all incoming edges to <code>node</code> removed.</p>
 </div>
 <div class="tsd-parameters">
 <h4 class="tsd-parameters-title">Parameters</h4>
@@ -176,24 +213,37 @@
 <li><span><span class="tsd-kind-parameter">node</span>: <span class="tsd-signature-type">string</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <a href="" class="tsd-signature-type tsd-kind-class">CausalGraph</a></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/pipeline/src/graph/causal-graph.ts#L118">pipeline/src/graph/causal-graph.ts:118</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/pipeline/src/graph/causal-graph.ts#L205">pipeline/src/graph/causal-graph.ts:205</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="dseparated"><span>d<wbr/>Separated</span><a href="#dseparated" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="">
 <div class="tsd-signature tsd-anchor-link" id="dseparated-1"><span class="tsd-kind-call-signature">dSeparated</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">x</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <span class="tsd-kind-parameter">y</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <span class="tsd-kind-parameter">z</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span><a href="#dseparated-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
-<div class="tsd-comment tsd-typography"><p>d-separation check: are X and Y conditionally independent given Z?</p>
+<div class="tsd-comment tsd-typography"><p>Strict d-separation test: are X and Y conditionally independent given Z?</p>
+<p>A trail (path treating edges as undirected) is <strong>d-connecting</strong> iff:</p>
+<ol>
+<li>For every non-collider node on the trail: it is NOT in Z.</li>
+<li>For every collider node on the trail: it IS in Z, or some descendant is in Z.</li>
+</ol>
+<p>Two nodes are <strong>d-separated</strong> by Z iff no d-connecting trail exists between them.</p>
 </div>
 <div class="tsd-parameters">
 <h4 class="tsd-parameters-title">Parameters</h4>
 <ul class="tsd-parameter-list">
-<li><span><span class="tsd-kind-parameter">x</span>: <span class="tsd-signature-type">string</span></span></li>
-<li><span><span class="tsd-kind-parameter">y</span>: <span class="tsd-signature-type">string</span></span></li>
-<li><span><span class="tsd-kind-parameter">z</span>: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span></span></li></ul></div>
-<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4><aside class="tsd-sources">
+<li><span><span class="tsd-kind-parameter">x</span>: <span class="tsd-signature-type">string</span></span>
+<div class="tsd-comment tsd-typography"><p>— first node name</p>
+</div></li>
+<li><span><span class="tsd-kind-parameter">y</span>: <span class="tsd-signature-type">string</span></span>
+<div class="tsd-comment tsd-typography"><p>— second node name</p>
+</div></li>
+<li><span><span class="tsd-kind-parameter">z</span>: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span></span>
+<div class="tsd-comment tsd-typography"><p>— conditioning set (node names)</p>
+</div></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4><p>true if X and Y are d-separated given Z</p>
+<aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/pipeline/src/graph/causal-graph.ts#L126">pipeline/src/graph/causal-graph.ts:126</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/pipeline/src/graph/causal-graph.ts#L228">pipeline/src/graph/causal-graph.ts:228</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="hascycle"><span>has<wbr/>Cycle</span><a href="#hascycle" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -202,7 +252,23 @@
 <div class="tsd-description">
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/pipeline/src/graph/causal-graph.ts#L99">pipeline/src/graph/causal-graph.ts:99</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/pipeline/src/graph/causal-graph.ts#L186">pipeline/src/graph/causal-graph.ts:186</a></li></ul></aside></div></li></ul></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="hasdirectedpath"><span>has<wbr/>Directed<wbr/>Path</span><a href="#hasdirectedpath" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="">
+<div class="tsd-signature tsd-anchor-link" id="hasdirectedpath-1"><span class="tsd-kind-call-signature">hasDirectedPath</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">from</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <span class="tsd-kind-parameter">to</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span><a href="#hasdirectedpath-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-description">
+<div class="tsd-comment tsd-typography"><p>Whether there exists a directed path from <code>from</code> to <code>to</code>.</p>
+</div>
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li><span><span class="tsd-kind-parameter">from</span>: <span class="tsd-signature-type">string</span></span></li>
+<li><span><span class="tsd-kind-parameter">to</span>: <span class="tsd-signature-type">string</span></span></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/pipeline/src/graph/causal-graph.ts#L176">pipeline/src/graph/causal-graph.ts:176</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="hasedge"><span>has<wbr/>Edge</span><a href="#hasedge" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -216,7 +282,7 @@
 <li><span><span class="tsd-kind-parameter">to</span>: <span class="tsd-signature-type">string</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/pipeline/src/graph/causal-graph.ts#L28">pipeline/src/graph/causal-graph.ts:28</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/pipeline/src/graph/causal-graph.ts#L36">pipeline/src/graph/causal-graph.ts:36</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="isdag"><span>is<wbr/>DAG</span><a href="#isdag" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -225,57 +291,73 @@
 <div class="tsd-description">
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/pipeline/src/graph/causal-graph.ts#L97">pipeline/src/graph/causal-graph.ts:97</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/pipeline/src/graph/causal-graph.ts#L182">pipeline/src/graph/causal-graph.ts:182</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="neighbors"><span>neighbors</span><a href="#neighbors" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="">
 <div class="tsd-signature tsd-anchor-link" id="neighbors-1"><span class="tsd-kind-call-signature">neighbors</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">node</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span><a href="#neighbors-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
+<div class="tsd-comment tsd-typography"><p>Undirected neighbors of <code>node</code> (both directions exist).</p>
+</div>
 <div class="tsd-parameters">
 <h4 class="tsd-parameters-title">Parameters</h4>
 <ul class="tsd-parameter-list">
 <li><span><span class="tsd-kind-parameter">node</span>: <span class="tsd-signature-type">string</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/pipeline/src/graph/causal-graph.ts#L88">pipeline/src/graph/causal-graph.ts:88</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/pipeline/src/graph/causal-graph.ts#L113">pipeline/src/graph/causal-graph.ts:113</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="nodeindex"><span>node<wbr/>Index</span><a href="#nodeindex" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="">
 <div class="tsd-signature tsd-anchor-link" id="nodeindex-1"><span class="tsd-kind-call-signature">nodeIndex</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">name</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><a href="#nodeindex-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
+<div class="tsd-comment tsd-typography"><p>Resolve a node name to its matrix index; throws if unknown.</p>
+</div>
 <div class="tsd-parameters">
 <h4 class="tsd-parameters-title">Parameters</h4>
 <ul class="tsd-parameter-list">
 <li><span><span class="tsd-kind-parameter">name</span>: <span class="tsd-signature-type">string</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">number</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/pipeline/src/graph/causal-graph.ts#L22">pipeline/src/graph/causal-graph.ts:22</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/pipeline/src/graph/causal-graph.ts#L28">pipeline/src/graph/causal-graph.ts:28</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="parents"><span>parents</span><a href="#parents" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="">
 <div class="tsd-signature tsd-anchor-link" id="parents-1"><span class="tsd-kind-call-signature">parents</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">node</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span><a href="#parents-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
+<div class="tsd-comment tsd-typography"><p>Direct parents of <code>node</code> (nodes with an edge → node).</p>
+</div>
 <div class="tsd-parameters">
 <h4 class="tsd-parameters-title">Parameters</h4>
 <ul class="tsd-parameter-list">
 <li><span><span class="tsd-kind-parameter">node</span>: <span class="tsd-signature-type">string</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/pipeline/src/graph/causal-graph.ts#L70">pipeline/src/graph/causal-graph.ts:70</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/pipeline/src/graph/causal-graph.ts#L93">pipeline/src/graph/causal-graph.ts:93</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="pdag2dag"><span>pdag2dag</span><a href="#pdag2dag" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="">
 <div class="tsd-signature tsd-anchor-link" id="pdag2dag-1"><span class="tsd-kind-call-signature">pdag2dag</span><span class="tsd-signature-symbol">()</span><span class="tsd-signature-symbol">:</span> <a href="" class="tsd-signature-type tsd-kind-class">CausalGraph</a><a href="#pdag2dag-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
-<div class="tsd-comment tsd-typography"><p>PDAG → DAG conversion via sink-finding algorithm</p>
+<div class="tsd-comment tsd-typography"><p>Convert a PDAG (partially directed acyclic graph) to a DAG.</p>
+<p>Algorithm (Dor &amp; Tarsi 1992):</p>
+<ol>
+<li>Collect undirected edges (i—j where both i→j and j→i exist).</li>
+<li>While undirected edges remain:
+a. Find a <strong>sink</strong> among the undirected-component nodes:
+a node that has undirected edges but NO outgoing <em>directed</em> edges.
+b. Orient all undirected edges incident to the sink <strong>into</strong> the sink.
+c. Remove these edges from the undirected set.</li>
+</ol>
 </div>
-<h4 class="tsd-returns-title">Returns <a href="" class="tsd-signature-type tsd-kind-class">CausalGraph</a></h4><aside class="tsd-sources">
+<h4 class="tsd-returns-title">Returns <a href="" class="tsd-signature-type tsd-kind-class">CausalGraph</a></h4><p>a fully directed DAG</p>
+<aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/pipeline/src/graph/causal-graph.ts#L180">pipeline/src/graph/causal-graph.ts:180</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/pipeline/src/graph/causal-graph.ts#L360">pipeline/src/graph/causal-graph.ts:360</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="removeedge"><span>remove<wbr/>Edge</span><a href="#removeedge" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -289,14 +371,14 @@
 <li><span><span class="tsd-kind-parameter">to</span>: <span class="tsd-signature-type">string</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/pipeline/src/graph/causal-graph.ts#L40">pipeline/src/graph/causal-graph.ts:40</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/pipeline/src/graph/causal-graph.ts#L50">pipeline/src/graph/causal-graph.ts:50</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="shd"><span>shd</span><a href="#shd" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="">
 <div class="tsd-signature tsd-anchor-link" id="shd-1"><span class="tsd-kind-call-signature">shd</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">other</span><span class="tsd-signature-symbol">:</span> <a href="" class="tsd-signature-type tsd-kind-class">CausalGraph</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><a href="#shd-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
-<div class="tsd-comment tsd-typography"><p>Structural Hamming Distance to another graph</p>
+<div class="tsd-comment tsd-typography"><p>Structural Hamming Distance to another graph.</p>
 </div>
 <div class="tsd-parameters">
 <h4 class="tsd-parameters-title">Parameters</h4>
@@ -304,7 +386,7 @@
 <li><span><span class="tsd-kind-parameter">other</span>: <a href="" class="tsd-signature-type tsd-kind-class">CausalGraph</a></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">number</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/pipeline/src/graph/causal-graph.ts#L230">pipeline/src/graph/causal-graph.ts:230</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/pipeline/src/graph/causal-graph.ts#L446">pipeline/src/graph/causal-graph.ts:446</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="tojson"><span>to<wbr/>JSON</span><a href="#tojson" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -313,24 +395,26 @@
 <div class="tsd-description">
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-symbol">{</span> <span class="tsd-kind-property">adjacency</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">;</span> <span class="tsd-kind-property">edges</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/_agentix-e_causality-analyzer-core.types.CausalEdge.html" class="tsd-signature-type tsd-kind-interface">CausalEdge</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">;</span> <span class="tsd-kind-property">nodes</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-keyword">readonly</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span> <span class="tsd-signature-symbol">}</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/pipeline/src/graph/causal-graph.ts#L253">pipeline/src/graph/causal-graph.ts:253</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/pipeline/src/graph/causal-graph.ts#L471">pipeline/src/graph/causal-graph.ts:471</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="topologicalsort"><span>topological<wbr/>Sort</span><a href="#topologicalsort" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="">
 <div class="tsd-signature tsd-anchor-link" id="topologicalsort-1"><span class="tsd-kind-call-signature">topologicalSort</span><span class="tsd-signature-symbol">()</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span><a href="#topologicalsort-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
-<div class="tsd-comment tsd-typography"><p>Topological order (Kahn's algorithm)</p>
+<div class="tsd-comment tsd-typography"><p>Kahn's algorithm for topological ordering.</p>
 </div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/pipeline/src/graph/causal-graph.ts#L210">pipeline/src/graph/causal-graph.ts:210</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/pipeline/src/graph/causal-graph.ts#L422">pipeline/src/graph/causal-graph.ts:422</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="toundirected"><span>to<wbr/>Undirected</span><a href="#toundirected" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="">
 <div class="tsd-signature tsd-anchor-link" id="toundirected-1"><span class="tsd-kind-call-signature">toUndirected</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">a</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <span class="tsd-kind-parameter">b</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">void</span><a href="#toundirected-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
+<div class="tsd-comment tsd-typography"><p>Convert an undirected edge to directed a→b.</p>
+</div>
 <div class="tsd-parameters">
 <h4 class="tsd-parameters-title">Parameters</h4>
 <ul class="tsd-parameter-list">
@@ -338,13 +422,15 @@
 <li><span><span class="tsd-kind-parameter">b</span>: <span class="tsd-signature-type">string</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/pipeline/src/graph/causal-graph.ts#L50">pipeline/src/graph/causal-graph.ts:50</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/pipeline/src/graph/causal-graph.ts#L64">pipeline/src/graph/causal-graph.ts:64</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="undirectededge"><span>undirected<wbr/>Edge</span><a href="#undirectededge" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="">
 <div class="tsd-signature tsd-anchor-link" id="undirectededge-1"><span class="tsd-kind-call-signature">undirectedEdge</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">a</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <span class="tsd-kind-parameter">b</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">void</span><a href="#undirectededge-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
+<div class="tsd-comment tsd-typography"><p>Add an undirected edge (both directions).</p>
+</div>
 <div class="tsd-parameters">
 <h4 class="tsd-parameters-title">Parameters</h4>
 <ul class="tsd-parameter-list">
@@ -352,7 +438,7 @@
 <li><span><span class="tsd-kind-parameter">b</span>: <span class="tsd-signature-type">string</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/pipeline/src/graph/causal-graph.ts#L46">pipeline/src/graph/causal-graph.ts:46</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/pipeline/src/graph/causal-graph.ts#L58">pipeline/src/graph/causal-graph.ts:58</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="fromedges"><code class="tsd-tag">Static</code><span>from<wbr/>Edges</span><a href="#fromedges" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -366,7 +452,7 @@
 <li><span><span class="tsd-kind-parameter">edges</span>: <a href="../interfaces/_agentix-e_causality-analyzer-core.types.CausalEdge.html" class="tsd-signature-type tsd-kind-interface">CausalEdge</a><span class="tsd-signature-symbol">[]</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <a href="" class="tsd-signature-type tsd-kind-class">CausalGraph</a></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/71a6ed471a7e9bd19e0c7fb0f1dd5d5a01fe4781/packages/pipeline/src/graph/causal-graph.ts#L257">pipeline/src/graph/causal-graph.ts:257</a></li></ul></aside></div></li></ul></section></section></details></div>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/pipeline/src/graph/causal-graph.ts#L475">pipeline/src/graph/causal-graph.ts:475</a></li></ul></aside></div></li></ul></section></section></details></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">
@@ -389,7 +475,7 @@
 <details open class="tsd-accordion tsd-page-navigation-section"><summary class="tsd-accordion-summary" data-key="section-Accessors"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>Accessors</summary>
 <div><a href="#adjacencymatrix"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Accessor"><use href="../assets/icons.svg#icon-262144"></use></svg><span>adjacency<wbr/>Matrix</span></a><a href="#edges"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Accessor"><use href="../assets/icons.svg#icon-262144"></use></svg><span>edges</span></a><a href="#nodecount"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Accessor"><use href="../assets/icons.svg#icon-262144"></use></svg><span>node<wbr/>Count</span></a></div></details>
 <details open class="tsd-accordion tsd-page-navigation-section"><summary class="tsd-accordion-summary" data-key="section-Methods"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>Methods</summary>
-<div><a href="#addedge"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>add<wbr/>Edge</span></a><a href="#applydomainknowledge"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>apply<wbr/>Domain<wbr/>Knowledge</span></a><a href="#children"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>children</span></a><a href="#clone"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>clone</span></a><a href="#do"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>do</span></a><a href="#dseparated"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>d<wbr/>Separated</span></a><a href="#hascycle"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>has<wbr/>Cycle</span></a><a href="#hasedge"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>has<wbr/>Edge</span></a><a href="#isdag"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>is<wbr/>DAG</span></a><a href="#neighbors"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>neighbors</span></a><a href="#nodeindex"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>node<wbr/>Index</span></a><a href="#parents"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>parents</span></a><a href="#pdag2dag"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>pdag2dag</span></a><a href="#removeedge"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>remove<wbr/>Edge</span></a><a href="#shd"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>shd</span></a><a href="#tojson"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>to<wbr/>JSON</span></a><a href="#topologicalsort"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>topological<wbr/>Sort</span></a><a href="#toundirected"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>to<wbr/>Undirected</span></a><a href="#undirectededge"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>undirected<wbr/>Edge</span></a><a href="#fromedges"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>from<wbr/>Edges</span></a></div></details></div></details></div>
+<div><a href="#addedge"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>add<wbr/>Edge</span></a><a href="#ancestors"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>ancestors</span></a><a href="#applydomainknowledge"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>apply<wbr/>Domain<wbr/>Knowledge</span></a><a href="#children"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>children</span></a><a href="#clone"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>clone</span></a><a href="#descendants"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>descendants</span></a><a href="#do"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>do</span></a><a href="#dseparated"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>d<wbr/>Separated</span></a><a href="#hascycle"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>has<wbr/>Cycle</span></a><a href="#hasdirectedpath"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>has<wbr/>Directed<wbr/>Path</span></a><a href="#hasedge"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>has<wbr/>Edge</span></a><a href="#isdag"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>is<wbr/>DAG</span></a><a href="#neighbors"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>neighbors</span></a><a href="#nodeindex"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>node<wbr/>Index</span></a><a href="#parents"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>parents</span></a><a href="#pdag2dag"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>pdag2dag</span></a><a href="#removeedge"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>remove<wbr/>Edge</span></a><a href="#shd"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>shd</span></a><a href="#tojson"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>to<wbr/>JSON</span></a><a href="#topologicalsort"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>topological<wbr/>Sort</span></a><a href="#toundirected"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>to<wbr/>Undirected</span></a><a href="#undirectededge"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>undirected<wbr/>Edge</span></a><a href="#fromedges"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>from<wbr/>Edges</span></a></div></details></div></details></div>
 <div class="site-menu">
 <nav class="tsd-navigation"><a href="../modules.html">Causality Analyzer</a>
 <ul class="tsd-small-nested-navigation" id="tsd-nav-container">

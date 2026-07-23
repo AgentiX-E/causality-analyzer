@@ -145,4 +145,14 @@ export class RemoteRelationalStore implements IRelationalStore {
   async rollbackToCheckpoint(_sid: string, cp: string): Promise<void> { await this._w(); await this.e('ROLLBACK TO SAVEPOINT sp_'+this.esc(cp)); }
   async setCheckpoint(sid: string, name: string): Promise<void> { await this._w(); await this.e('SAVEPOINT sp_'+this.esc(name)); await this.q('INSERT INTO analysis_state VALUES ($1,$2,$3,$4) ON CONFLICT (session_id, checkpoint_name) DO UPDATE SET stage = EXCLUDED.stage', [sid,'checkpoint',name,null]); }
   async close(): Promise<void> { await this.client.end(); }
+
+  /** Health check: verifies database connectivity */
+  async healthCheck(): Promise<boolean> {
+    try { await this.q('SELECT 1'); return true; } catch { return false; }
+  }
+
+  /** Graceful shutdown with timeout */
+  async gracefulShutdown(ms = 5000): Promise<void> {
+    await Promise.race([this.close(), new Promise(r => setTimeout(r, ms))]);
+  }
 }

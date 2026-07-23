@@ -419,4 +419,14 @@ export class RemoteGraphStore implements IGraphStore {
       } catch { /* best-effort cleanup */ }
     }
   }
+
+  /** Health check: verifies Neo4j connectivity */
+  async healthCheck(): Promise<boolean> {
+    try { await (this.driver as any).getServerInfo?.(); return true; } catch { return false; }
+  }
+
+  /** Graceful shutdown with timeout */
+  async gracefulShutdown(ms = 5000): Promise<void> {
+    await Promise.race([this.close(), new Promise(r => setTimeout(r, ms))]);
+  }
 }

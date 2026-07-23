@@ -91,4 +91,5 @@ export class EmbedGraphStore implements IGraphStore {
   }
 
   close(): void { this.g?.close?.(); }
+  healthCheck(): boolean { return this.g != null; }
 }

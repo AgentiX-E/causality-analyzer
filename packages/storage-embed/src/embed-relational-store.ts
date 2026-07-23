@@ -90,4 +90,5 @@ export class EmbedRelationalStore implements IRelationalStore {
     this.db.exec('SAVEPOINT "'+this.esc(name)+'"'); this.q.sUpsert.run(sid,'checkpoint',name,null);
   }
   close(): void { this.db.close(); }
+  healthCheck(): boolean { try { this.db.prepare('SELECT 1').get(); return true; } catch { return false; } }
 }

@@ -4,10 +4,24 @@ All notable changes to Causality Analyzer.
 
 ## [Unreleased]
 
-### Added (I7-I8)
-- **Causal Effect Estimation**: Backdoor adjustment, frontdoor formula, IV/2SLS, propensity score matching, doubly robust estimation
-- **Shapley RCA**: Monte Carlo Shapley-value anomaly attribution for SCMs
-- **Model Evaluation**: R², MSE per mechanism; bootstrap confidence intervals
+### Fixed (I4 — P0 critical correctness)
+- **P0-1**: Rewrote `dSeparated()` with strict Pearl 2009 d-separation (collider activation, descendant activation, trail-based DFS)
+- **P0-2**: Fixed `pdag2dag()` Dor-Tarsi sink-finding algorithm (was dead-loop, now correctly orients undirected edges)
+- **P0-3**: Fixed CATE dimension bug — `k = 2 + 2p` (was `1 + 2p`, causing OOB array access) + feature centering
+- **P0-4**: Rewrote `estimateIPW()` with IRLS logistic regression propensity score fitting (was constant marginal probability)
+- **P0-5**: Fixed `CIRCAPipeline.analyze()` toJSON closure — now captures `topFive` instead of full `rootCauses`
+- **P0-7**: Fixed SCM + RHTScorer NaN handling — entire row skipped when ANY variable is NaN (was inconsistent per-column skipping causing biased OLS)
+
+### Changed (I4)
+- **P0-6**: Renamed `BayesianRCA` → `HeuristicPathRCA`; old name kept as deprecated alias
+- Added `ancestors()`, `descendants()`, `hasDirectedPath()` graph traversal methods
+- Fixed RHTScorer intercept computation — uses actual column means instead of E[xi*y]/N proxy
+
+### Added (I4)
+- Tests: d-separation → 21 test cases (was 3 smoke), pdag2dag → 6 tests (was 1 smoke)
+- Tests: SCM NaN handling → 4 tests, RHTScorer NaN handling → 4 tests
+- Tests: CATE → 8 tests (was 1), IPW → 7 tests (was 1)
+- Tests: Graph traversal → 4 tests (ancestors, descendants, hasDirectedPath)
 - **Neo4j mTLS CI**: Full mutual TLS integration tests with Dockerized Neo4j
 
 ### Added (I5-I6)
