@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@agentix-e/causality-analyzer-core": "^1.0.0",
+    "@agentix-e/causality-analyzer-core": "workspace:*",
     "overgraph": "^0.16.0"
   },
   "optionalDependencies": {
