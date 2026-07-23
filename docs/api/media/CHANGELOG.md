@@ -2,62 +2,82 @@
 
 All notable changes to Causality Analyzer.
 
-## [Unreleased]
+## [1.0.0] — 2026-07-23
 
-### Fixed (I4 — P0 critical correctness)
-- **P0-1**: Rewrote `dSeparated()` with strict Pearl 2009 d-separation (collider activation, descendant activation, trail-based DFS)
-- **P0-2**: Fixed `pdag2dag()` Dor-Tarsi sink-finding algorithm (was dead-loop, now correctly orients undirected edges)
-- **P0-3**: Fixed CATE dimension bug — `k = 2 + 2p` (was `1 + 2p`, causing OOB array access) + feature centering
-- **P0-4**: Rewrote `estimateIPW()` with IRLS logistic regression propensity score fitting (was constant marginal probability)
-- **P0-5**: Fixed `CIRCAPipeline.analyze()` toJSON closure — now captures `topFive` instead of full `rootCauses`
-- **P0-7**: Fixed SCM + RHTScorer NaN handling — entire row skipped when ANY variable is NaN (was inconsistent per-column skipping causing biased OLS)
+### Breaking Changes
 
-### Changed (I4)
-- **P0-6**: Renamed `BayesianRCA` → `HeuristicPathRCA`; old name kept as deprecated alias
-- Added `ancestors()`, `descendants()`, `hasDirectedPath()` graph traversal methods
-- Fixed RHTScorer intercept computation — uses actual column means instead of E[xi*y]/N proxy
+- **`BayesianRCA` → `HeuristicPathRCA`**: The class is a heuristic path-scoring engine, not Bayesian inference. Old name kept as deprecated alias; will be removed in v2.0.
+- **d-separation reimplemented**: `CausalGraph.dSeparated()` now implements strict Pearl (2009) d-separation. Previous implementation used moralized graph separation which gave incorrect results for colliders. Behavior change — previous test results relying on the buggy implementation may need review.
+- **pdag2dag fixed**: Was a no-op (dead loop); now correctly implements Dor-Tarsi (1992). Any code relying on PDAG→DAG conversion will get different (correct) orientiation.
+- **IPW propensity scores**: Previously used constant marginal probability for all observations. Now uses IRLS logistic regression. ATE estimates will differ.
+- **MAD center changed**: StatsDetector MAD now uses median (correct) instead of mean. Anomaly thresholds will shift.
+- **NaN handling in SCM/RHTScorer**: Previously skipped individual columns, causing biased OLS matrices. Now skips entire rows. Regression coefficients will differ when NaN values are present.
+- **Voting fusion tie-breaking**: Now sorts by vote count first, then score. Previous sorting by score only. Root cause rankings in voting mode will change.
+- **CIRCAPipeline toJSON()**: Previously serialized all rootCauses (ignoring top-5 slice). Now correctly serializes only top 5.
+- **Shapley V(S)**: Previously used 50/50 blending for counterfactuals. Now uses proper conditional expectation. Attribution rankings will differ.
 
-### Added (I4)
-- Tests: d-separation → 21 test cases (was 3 smoke), pdag2dag → 6 tests (was 1 smoke)
-- Tests: SCM NaN handling → 4 tests, RHTScorer NaN handling → 4 tests
-- Tests: CATE → 8 tests (was 1), IPW → 7 tests (was 1)
-- Tests: Graph traversal → 4 tests (ancestors, descendants, hasDirectedPath)
-- **Neo4j mTLS CI**: Full mutual TLS integration tests with Dockerized Neo4j
+### Added
 
-### Added (I5-I6)
-- **Shared Math Library**: `solveLinear`, `normalTail`, `erf`, `normalCDF` extracted from pipeline → `core/src/math.ts`
-- **CI Quality**: ESLint + Prettier enforcement, full typecheck on all 5 packages
-- **Pipeline barrel exports**: Complete re-exports for graph, analyze, infer, gcm, viz sub-packages
+#### Causal Discovery (4 algorithms)
+- **PC** (constraint-based): Fisher Z + stable variant
+- **FCI** (latent confounders): Possible-D-SEP search + Meek rules R1-R3
+- **GES** (score-based, Chickering 2002): BIC-optimized forward/backward search
+- **LiNGAM** (non-Gaussian, Shimizu et al. 2011): DirectLiNGAM causal ordering
 
-### Fixed (I5)
-- **P0-2**: HTRCA intercept computation — uses per-column means (was first-row/n)
-- **P0-3**: FPGrowthRCA — full recursive FP-Tree mining (was singleton-only)
-- **P0-4**: `refutePlaceboTreatment` — empirical p-value (was hardcoded 0.5/0.01)
-- **P0-6**: BayesianRCA CPT — data-driven per-row anomaly detection
-- **P0-7**: SpectralResidual — removed buffer state leak in `detect()`
-- **P1-1**: RandomWalkRCA — seed-based reproducibility via LCG
-- **P1-3**: Fusion voting strategy implemented
-- **P1-7**: `readMetrics` — honors `MetricQuery.metrics` filter
-- **P1-8/9**: EmbedGraphStore — graph-specific label lookup, version-aware loading
-- **P1-10/11**: Time series chart — unified time axis, anomaly region rendering
-- **P1-12**: Graph renderer — topology-aware BFS layered layout
+#### Conditional Independence (2 methods)
+- **Fisher Z test**: linear Gaussian CI testing
+- **KCI test**: kernel-based nonlinear CI testing (RBF + permutation p-value)
 
-### Changed
-- All storage interfaces (`IRelationalStore`, `IGraphStore`) now include `close(): void`
-- `BaseConfig.getSchema()` is now abstract — subclasses must provide schemas
-- `ColumnarTable.fromRows` collects all row keys (was first-row-only)
-- neo4j-driver-lite moved from optionalDependencies → dependencies
+#### Causal Identification
+- **do-calculus ID algorithm** (Shpitser & Pearl 2006): c-component decomposition
+- **Backdoor adjustment**: correct confounding adjustment
+- **Frontdoor adjustment**: mediation-based identification
+- **Propensity score matching**: IRLS logistic regression + IPW
+- **Doubly robust estimation**: combined propensity + outcome model
 
-## [0.1.0] — 2026-06
+#### Anomaly Detection & RCA
+- **CIRCA**: RHT z-score + descending adjustment for root cause ranking
+- **HeuristicPathRCA**: path-based heuristic scoring
+- **Shapley RCA**: Monte Carlo Shapley-value anomaly attribution
+- **SPOT/DSPOT**: streaming POT threshold detection
+- **Spectral Residual**: FFT-based anomaly detection
+- **VotingDetector**: ensemble anomaly detection
 
-### Added (I1-I4)
-- **Monorepo**: 5 packages — core, pipeline, storage-embed, storage-remote, visual
-- **CIRCA Pipeline**: RHTScorer + DAScorer for causal RCA
-- **RCA Algorithms**: BayesianRCA, RandomWalkRCA, HTRCA, FPGrowthRCA
-- **Causal Inference**: `identifyBackdoor`, `identifyFrontdoor`, `estimateLinearRegression`, refutation methods
-- **Anomaly Detection**: StatsDetector, SpectralResidual, SPOT/DSPOT, VotingDetector
-- **Causal Discovery**: PC algorithm with Fisher's Z-test
-- **GCM**: StructuralCausalModel with counterfactual inference
-- **Storage**: SQLite-backed embed store, pg.Client + neo4j-driver-lite remote stores
-- **Visualization**: Lit 3 Web Components (`<ca-causal-graph>`, `<ca-time-series>`, `<ca-root-cause-ranking>`)
-- **CI**: GitHub Actions with test, browser-test, Neo4j-test jobs
+#### Causal Inference
+- **CATE**: Conditional Average Treatment Effect with feature centering
+- **Mediation analysis**: Baron-Kenny natural direct/indirect effects
+- **Sensitivity analysis**: E-value, partial R², robustness value
+- **Bootstrap CI**: sequential + parallel (Promise.all chunking)
+
+#### Graph Operations
+- Strict Pearl (2009) d-separation with collider activation
+- Dor-Tarsi (1992) PDAG→DAG conversion
+- c-component decomposition for latent confounder handling
+- SHD (Structural Hamming Distance), topological sort, do-surgery
+- Domain knowledge application (forbid/require/rootLeaf)
+
+#### Quality Infrastructure
+- **AuditLogger**: immutable JSON audit trail
+- **MetricsRegistry**: Prometheus-compatible counters + histograms
+- **RateLimiter**: drop_oldest/drop_newest/block overflow strategies
+- **EncryptedStore**: AES-256-GCM storage encryption
+- **Typed error hierarchy**: 6 error classes
+- **Shared constants**: 20+ tunable parameters with literature references
+
+#### Benchmarks & Validation
+- **ASIA benchmark** (Lauritzen & Spiegelhalter 1988): standard DAG validation
+- **Performance benchmarks**: 8 algorithmic operations with documented budgets
+- **Fuzz testing**: property-based random DAG validation (440 tests total)
+
+### Fixed
+- P0-1: d-separation collider handling (was moralized graph, now Pearl 2009)
+- P0-2: pdag2dag Dor-Tarsi sink-finding algorithm
+- P0-3: CATE dimension bug (k = 2+2p) + feature centering
+- P0-4: IPW propensity score fitting (was constant, now IRLS)
+- P0-5: CIRCAPipeline toJSON closure (captured full, now top 5)
+- P0-7: SCM + RHTScorer NaN row-level skipping
+- P1-1: PC non-stable variant (removed, always stable)
+- P1-2: MAD center (was mean, now median)
+- P1-5: Shapley V(S) arbitrary blending (now proper conditional expectation)
+- P1-6: Graph falsification CI testing
+- P1-7: Voting fusion tie-breaking

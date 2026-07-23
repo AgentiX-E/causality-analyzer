@@ -17,7 +17,7 @@
 </div></section>
 <div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">IdentifiedEstimand</span> <span class="tsd-signature-symbol">{</span><br/>    <a class="tsd-kind-property" href="#backdoorvariables">backdoorVariables</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Record</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">ReadonlyArray</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#estimandtype">estimandType</a><span class="tsd-signature-symbol">:</span><br/>        <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;nonparametric_ate&quot;</span><br/>        <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;nonparametric_nde&quot;</span><br/>        <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;nonparametric_nie&quot;</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#frontdoorvariables">frontdoorVariables</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-keyword">readonly</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#instrumentalvariables">instrumentalVariables</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-keyword">readonly</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#outcomevariables">outcomeVariables</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-keyword">readonly</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#treatmentvariables">treatmentVariables</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-keyword">readonly</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">;</span><br/><span class="tsd-signature-symbol">}</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/core/src/types/index.ts#L141">types/index.ts:141</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/ed6484bf71e9edac1a05f1d3cd3936f4f199d1f8/packages/core/src/types/index.ts#L141">packages/core/src/types/index.ts:141</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-accordion" open><summary class="tsd-accordion-summary tsd-index-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
@@ -41,42 +41,42 @@
 <div class="tsd-comment tsd-typography"><p>Backdoor adjustment sets (keyed by method name)</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/core/src/types/index.ts#L149">types/index.ts:149</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/ed6484bf71e9edac1a05f1d3cd3936f4f199d1f8/packages/core/src/types/index.ts#L149">packages/core/src/types/index.ts:149</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="estimandtype"><code class="tsd-tag">Readonly</code><span>estimand<wbr/>Type</span><a href="#estimandtype" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">estimandType</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;nonparametric_ate&quot;</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;nonparametric_nde&quot;</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;nonparametric_nie&quot;</span></div>
 <div class="tsd-comment tsd-typography"><p>Type of estimand</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/core/src/types/index.ts#L143">types/index.ts:143</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/ed6484bf71e9edac1a05f1d3cd3936f4f199d1f8/packages/core/src/types/index.ts#L143">packages/core/src/types/index.ts:143</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="frontdoorvariables"><code class="tsd-tag">Readonly</code><span>frontdoor<wbr/>Variables</span><a href="#frontdoorvariables" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">frontdoorVariables</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-keyword">readonly</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span></div>
 <div class="tsd-comment tsd-typography"><p>Frontdoor variables (if frontdoor method identified)</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/core/src/types/index.ts#L153">types/index.ts:153</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/ed6484bf71e9edac1a05f1d3cd3936f4f199d1f8/packages/core/src/types/index.ts#L153">packages/core/src/types/index.ts:153</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="instrumentalvariables"><code class="tsd-tag">Readonly</code><span>instrumental<wbr/>Variables</span><a href="#instrumentalvariables" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">instrumentalVariables</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-keyword">readonly</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span></div>
 <div class="tsd-comment tsd-typography"><p>Instrumental variables (if IV method identified)</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/core/src/types/index.ts#L151">types/index.ts:151</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/ed6484bf71e9edac1a05f1d3cd3936f4f199d1f8/packages/core/src/types/index.ts#L151">packages/core/src/types/index.ts:151</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="outcomevariables"><code class="tsd-tag">Readonly</code><span>outcome<wbr/>Variables</span><a href="#outcomevariables" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">outcomeVariables</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-keyword">readonly</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span></div>
 <div class="tsd-comment tsd-typography"><p>Outcome variable names</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/core/src/types/index.ts#L147">types/index.ts:147</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/ed6484bf71e9edac1a05f1d3cd3936f4f199d1f8/packages/core/src/types/index.ts#L147">packages/core/src/types/index.ts:147</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="treatmentvariables"><code class="tsd-tag">Readonly</code><span>treatment<wbr/>Variables</span><a href="#treatmentvariables" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">treatmentVariables</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-keyword">readonly</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span></div>
 <div class="tsd-comment tsd-typography"><p>Treatment variable names</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/core/src/types/index.ts#L145">types/index.ts:145</a></li></ul></aside></section></section></details></div>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/ed6484bf71e9edac1a05f1d3cd3936f4f199d1f8/packages/core/src/types/index.ts#L145">packages/core/src/types/index.ts:145</a></li></ul></aside></section></section></details></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">

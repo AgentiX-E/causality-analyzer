@@ -84,16 +84,14 @@ Data Flow:
 ## Key Features
 
 - **Causal Discovery** — PC algorithm (stable variant), FCI with R1-R4 orientation rules
-- **Root Cause Analysis** — HeuristicPathRCA, RandomWalkRCA, HTRCA, FPGrowthRCA, CIRCA pipeline
+- **Root Cause Analysis** — HeuristicPathRCA, Bayesian Network (VE/JT/LBP/LW/Gibbs), HTRCA, RandomWalkRCA, FPGrowthRCA, CIRCA pipeline
 - **Causal Effect Estimation** — Backdoor adjustment, Frontdoor, IV/2SLS, Propensity Score, Doubly Robust
 - **Sensitivity Analysis** — E-value, partial R², robustness value with plain-English interpretation
 - **do-Calculus** — Pearl's identification rules + ID algorithm (Tian & Pearl, Shpitser & Pearl)
 - **Structural Causal Models** — Additive noise, PostNonlinear (sigmoid), auto mechanism assignment
 - **Counterfactual Inference** — Abduction-Action-Prediction framework, Shapley anomaly attribution
-- **Distribution Change Detection** — Mechanism change attribution with bootstrap confidence intervals
-- **Graph Validation** — CI-based graph falsification, local Markov condition testing
-- **Mediation Analysis** — Natural direct/indirect effects, arrow strength quantification
-- **Deterministic Reproducibility** — All stochastic algorithms accept optional seed via `createRNG()`
+- **Audit Trail** — Tamper-evident SHA-256 hash-chained audit log with verify()
+- **NL Explanation** — Deterministic, templated reports for RCA, sensitivity, and effect estimates
 - **Enterprise Security** — Full mTLS on both Bolt (Neo4j) and PG-wire (PostgreSQL)
 - **TypeScript Native** — Strict type safety, dependency injection, framework-agnostic design
 
@@ -252,9 +250,10 @@ causality-analyzer/
 │               └── ca-root-cause-ranking.ts # Ranked root cause list
 │
 ├── docs/
-│   ├── adr/             # Architecture Decision Records
-│   ├── audit-*.md       # Audit reports
-│   └── user-guide.md    # Comprehensive user guide
+│   ├── user-guide.md    # Comprehensive user guide
+│   ├── guide/           # Getting started guide
+│   ├── reference/       # Algorithm reference docs
+│   └── api/             # TypeDoc-generated API
 ├── .github/workflows/   # CI/CD (lint, typecheck, test, browser, Neo4j mTLS)
 └── typedoc.json         # API documentation config
 ```
@@ -283,7 +282,7 @@ CI runs on every PR: lint → typecheck → unit tests → browser tests → Neo
 
 - [**User Guide**](./docs/user-guide.md) — From zero to production with Causality Analyzer
 - [**API Reference**](./docs/api/) — TypeDoc-generated API documentation
-- [**Architecture Decisions**](./docs/adr/) — Key design rationales
+- [**Cheat Sheet**](./docs/reference/) — Algorithm reference with scenarios and parameters
 - [**Changelog**](./CHANGELOG.md) — Full release history
 - [**Contributing**](./CONTRIBUTING.md) — Development workflow and standards
 

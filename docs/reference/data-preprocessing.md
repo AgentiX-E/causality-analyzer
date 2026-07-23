@@ -41,7 +41,7 @@ const normalized = standardize(table, { method: 'zscore' });
 
 Bins continuous values into integer labels for CPT estimation and Bayesian inference.
 
-### Scenario: Discretize latency into 5 bins for BayesianRCA
+### Scenario: Discretize latency into 5 bins for root cause analysis
 
 ```typescript
 import { discretize } from '@agentix-e/causality-analyzer-pipeline';

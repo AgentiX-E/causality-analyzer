@@ -18,8 +18,10 @@
 <div class="tsd-signature tsd-anchor-link" id="solvelinear"><span class="tsd-kind-call-signature">solveLinear</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">A</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">,</span> <span class="tsd-kind-parameter">b</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">[]</span><a href="#solvelinear" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
 <div class="tsd-comment tsd-typography"><p>Gaussian elimination with partial pivoting.</p>
-<p>Solves Ax = b for x. Handles n=0 (returns []), near-singular matrices
-(continues via partial pivoting), and non-square augmented matrices.</p>
+<p>Solves Ax = b for x. Handles n=0 (returns []).</p>
+<p><strong>WARNING</strong>: Near-singular pivots (&lt; 1e-12) are skipped, which can produce
+unreliable results for ill-conditioned matrices. Prefer <code>solveLinearSafe</code>
+for production use, which detects singularity explicitly.</p>
 <p>Complexity: O(n³) worst case.</p>
 </div>
 <div class="tsd-parameters">
@@ -29,7 +31,7 @@
 <li><span><span class="tsd-kind-parameter">b</span>: <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">[]</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">[]</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/core/src/math.ts#L19">math.ts:19</a></li></ul></aside></div></li></ul></section></div>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/ed6484bf71e9edac1a05f1d3cd3936f4f199d1f8/packages/core/src/math.ts#L22">packages/core/src/math.ts:22</a></li></ul></aside></div></li></ul></section></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">

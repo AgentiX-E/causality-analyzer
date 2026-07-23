@@ -23,7 +23,7 @@ Shared interface: PgClientLike (./remote-relational-store.js)</p>
 <ul class="tsd-hierarchy">
 <li><a href="../interfaces/_agentix-e_causality-analyzer-core.interfaces.IRelationalStore.html" class="tsd-signature-type tsd-kind-interface">IRelationalStore</a></li></ul></section><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/storage-remote/src/remote-relational-store.ts#L107">remote-relational-store.ts:107</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/ed6484bf71e9edac1a05f1d3cd3936f4f199d1f8/packages/storage-remote/src/remote-relational-store.ts#L107">remote-relational-store.ts:107</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-accordion" open><summary class="tsd-accordion-summary tsd-index-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
@@ -38,6 +38,8 @@ Shared interface: PgClientLike (./remote-relational-store.js)</p>
 <div class="tsd-index-list"><a href="#begintransaction" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>begin<wbr/>Transaction</span></a>
 <a href="#close" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>close</span></a>
 <a href="#committransaction" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>commit<wbr/>Transaction</span></a>
+<a href="#gracefulshutdown" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>graceful<wbr/>Shutdown</span></a>
+<a href="#healthcheck" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>health<wbr/>Check</span></a>
 <a href="#loadcpt" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>load<wbr/>CPT</span></a>
 <a href="#loadregressionmodel" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>load<wbr/>Regression<wbr/>Model</span></a>
 <a href="#queryhistoricalresults" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>query<wbr/>Historical<wbr/>Results</span></a>
@@ -64,7 +66,7 @@ Shared interface: PgClientLike (./remote-relational-store.js)</p>
 <li><span><span class="tsd-kind-parameter">config</span>: <span class="tsd-signature-type">RemoteRelationalConfig</span><span class="tsd-signature-symbol"> = {}</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <a href="" class="tsd-signature-type tsd-kind-class">RemoteRelationalStore</a></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/storage-remote/src/remote-relational-store.ts#L111">remote-relational-store.ts:111</a></li></ul></aside></div></li></ul></section></section></details>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/ed6484bf71e9edac1a05f1d3cd3936f4f199d1f8/packages/storage-remote/src/remote-relational-store.ts#L111">remote-relational-store.ts:111</a></li></ul></aside></div></li></ul></section></section></details>
 <details class="tsd-panel-group tsd-member-group tsd-accordion" open><summary class="tsd-accordion-summary" data-key="section-Methods"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
 <h2 class="tsd-anchor-link" id="methods-1">Methods<a href="#methods-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h2></summary>
 <section>
@@ -83,7 +85,7 @@ Shared interface: PgClientLike (./remote-relational-store.js)</p>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <p>Implementation of <a href="../interfaces/_agentix-e_causality-analyzer-core.interfaces.IRelationalStore.html">IRelationalStore</a>.<a href="../interfaces/_agentix-e_causality-analyzer-core.interfaces.IRelationalStore.html#begintransaction">beginTransaction</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/storage-remote/src/remote-relational-store.ts#L143">remote-relational-store.ts:143</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/ed6484bf71e9edac1a05f1d3cd3936f4f199d1f8/packages/storage-remote/src/remote-relational-store.ts#L143">remote-relational-store.ts:143</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="close"><span>close</span><a href="#close" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -95,7 +97,7 @@ Shared interface: PgClientLike (./remote-relational-store.js)</p>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <p>Implementation of <a href="../interfaces/_agentix-e_causality-analyzer-core.interfaces.IRelationalStore.html">IRelationalStore</a>.<a href="../interfaces/_agentix-e_causality-analyzer-core.interfaces.IRelationalStore.html#close">close</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/storage-remote/src/remote-relational-store.ts#L147">remote-relational-store.ts:147</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/ed6484bf71e9edac1a05f1d3cd3936f4f199d1f8/packages/storage-remote/src/remote-relational-store.ts#L147">remote-relational-store.ts:147</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="committransaction"><span>commit<wbr/>Transaction</span><a href="#committransaction" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -111,7 +113,33 @@ Shared interface: PgClientLike (./remote-relational-store.js)</p>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <p>Implementation of <a href="../interfaces/_agentix-e_causality-analyzer-core.interfaces.IRelationalStore.html">IRelationalStore</a>.<a href="../interfaces/_agentix-e_causality-analyzer-core.interfaces.IRelationalStore.html#committransaction">commitTransaction</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/storage-remote/src/remote-relational-store.ts#L144">remote-relational-store.ts:144</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/ed6484bf71e9edac1a05f1d3cd3936f4f199d1f8/packages/storage-remote/src/remote-relational-store.ts#L144">remote-relational-store.ts:144</a></li></ul></aside></div></li></ul></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="gracefulshutdown"><span>graceful<wbr/>Shutdown</span><a href="#gracefulshutdown" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="">
+<div class="tsd-signature tsd-anchor-link" id="gracefulshutdown-1"><span class="tsd-kind-call-signature">gracefulShutdown</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">ms</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span><a href="#gracefulshutdown-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-description">
+<div class="tsd-comment tsd-typography"><p>Graceful shutdown with timeout</p>
+</div>
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li><span><span class="tsd-kind-parameter">ms</span>: <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> = 5000</span></span></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/ed6484bf71e9edac1a05f1d3cd3936f4f199d1f8/packages/storage-remote/src/remote-relational-store.ts#L155">remote-relational-store.ts:155</a></li></ul></aside></div></li></ul></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="healthcheck"><span>health<wbr/>Check</span><a href="#healthcheck" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="">
+<div class="tsd-signature tsd-anchor-link" id="healthcheck-1"><span class="tsd-kind-call-signature">healthCheck</span><span class="tsd-signature-symbol">()</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">&gt;</span><a href="#healthcheck-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-description">
+<div class="tsd-comment tsd-typography"><p>Health check: verifies database connectivity</p>
+</div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/ed6484bf71e9edac1a05f1d3cd3936f4f199d1f8/packages/storage-remote/src/remote-relational-store.ts#L150">remote-relational-store.ts:150</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="loadcpt"><span>load<wbr/>CPT</span><a href="#loadcpt" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -128,7 +156,7 @@ Shared interface: PgClientLike (./remote-relational-store.js)</p>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/_agentix-e_causality-analyzer-core.types.ConditionalProbabilityTable.html" class="tsd-signature-type tsd-kind-interface">ConditionalProbabilityTable</a> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">null</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <p>Implementation of <a href="../interfaces/_agentix-e_causality-analyzer-core.interfaces.IRelationalStore.html">IRelationalStore</a>.<a href="../interfaces/_agentix-e_causality-analyzer-core.interfaces.IRelationalStore.html#loadcpt">loadCPT</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/storage-remote/src/remote-relational-store.ts#L138">remote-relational-store.ts:138</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/ed6484bf71e9edac1a05f1d3cd3936f4f199d1f8/packages/storage-remote/src/remote-relational-store.ts#L138">remote-relational-store.ts:138</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="loadregressionmodel"><span>load<wbr/>Regression<wbr/>Model</span><a href="#loadregressionmodel" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -145,7 +173,7 @@ Shared interface: PgClientLike (./remote-relational-store.js)</p>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/_agentix-e_causality-analyzer-core.types.RegressionParams.html" class="tsd-signature-type tsd-kind-interface">RegressionParams</a> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">null</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <p>Implementation of <a href="../interfaces/_agentix-e_causality-analyzer-core.interfaces.IRelationalStore.html">IRelationalStore</a>.<a href="../interfaces/_agentix-e_causality-analyzer-core.interfaces.IRelationalStore.html#loadregressionmodel">loadRegressionModel</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/storage-remote/src/remote-relational-store.ts#L140">remote-relational-store.ts:140</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/ed6484bf71e9edac1a05f1d3cd3936f4f199d1f8/packages/storage-remote/src/remote-relational-store.ts#L140">remote-relational-store.ts:140</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="queryhistoricalresults"><span>query<wbr/>Historical<wbr/>Results</span><a href="#queryhistoricalresults" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -161,7 +189,7 @@ Shared interface: PgClientLike (./remote-relational-store.js)</p>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/_agentix-e_causality-analyzer-core.types.RCAResult.html" class="tsd-signature-type tsd-kind-interface">RCAResult</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <p>Implementation of <a href="../interfaces/_agentix-e_causality-analyzer-core.interfaces.IRelationalStore.html">IRelationalStore</a>.<a href="../interfaces/_agentix-e_causality-analyzer-core.interfaces.IRelationalStore.html#queryhistoricalresults">queryHistoricalResults</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/storage-remote/src/remote-relational-store.ts#L142">remote-relational-store.ts:142</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/ed6484bf71e9edac1a05f1d3cd3936f4f199d1f8/packages/storage-remote/src/remote-relational-store.ts#L142">remote-relational-store.ts:142</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="readmetrics"><span>read<wbr/>Metrics</span><a href="#readmetrics" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -181,7 +209,7 @@ Shared interface: PgClientLike (./remote-relational-store.js)</p>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="_agentix-e_causality-analyzer-core.table.ColumnarTable.html" class="tsd-signature-type tsd-kind-class">ColumnarTable</a><span class="tsd-signature-symbol">&lt;</span><a class="tsd-signature-type tsd-kind-type-parameter" href="#readmetricss">S</a><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <p>Implementation of <a href="../interfaces/_agentix-e_causality-analyzer-core.interfaces.IRelationalStore.html">IRelationalStore</a>.<a href="../interfaces/_agentix-e_causality-analyzer-core.interfaces.IRelationalStore.html#readmetrics">readMetrics</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/storage-remote/src/remote-relational-store.ts#L135">remote-relational-store.ts:135</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/ed6484bf71e9edac1a05f1d3cd3936f4f199d1f8/packages/storage-remote/src/remote-relational-store.ts#L135">remote-relational-store.ts:135</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="rollbacktocheckpoint"><span>rollback<wbr/>To<wbr/>Checkpoint</span><a href="#rollbacktocheckpoint" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -198,7 +226,7 @@ Shared interface: PgClientLike (./remote-relational-store.js)</p>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <p>Implementation of <a href="../interfaces/_agentix-e_causality-analyzer-core.interfaces.IRelationalStore.html">IRelationalStore</a>.<a href="../interfaces/_agentix-e_causality-analyzer-core.interfaces.IRelationalStore.html#rollbacktocheckpoint">rollbackToCheckpoint</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/storage-remote/src/remote-relational-store.ts#L145">remote-relational-store.ts:145</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/ed6484bf71e9edac1a05f1d3cd3936f4f199d1f8/packages/storage-remote/src/remote-relational-store.ts#L145">remote-relational-store.ts:145</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="savecpt"><span>save<wbr/>CPT</span><a href="#savecpt" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -216,7 +244,7 @@ Shared interface: PgClientLike (./remote-relational-store.js)</p>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <p>Implementation of <a href="../interfaces/_agentix-e_causality-analyzer-core.interfaces.IRelationalStore.html">IRelationalStore</a>.<a href="../interfaces/_agentix-e_causality-analyzer-core.interfaces.IRelationalStore.html#savecpt">saveCPT</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/storage-remote/src/remote-relational-store.ts#L137">remote-relational-store.ts:137</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/ed6484bf71e9edac1a05f1d3cd3936f4f199d1f8/packages/storage-remote/src/remote-relational-store.ts#L137">remote-relational-store.ts:137</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="savercaresult"><span>save<wbr/>RCA<wbr/>Result</span><a href="#savercaresult" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -233,7 +261,7 @@ Shared interface: PgClientLike (./remote-relational-store.js)</p>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <p>Implementation of <a href="../interfaces/_agentix-e_causality-analyzer-core.interfaces.IRelationalStore.html">IRelationalStore</a>.<a href="../interfaces/_agentix-e_causality-analyzer-core.interfaces.IRelationalStore.html#savercaresult">saveRCAResult</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/storage-remote/src/remote-relational-store.ts#L141">remote-relational-store.ts:141</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/ed6484bf71e9edac1a05f1d3cd3936f4f199d1f8/packages/storage-remote/src/remote-relational-store.ts#L141">remote-relational-store.ts:141</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="saveregressionmodel"><span>save<wbr/>Regression<wbr/>Model</span><a href="#saveregressionmodel" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -251,7 +279,7 @@ Shared interface: PgClientLike (./remote-relational-store.js)</p>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <p>Implementation of <a href="../interfaces/_agentix-e_causality-analyzer-core.interfaces.IRelationalStore.html">IRelationalStore</a>.<a href="../interfaces/_agentix-e_causality-analyzer-core.interfaces.IRelationalStore.html#saveregressionmodel">saveRegressionModel</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/storage-remote/src/remote-relational-store.ts#L139">remote-relational-store.ts:139</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/ed6484bf71e9edac1a05f1d3cd3936f4f199d1f8/packages/storage-remote/src/remote-relational-store.ts#L139">remote-relational-store.ts:139</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="setcheckpoint"><span>set<wbr/>Checkpoint</span><a href="#setcheckpoint" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -268,7 +296,7 @@ Shared interface: PgClientLike (./remote-relational-store.js)</p>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <p>Implementation of <a href="../interfaces/_agentix-e_causality-analyzer-core.interfaces.IRelationalStore.html">IRelationalStore</a>.<a href="../interfaces/_agentix-e_causality-analyzer-core.interfaces.IRelationalStore.html#setcheckpoint">setCheckpoint</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/storage-remote/src/remote-relational-store.ts#L146">remote-relational-store.ts:146</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/ed6484bf71e9edac1a05f1d3cd3936f4f199d1f8/packages/storage-remote/src/remote-relational-store.ts#L146">remote-relational-store.ts:146</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="writedetections"><span>write<wbr/>Detections</span><a href="#writedetections" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -284,7 +312,7 @@ Shared interface: PgClientLike (./remote-relational-store.js)</p>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <p>Implementation of <a href="../interfaces/_agentix-e_causality-analyzer-core.interfaces.IRelationalStore.html">IRelationalStore</a>.<a href="../interfaces/_agentix-e_causality-analyzer-core.interfaces.IRelationalStore.html#writedetections">writeDetections</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/f432e6393874482a625b0412dcf30c39f9916519/packages/storage-remote/src/remote-relational-store.ts#L136">remote-relational-store.ts:136</a></li></ul></aside></div></li></ul></section></section></details></div>
+<li>Defined in <a href="https://github.com/AgentiX-E/causality-analyzer/blob/ed6484bf71e9edac1a05f1d3cd3936f4f199d1f8/packages/storage-remote/src/remote-relational-store.ts#L136">remote-relational-store.ts:136</a></li></ul></aside></div></li></ul></section></section></details></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">
@@ -303,7 +331,7 @@ Shared interface: PgClientLike (./remote-relational-store.js)</p>
 <details open class="tsd-accordion tsd-page-navigation-section"><summary class="tsd-accordion-summary" data-key="section-Constructors"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>Constructors</summary>
 <div><a href="#constructor"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Constructor"><use href="../assets/icons.svg#icon-512"></use></svg><span>constructor</span></a></div></details>
 <details open class="tsd-accordion tsd-page-navigation-section"><summary class="tsd-accordion-summary" data-key="section-Methods"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>Methods</summary>
-<div><a href="#begintransaction"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>begin<wbr/>Transaction</span></a><a href="#close"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>close</span></a><a href="#committransaction"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>commit<wbr/>Transaction</span></a><a href="#loadcpt"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>load<wbr/>CPT</span></a><a href="#loadregressionmodel"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>load<wbr/>Regression<wbr/>Model</span></a><a href="#queryhistoricalresults"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>query<wbr/>Historical<wbr/>Results</span></a><a href="#readmetrics"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>read<wbr/>Metrics</span></a><a href="#rollbacktocheckpoint"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>rollback<wbr/>To<wbr/>Checkpoint</span></a><a href="#savecpt"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>save<wbr/>CPT</span></a><a href="#savercaresult"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>save<wbr/>RCA<wbr/>Result</span></a><a href="#saveregressionmodel"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>save<wbr/>Regression<wbr/>Model</span></a><a href="#setcheckpoint"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>set<wbr/>Checkpoint</span></a><a href="#writedetections"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>write<wbr/>Detections</span></a></div></details></div></details></div>
+<div><a href="#begintransaction"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>begin<wbr/>Transaction</span></a><a href="#close"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>close</span></a><a href="#committransaction"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>commit<wbr/>Transaction</span></a><a href="#gracefulshutdown"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>graceful<wbr/>Shutdown</span></a><a href="#healthcheck"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>health<wbr/>Check</span></a><a href="#loadcpt"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>load<wbr/>CPT</span></a><a href="#loadregressionmodel"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>load<wbr/>Regression<wbr/>Model</span></a><a href="#queryhistoricalresults"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>query<wbr/>Historical<wbr/>Results</span></a><a href="#readmetrics"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>read<wbr/>Metrics</span></a><a href="#rollbacktocheckpoint"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>rollback<wbr/>To<wbr/>Checkpoint</span></a><a href="#savecpt"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>save<wbr/>CPT</span></a><a href="#savercaresult"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>save<wbr/>RCA<wbr/>Result</span></a><a href="#saveregressionmodel"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>save<wbr/>Regression<wbr/>Model</span></a><a href="#setcheckpoint"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>set<wbr/>Checkpoint</span></a><a href="#writedetections"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>write<wbr/>Detections</span></a></div></details></div></details></div>
 <div class="site-menu">
 <nav class="tsd-navigation"><a href="../modules.html">Causality Analyzer</a>
 <ul class="tsd-small-nested-navigation" id="tsd-nav-container">
