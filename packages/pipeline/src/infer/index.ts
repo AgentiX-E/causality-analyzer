@@ -32,3 +32,8 @@ export {
   detectColliderBias, findColliders, isColliderBias, removeColliderBiasedAdjustments,
 } from './collider-bias.js';
 export type { ColliderBiasWarning } from './collider-bias.js';
+
+// ── Causal Forest + Double ML ───────────────────────────────────
+export { CausalForest } from './causal-forest.js';
+export type { CausalForestConfig } from './causal-forest.js';
+export { doubleMLATE, doubleMLCATE } from './double-ml.js';
