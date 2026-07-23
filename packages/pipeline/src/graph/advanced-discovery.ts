@@ -87,6 +87,58 @@ export function fciAlgorithm(
     depth++;
   }
 
+  // ── Phase 1b: Possible-D-SEP search (FCI-specific) ──────────────
+  // Re-test adjacent edges using conditioning sets drawn from a larger
+  // "possible d-separation" set. This enables FCI to correctly handle
+  // latent confounders that the initial PC-style skeleton cannot.
+  // Reference: Spirtes et al. (2000), §6.2; Zhang (2008).
+  for (let i = 0; i < n; i++) {
+    const iName = nodeNames[i]!;
+    // Collect Possible-D-SEP(i): all nodes reachable within 3 hops
+    const pds = new Set<number>();
+    const visited = new Set<number>();
+    const queue: number[] = [i];
+    visited.add(i);
+    let pdsDepth = 0;
+    while (queue.length > 0 && pdsDepth < 3) {
+      const sz = queue.length;
+      for (let _s = 0; _s < sz; _s++) {
+        const v = queue.shift()!;
+        if (v !== i) pds.add(v);
+        for (let w = 0; w < n; w++) {
+          if (visited.has(w)) continue;
+          if (g.hasEdge(nodeNames[v]!, nodeNames[w]!) || g.hasEdge(nodeNames[w]!, nodeNames[v]!)) {
+            visited.add(w);
+            queue.push(w);
+          }
+        }
+      }
+      pdsDepth++;
+    }
+
+    // Re-test each adjacent pair (i, j) with PDS conditioning sets
+    for (let j = i + 1; j < n; j++) {
+      if (!g.hasEdge(iName, nodeNames[j]!)) continue;
+      const candidates = [...pds].filter(k => k !== j);
+      for (let cSize = 1; cSize <= Math.min(3, candidates.length); cSize++) {
+        const subsets = combinations(candidates.map(String).map(Number), cSize);
+        let removed = false;
+        for (const S of subsets) {
+          const p = fisherZTest(data, i, j, S);
+          if (p > cfg.alpha) {
+            g.removeEdge(iName, nodeNames[j]!);
+            g.removeEdge(nodeNames[j]!, iName);
+            const key = `${Math.min(i, j)}-${Math.max(i, j)}`;
+            sepSet.set(key, new Set(S.map(s => nodeNames[s]!)));
+            removed = true;
+            break;
+          }
+        }
+        if (removed) break;
+      }
+    }
+  }
+
   // Phase 2: Orient v-structures
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
@@ -133,6 +185,26 @@ export function fciAlgorithm(
           if (!g.hasEdge(nodeNames[j]!, nodeNames[k]!) || g.hasEdge(nodeNames[k]!, nodeNames[j]!)) continue;
           g.toUndirected(nodeNames[i]!, nodeNames[k]!);
           changed = true;
+        }
+      }
+    }
+
+    // R3: i—k→j, i—l→j, k and l non-adjacent → i→j
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        if (!g.hasEdge(nodeNames[i]!, nodeNames[j]!) || !g.hasEdge(nodeNames[j]!, nodeNames[i]!)) continue;
+        for (let k = 0; k < n; k++) {
+          if (!g.hasEdge(nodeNames[i]!, nodeNames[k]!) || !g.hasEdge(nodeNames[k]!, nodeNames[i]!)) continue;
+          if (!g.hasEdge(nodeNames[k]!, nodeNames[j]!) || g.hasEdge(nodeNames[j]!, nodeNames[k]!)) continue;
+          for (let l = 0; l < n; l++) {
+            if (l === k) continue;
+            if (!g.hasEdge(nodeNames[i]!, nodeNames[l]!) || !g.hasEdge(nodeNames[l]!, nodeNames[i]!)) continue;
+            if (!g.hasEdge(nodeNames[l]!, nodeNames[j]!) || g.hasEdge(nodeNames[j]!, nodeNames[l]!)) continue;
+            if (g.hasEdge(nodeNames[k]!, nodeNames[l]!) || g.hasEdge(nodeNames[l]!, nodeNames[k]!)) continue;
+            g.toUndirected(nodeNames[i]!, nodeNames[j]!);
+            changed = true;
+            break;
+          }
         }
       }
     }
