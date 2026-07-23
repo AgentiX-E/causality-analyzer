@@ -6,3 +6,4 @@ export { kciTest } from './kci.js';
 export type { KCIConfig } from './kci.js';
 export { gesAlgorithm } from './ges.js';
 export type { GESConfig } from './ges.js';
+export { directLiNGAM } from './lingam.js';
