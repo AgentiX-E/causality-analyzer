@@ -3,6 +3,7 @@ import {
   CONSTANTS,
   CausalityError, ConfigValidationError, NodeNotFoundError,
   SingularMatrixError, IdentificationError, ColumnNotFoundError,
+  clamp, safeDiv, safeLog,
 } from '../constants.js';
 
 describe('CONSTANTS', () => {
@@ -58,4 +59,13 @@ describe('CausalityError hierarchy', () => {
     const e = new ColumnNotFoundError('latency_p99');
     expect(e.message).toContain('latency_p99');
   });
+});
+
+describe('clamp / safeDiv / safeLog', () => {
+  it('clamp within range returns value', () => { expect(clamp(5, 15)).toBe(5); });
+  it('clamp above limit caps', () => { expect(clamp(100, 15)).toBe(15); });
+  it('clamp below negative limit caps', () => { expect(clamp(-100, 15)).toBe(-15); });
+  it('safeDiv with near-zero denominator returns 0', () => { expect(safeDiv(5, 1e-12)).toBe(0); });
+  it('safeDiv with valid denominator returns ratio', () => { expect(safeDiv(6, 3)).toBe(2); });
+  it('safeLog of 1 returns 0', () => { expect(safeLog(1)).toBe(0); });
 });

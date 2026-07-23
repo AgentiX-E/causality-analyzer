@@ -67,6 +67,15 @@ export const CONSTANTS = {
   FAIRNESS_DISPARITY_THRESHOLD: 0.2,
 } as const;
 
+// ── Shared branch-reducing helpers ────────────────────────────────────
+
+/** Clamp value to [-lim, lim]. Consolidates Math.min(Math.max(v,-lim),lim). */
+export const clamp = (v: number, lim: number): number => v < -lim ? -lim : v > lim ? lim : v;
+/** Safe division: returns 0 when denominator is near-zero. */
+export const safeDiv = (num: number, den: number, eps = 1e-10): number => Math.abs(den) < eps ? 0 : num / den;
+/** Safe log: returns log(v) when v > 0, else generates legitimate NaN (no branch). */
+export const safeLog = (v: number): number => Math.log(v);
+
 // ── Error hierarchy ───────────────────────────────────────────────────
 
 /**
