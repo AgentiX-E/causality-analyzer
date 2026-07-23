@@ -45,7 +45,14 @@ export type {
 export { ColumnarTable } from './table/index.js';
 
 // ── Interfaces ────────────────────────────────────────────────────
-export type { IRelationalStore, IGraphStore } from './interfaces/index.js';
+export type {
+  IRelationalStore,
+  IGraphStore,
+  IMetricStore,
+  IModelStore,
+  IResultStore,
+  ITransactionStore,
+} from './interfaces/index.js';
 
 // ── Registry ──────────────────────────────────────────────────────
 export {

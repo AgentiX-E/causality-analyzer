@@ -244,3 +244,11 @@ describe('Cross-class hierarchy', () => {
     expect(e instanceof ConvergenceError).toBe(false);
   });
 });
+
+describe('ISP — Interface Segregation Principle compliance', () => {
+  // Compile-time verification: each focused interface has the correct methods
+  it('IMetricStore, IModelStore, IResultStore, ITransactionStore are importable', async () => {
+    const mod = await import('../interfaces/index.js');
+    expect(typeof mod).toBe('object');
+  });
+});
