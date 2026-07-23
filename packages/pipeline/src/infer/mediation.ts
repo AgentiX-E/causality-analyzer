@@ -162,15 +162,16 @@ function multipleRegression(
       for (let j = col; j <= k; j++) aug[row]![j]! -= f * aug[col]![j]!;
     }
   }
+  // Back-substitution
   const coefs = new Array(k).fill(0);
   for (let i = k - 1; i >= 0; i--) {
     let sum = aug[i]![k]!;
     for (let j = i + 1; j < k; j++) sum -= aug[i]![j]! * coefs[j]!;
-    coefs[i] = aug[i]![i]! !== 0 ? sum / aug[i]![i]! : 0;
+    coefs[i] = Math.abs(aug[i]![i]!) > 1e-12 ? sum / aug[i]![i]! : 0;
   }
 
   const yMean = ySum / n;
-  const intercept = yMean - coefs.reduce((s, c, i) => s + c * (xIndices[i]! >= 0 ? colMean(data, xIndices[i]!) : 0), 0);
+  const intercept = yMean - coefs.reduce((s, c, i) => s + c * colMean(data, xIndices[i]!), 0);
   return { coefs, intercept };
 }
 
