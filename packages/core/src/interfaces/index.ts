@@ -106,6 +106,8 @@ export interface ITransactionStore {
 export interface IRelationalStore extends IMetricStore, IModelStore, IResultStore, ITransactionStore {
   /** Close the store and release all resources */
   close(): void;
+  /** Health check: true if store is accessible */
+  healthCheck?(): Promise<boolean> | boolean;
 }
 
 // ── Graph Store ─────────────────────────────────────────────────────────

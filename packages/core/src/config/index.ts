@@ -8,7 +8,8 @@
  * @packageDocumentation
  */
 
-import type { ZodType, ZodTypeDef } from 'zod';
+import type { ZodType, ZodTypeDef, ZodObject, ZodRawShape } from 'zod';
+import { z } from 'zod';
 
 /** Result of a configuration validation */
 export interface ValidationResult {
@@ -118,6 +119,37 @@ export abstract class BaseConfig {
   /** Serialize configuration to a JSON string */
   toString(): string {
     return JSON.stringify(this.toJSON(), null, 2);
+  }
+
+  /**
+   * Merge environment variables (prefixed with `CA_`) into configuration.
+   *
+   * Reads `process.env` keys matching `CA_<FIELD_NAME>` and applies them
+   * over the current config. Numeric values are auto-coerced via Zod.
+   *
+   * Example:
+   * ```bash
+   * CA_ALPHA=0.01 CA_MAX_DEGREE=5
+   * ```
+   *
+   * @param prefix — env var prefix (default: "CA_")
+   * @throws if the merged config fails Zod validation
+   */
+  static fromEnv<T extends BaseConfig>(
+    this: new (...args: any[]) => T,
+    params?: Record<string, unknown>,
+    prefix = 'CA_',
+  ): T {
+    const defaults: Record<string, unknown> = { ...params };
+    for (const [key, val] of Object.entries(process.env)) {
+      if (!key.startsWith(prefix)) continue;
+      const raw = key.slice(prefix.length).toLowerCase();
+      const field = raw.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+      // Auto-coerce numeric strings
+      const num = Number(val);
+      defaults[field] = Number.isNaN(num) ? val : num;
+    }
+    return new this(defaults);
   }
 
 }

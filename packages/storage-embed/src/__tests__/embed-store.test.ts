@@ -74,6 +74,103 @@ describe('EmbedRelationalStore', () => {
     const table = await store.readMetrics({ start: 0, end: 2000 });
     expect(table.rowCount).toBeGreaterThan(0);
   });
+
+  it('readMetrics respects metric filter', async () => {
+    store = createStore();
+    // Write two metric columns
+    await store.writeDetections([
+      { isAnomalous: true, labels: new Float64Array([1, 0]), scores: new Float64Array([0.9, 0.1]), timestamp: 1000, metadata: {} },
+    ]);
+    // Read with filter: only m0
+    const table = await store.readMetrics({ start: 0, end: 2000, metrics: ['m0'] });
+    expect(table.rowCount).toBe(1);
+    // Read without filter: both m0 + m1
+    const unfiltered = await store.readMetrics({ start: 0, end: 2000 });
+    expect(unfiltered.rowCount).toBe(2);
+  });
+
+  it('readMetrics handles AbortSignal', async () => {
+    store = createStore();
+    const ctrl = new AbortController();
+    ctrl.abort();
+    await expect(store.readMetrics({ start: 0, end: 2000, signal: ctrl.signal })).rejects.toThrow();
+  });
+
+  it('writeDetections with AbortSignal', async () => {
+    store = createStore();
+    const ctrl = new AbortController();
+    ctrl.abort();
+    await expect(store.writeDetections([], ctrl.signal)).rejects.toThrow();
+  });
+
+  it('checkpoint with abort respects signal', async () => {
+    store = createStore();
+    const ctrl = new AbortController();
+    ctrl.abort();
+    await expect(store.setCheckpoint('sx', 'cp', ctrl.signal)).rejects.toThrow();
+  });
+
+  it('saveCPT with AbortSignal', async () => {
+    store = createStore();
+    const ctrl = new AbortController();
+    ctrl.abort();
+    await expect(store.saveCPT('g', 'n', { node: 'n', parents: [], entries: {} }, ctrl.signal)).rejects.toThrow();
+  });
+
+  it('loadRegressionModel with AbortSignal', async () => {
+    store = createStore();
+    const ctrl = new AbortController();
+    ctrl.abort();
+    await expect(store.loadRegressionModel('g', 'n', ctrl.signal)).rejects.toThrow();
+  });
+
+  it('regression save with abort', async () => {
+    store = createStore();
+    const ctrl = new AbortController();
+    ctrl.abort();
+    await expect(store.saveRegressionModel('g', 'n', { coefficients: [], intercept: 0, residualStdDev: 1 }, ctrl.signal)).rejects.toThrow();
+  });
+
+  it('rollbackToCheckpoint with abort', async () => {
+    store = createStore();
+    const ctrl = new AbortController();
+    ctrl.abort();
+    await expect(store.rollbackToCheckpoint('s', 'c', ctrl.signal)).rejects.toThrow();
+  });
+
+  it('commitTransaction with abort', async () => {
+    store = createStore();
+    const ctrl = new AbortController();
+    ctrl.abort();
+    await expect(store.commitTransaction('s', ctrl.signal)).rejects.toThrow();
+  });
+
+  it('beginTransaction with abort', async () => {
+    store = createStore();
+    const ctrl = new AbortController();
+    ctrl.abort();
+    await expect(store.beginTransaction('s', ctrl.signal)).rejects.toThrow();
+  });
+
+  it('healthCheck returns true', () => {
+    store = createStore();
+    expect(store.healthCheck()).toBe(true);
+  });
+
+  it('migrate creates schema version table', async () => {
+    store = createStore();
+    await store.migrate();
+    expect(await store.getSchemaVersion()).toBeGreaterThanOrEqual(0);
+  });
+
+  it('migrate is idempotent', async () => {
+    store = createStore();
+    await store.migrate();
+    const v1 = await store.getSchemaVersion();
+    await store.migrate();
+    const v2 = await store.getSchemaVersion();
+    expect(v1).toBe(v2);
+  });
 });
 
 // ── EmbedGraphStore (overgraph persistent) ──────────────────────────
@@ -176,5 +273,54 @@ describe('EmbedGraphStore', () => {
     const b = await store.loadGraph('gb');
     expect(a?.nodes).toEqual(['A']);
     expect(b?.nodes).toEqual(['B']);
+  });
+
+  it('findSimilarGraphs returns empty for empty store', async () => {
+    // fresh store with no graphs saved
+    const results = await store.findSimilarGraphs(mg(['X']), 5);
+    expect(Array.isArray(results)).toBe(true);
+    expect(results.length).toBe(0);
+  });
+
+  it('saveGraph with AbortSignal', async () => {
+    const ctrl = new AbortController();
+    ctrl.abort();
+    await expect(store.saveGraph(
+      mg(['A']),
+      { id: 'g-abort', method: 'pc', computedAt: 1, parameters: {}, confidence: 0.9 },
+      ctrl.signal,
+    )).rejects.toThrow();
+  });
+
+  it('loadGraph with AbortSignal', async () => {
+    const ctrl = new AbortController();
+    ctrl.abort();
+    await expect(store.loadGraph('g', ctrl.signal)).rejects.toThrow();
+  });
+
+  it('loadGraphVersion with abort', async () => {
+    const ctrl = new AbortController();
+    ctrl.abort();
+    await expect(store.loadGraphVersion('g', 1, ctrl.signal)).rejects.toThrow();
+  });
+
+  it('listGraphVersions with abort', async () => {
+    const ctrl = new AbortController();
+    ctrl.abort();
+    await expect(store.listGraphVersions('g', ctrl.signal)).rejects.toThrow();
+  });
+
+  it('findSimilarGraphs with abort', async () => {
+    const ctrl = new AbortController();
+    ctrl.abort();
+    await expect(store.findSimilarGraphs(mg(['A']), 5, ctrl.signal)).rejects.toThrow();
+  });
+
+  it('loadGraph returns null for graph with no nodes', async () => {
+    // Save a graph that has an ID but whose nodes are empty
+    const g = mg([]);
+    const id = await store.saveGraph(g, { id: 'g-nonodes', method: 'pc', computedAt: 1, parameters: {}, confidence: 0.9 });
+    const loaded = await store.loadGraph(id);
+    expect(loaded).toBeNull();
   });
 });

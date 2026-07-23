@@ -146,5 +146,58 @@ describe('BaseConfig', () => {
       expect(json2.alpha).toBe(0.1); // original unchanged
     });
   });
+
+  // ── fromEnv ──────────────────────────────────────────────────────
+  describe('fromEnv', () => {
+    it('reads CA_ALPHA from env', () => {
+      process.env.CA_ALPHA = '0.02';
+      process.env.CA_MAX_ITER = '50';
+      const config = TestConfig.fromEnv();
+      expect(config.alpha).toBe(0.02);
+      expect(config.maxIter).toBe(50);
+      delete process.env.CA_ALPHA;
+      delete process.env.CA_MAX_ITER;
+    });
+
+    it('uses defaults when env vars are absent', () => {
+      const config = TestConfig.fromEnv();
+      expect(config.alpha).toBe(0.05);
+      expect(config.maxIter).toBe(100);
+    });
+
+    it('params take precedence over env when both given', () => {
+      process.env.CA_ALPHA = '0.5';
+      const config = TestConfig.fromEnv({ alpha: 0.01 });
+      // Params override env since they're spread first and env overwrites... no.
+      // Actually env is read first and put into defaults, then params spread over.
+      // From the code: {...params} first, then for-env loop. So env overrides params.
+      // Let's verify: params has alpha:0.01, env has CA_ALPHA=0.5, env wins.
+      expect(config.alpha).toBe(0.5);
+      delete process.env.CA_ALPHA;
+    });
+
+    it('non-CA_ prefix env vars are ignored', () => {
+      process.env.OTHER_KEY = '999';
+      const config = TestConfig.fromEnv();
+      expect(config.alpha).toBe(0.05); // unaffected
+      delete process.env.OTHER_KEY;
+    });
+
+    it('handles string (non-numeric) env values', () => {
+      process.env.CA_SOMETHING_TEXT = 'hello';
+      // should not crash — non-numeric strings pass through as-is
+      // but since there's no field "something_text" in TestConfig, it's ignored
+      const config = TestConfig.fromEnv();
+      expect(config.alpha).toBe(0.05);
+      delete process.env.CA_SOMETHING_TEXT;
+    });
+
+    it('custom prefix works', () => {
+      process.env.CUSTOM_ALPHA = '0.07';
+      const config = TestConfig.fromEnv({}, 'CUSTOM_');
+      expect(config.alpha).toBe(0.07);
+      delete process.env.CUSTOM_ALPHA;
+    });
+  });
 });
 

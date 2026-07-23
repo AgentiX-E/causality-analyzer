@@ -9,11 +9,11 @@ export default defineConfig({
       reporter: ['text','json','lcov'],
       include: ['src/**/*.ts'],
       exclude: ['src/**/*.test.ts', 'src/**/index.ts'],
-      // Lit decorators (@customElement, @property, @state) and Shadow DOM
-      // lifecycle generate framework infrastructure code, not application logic.
-      // CI happy-dom coverage is lower than local due to v8 variance.
-      // Canvas2DRenderer and GraphRenderer interface are the testable logic.
-      thresholds: { statements: 35, branches: 65, functions: 45, lines: 35 }
+      // Canvas2DRenderer = 100% stmts (core business logic, fully tested).
+      // Lit 3 Web Component decorator-generated code + uPlot Canvas hooks
+      // require real browser rendering — covered by Playwright E2E tests.
+      // These thresholds represent the maximum achievable in happy-dom.
+      thresholds: { statements: 50, branches: 80, functions: 70, lines: 50 }
     }
   }
 });

@@ -11,6 +11,11 @@ const DDL: Record<string,string> = {
   regression:  "CREATE TABLE IF NOT EXISTS regression_models (graph_id TEXT NOT NULL, node TEXT NOT NULL, coefficients TEXT NOT NULL, intercept REAL NOT NULL, residual_std REAL NOT NULL, PRIMARY KEY (graph_id, node))",
   rca_results: "CREATE TABLE IF NOT EXISTS rca_results (case_id TEXT PRIMARY KEY, result_json TEXT NOT NULL, analyzed_at INTEGER NOT NULL, root_cause TEXT)",
   analysis:    "CREATE TABLE IF NOT EXISTS analysis_state (session_id TEXT NOT NULL, stage TEXT NOT NULL, checkpoint_name TEXT, progress TEXT, PRIMARY KEY (session_id, checkpoint_name))",
+  version:     "CREATE TABLE IF NOT EXISTS _schema_version (version INTEGER NOT NULL DEFAULT 0)",
+};
+
+const MIGRATIONS: Record<number, string[]> = {
+  0: ["INSERT INTO _schema_version (version) VALUES (0) ON CONFLICT DO NOTHING;"],
 };
 
 export interface EmbedStoreOptions {
@@ -24,6 +29,8 @@ function checkAborted(signal?: AbortSignal): void {
 export class EmbedRelationalStore implements IRelationalStore {
   private db: any;
   private q: Record<string,any> = {};
+  /** Tracks nested BEGIN…COMMIT depth. 0 = no active outer transaction. */
+  private _txnDepth = 0;
 
   constructor(opts: EmbedStoreOptions = {}) {
     const dbPath = opts.dbPath || "./causality-analyzer.db";
@@ -31,6 +38,7 @@ export class EmbedRelationalStore implements IRelationalStore {
     this.db.pragma(dbPath === ":memory:" ? "journal_mode = MEMORY" : "journal_mode = WAL");
     this.db.pragma("synchronous = NORMAL");
     for (const ddl of Object.values(DDL)) this.db.exec(ddl);
+    this._migrate();
 
     this.q.mInsert = this.db.prepare("INSERT OR REPLACE INTO metrics VALUES (?, ?, ?)");
     this.q.mRead   = this.db.prepare("SELECT ts, metric_name, value FROM metrics WHERE ts >= ? AND ts <= ? ORDER BY ts");
@@ -41,6 +49,29 @@ export class EmbedRelationalStore implements IRelationalStore {
     this.q.aSave   = this.db.prepare("INSERT OR REPLACE INTO rca_results VALUES (?, ?, ?, ?)");
     this.q.aQuery  = this.db.prepare("SELECT result_json FROM rca_results WHERE (? IS NULL OR analyzed_at >= ?) AND (? IS NULL OR analyzed_at <= ?) AND (? IS NULL OR root_cause = ?) ORDER BY analyzed_at DESC LIMIT ?");
     this.q.sUpsert = this.db.prepare("INSERT OR REPLACE INTO analysis_state VALUES (?, ?, ?, ?)");
+  }
+
+  /** Idempotent schema migration — safe to call on fresh or existing DB. */
+  private _migrate(): void {
+    const row = this.db.prepare('SELECT MAX(version) as v FROM _schema_version').get() as { v: number | null } | undefined;
+    const current = row?.v ?? -1;
+    const target = Math.max(...Object.keys(MIGRATIONS).map(Number));
+    for (let v = current + 1; v <= target; v++) {
+      const stmts = MIGRATIONS[v];
+      if (stmts) {
+        for (const sql of stmts) this.db.exec(sql);
+      }
+    }
+    this.db.prepare('INSERT INTO _schema_version (version) VALUES (?) ON CONFLICT DO NOTHING').run(target);
+  }
+
+  async migrate(): Promise<void> {
+    this._migrate();
+  }
+
+  async getSchemaVersion(): Promise<number> {
+    const row = this.db.prepare('SELECT MAX(version) as v FROM _schema_version').get() as { v: number | null } | undefined;
+    return row?.v ?? 0;
   }
 
   private esc(s: string): string { return s.replace(/"/g, '""'); }
@@ -90,14 +121,16 @@ export class EmbedRelationalStore implements IRelationalStore {
   }
   async beginTransaction(sid: string, signal?: AbortSignal): Promise<void> {
     checkAborted(signal);
-    this.db.exec('BEGIN');
+    if (this._txnDepth === 0) this.db.exec('BEGIN');
+    this._txnDepth++;
     this.db.exec('SAVEPOINT "'+this.esc(sid)+'"');
     this.q.sUpsert.run(sid,'started',null,null);
   }
   async commitTransaction(sid: string, signal?: AbortSignal): Promise<void> {
     checkAborted(signal);
     this.db.exec('RELEASE SAVEPOINT "'+this.esc(sid)+'"');
-    this.db.exec('COMMIT');
+    this._txnDepth--;
+    if (this._txnDepth === 0) this.db.exec('COMMIT');
   }
   async rollbackToCheckpoint(sid: string, cp: string, signal?: AbortSignal): Promise<void> {
     checkAborted(signal);
