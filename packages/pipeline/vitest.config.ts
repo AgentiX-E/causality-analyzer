@@ -8,10 +8,10 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text','json','lcov'],
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts', 'src/**/index.ts', 'src/cli.ts'],
       exclude: [
         'src/**/*.test.ts',
         'src/**/index.ts',    // barrel exports — no executable logic
+        'src/cli.ts',         // CLI entry point — tested via integration
       ],
       thresholds: { statements: 95, branches: 83, functions: 95, lines: 95 }
     }
