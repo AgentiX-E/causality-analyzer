@@ -10,7 +10,7 @@ import {
   refuteDataSubset, refuteBootstrap,
 } from '../infer/causal-inference.js';
 import { CIRCAPipeline } from '../analyze/circa.js';
-import { BayesianRCA } from '../analyze/rca.js';
+import { HeuristicPathRCA } from '../analyze/rca.js';
 
 // ── Identification ──────────────────────────────────────────────────
 describe('causal identification', () => {
@@ -147,7 +147,7 @@ describe('CIRCA branch coverage', () => {
 
   it('RCA ensemble with no candidates', () => {
     const g = new CausalGraph(['A', 'B']);
-    const rca = new BayesianRCA();
+    const rca = new HeuristicPathRCA();
     rca.train(g, new Set(['A']), new Matrix(2, 2));
     const result = rca.findRootCauses([]);
     expect(result.rootCauses.length).toBeGreaterThanOrEqual(0);

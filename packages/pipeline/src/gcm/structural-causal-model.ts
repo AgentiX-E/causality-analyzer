@@ -81,25 +81,39 @@ export class StructuralCausalModel {
 
       } else {
         // OLS: X_i = β₀ + Σ βⱼ * paⱼ + ε
+        // Every row contributes consistently to XtX and Xty:
+        // if any variable (y or any xi) is NaN, skip the entire row.
         const XtX = Array.from({ length: k }, () => new Array(k).fill(0));
         const Xty = new Array(k).fill(0);
         let ySum = 0, validN = 0;
         for (let r = 0; r < n; r++) {
           const y = data[r]![nodeIdx]!;
           if (Number.isNaN(y)) continue;
+          const xRow = pIdx.map(i => data[r]![i]!);
+          if (xRow.some(x => Number.isNaN(x))) continue; // skip entire row if any parent is NaN
           ySum += y; validN++;
           for (let i = 0; i < k; i++) {
-            const xi = data[r]![pIdx[i]!]!;
-            if (Number.isNaN(xi)) continue;
-            Xty[i] += xi * y;
+            Xty[i] += xRow[i]! * y;
             for (let j = 0; j < k; j++) {
-              const xj = data[r]![pIdx[j]!]!;
-              if (!Number.isNaN(xj)) XtX[i]![j] += xi * xj;
+              XtX[i]![j] += xRow[i]! * xRow[j]!;
             }
           }
         }
         const coef = solveLinear(XtX, Xty);
-        const intercept = validN > 0 ? ySum / validN - coef.reduce((s, c, i) => s + c * ((validN > 0 ? Xty[i]! / validN : 0)), 0) : 0;
+        // Compute intercept: y̅ - Σ(β_i * x̅_i)
+        const yMean = validN > 0 ? ySum / validN : 0;
+        const xMeans = pIdx.map((_, i) => {
+          let sum = 0;
+          for (let r = 0; r < n; r++) {
+            const y = data[r]![nodeIdx]!;
+            if (Number.isNaN(y)) continue;
+            const xRow = pIdx.map(pi => data[r]![pi]!);
+            if (xRow.some(x => Number.isNaN(x))) continue;
+            sum += xRow[i]!;
+          }
+          return validN > 0 ? sum / validN : 0;
+        });
+        const intercept = yMean - coef.reduce((s, c, i) => s + c * (xMeans[i] ?? 0), 0);
         let ss = 0;
         for (let r = 0; r < n; r++) {
           let pred = intercept;

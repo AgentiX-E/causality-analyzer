@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest';
 import { CausalGraph } from '../graph/causal-graph.js';
 import { StructuralCausalModel } from '../gcm/structural-causal-model.js';
 import { CIRCAPipeline } from '../analyze/circa.js';
-import { BayesianRCA } from '../analyze/rca.js';
+import { HeuristicPathRCA } from '../analyze/rca.js';
 import { buildGraphVizData, buildTimeseriesVizData, buildRankingVizData } from '../viz/viz-data.js';
 import { FusionAnalyzer } from '../viz/fusion.js';
 
@@ -151,10 +151,10 @@ describe('E2E pipeline', () => {
     expect(graphViz.nodes.length).toBe(3);
   });
 
-  it('E2E with BayesianRCA + fusion', () => {
+  it('E2E with HeuristicPathRCA + fusion', () => {
     const g = new CausalGraph(['S1', 'S2', 'S3']);
     g.addEdge('S1', 'S2'); g.addEdge('S2', 'S3');
-    const rca = new BayesianRCA();
+    const rca = new HeuristicPathRCA();
     rca.train(g, new Set(['S2', 'S3']), { rows: 2, columns: 3, set: () => {}, get: () => 0, clone: () => ({} as any), subMatrixColumn: () => ({} as any) } as any);
     // Even untrained, verify no crash
     expect(() => rca.findRootCauses(['S2'])).not.toThrow();

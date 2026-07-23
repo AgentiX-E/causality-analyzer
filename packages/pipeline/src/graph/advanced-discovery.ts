@@ -17,6 +17,7 @@
  * @packageDocumentation
  */
 import { Matrix } from 'ml-matrix';
+import { combinations } from "@agentix-e/causality-analyzer-core";
 import { CausalGraph } from './causal-graph.js';
 import { fisherZTest } from './pc.js';
 import type { PCConfig } from './pc.js';
@@ -286,11 +287,3 @@ export function targetedDiscovery(
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-function combinations<T>(arr: T[], k: number): T[][] {
-  if (k === 0) return [[]];
-  if (arr.length < k) return [];
-  const [first, ...rest] = arr as [T, ...T[]];
-  const withFirst = combinations(rest, k - 1).map(c => [first, ...c]);
-  const without = combinations(rest, k);
-  return [...withFirst, ...without];
-}

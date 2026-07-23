@@ -1,3 +1,4 @@
+import { CONSTANTS } from "../constants.js";
 /**
  * Statistical anomaly detector: 3-sigma, MAD, IQR methods.
  *
@@ -64,8 +65,12 @@ export class StatsDetector {
         this.means![m] = mean;
 
         if (this.config.method === 'mad') {
-          const absDevs = Array.from(vals, v => Math.abs(v - mean)).sort((a, b) => a - b);
-          this.scales![m] = 1.4826 * (absDevs[Math.floor(absDevs.length / 2)]! || 1);
+          // MAD = CONSTANTS.MAD_CONSISTENCY × median(|x_i - median(x)|)
+          // The center must be the median, not the mean, for robustness.
+          const sVals = Array.from(vals).sort((a, b) => a - b);
+          const median = sVals[Math.floor(sVals.length / 2)]!;
+          const absDevs = Array.from(vals, v => Math.abs(v - median)).sort((a, b) => a - b);
+          this.scales![m] = CONSTANTS.MAD_CONSISTENCY * (absDevs[Math.floor(absDevs.length / 2)]! || 1);
         } else { // iqr
           const sorted = Array.from(vals).sort((a, b) => a - b);
           const q1 = sorted[Math.floor(sorted.length * 0.25)]!;

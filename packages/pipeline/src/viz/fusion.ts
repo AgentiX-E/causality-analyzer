@@ -106,9 +106,15 @@ export class FusionAnalyzer {
 
     const rootCauses: RootCause[] = [];
     for (const [name, v] of votes) {
-      rootCauses.push({ name, score: v.maxScore, confidence: v.maxConfidence, rank: 0, evidence: v.evidence });
+      rootCauses.push({ name, score: v.count / 3, confidence: v.maxConfidence, rank: 0, evidence: v.evidence });
     }
-    rootCauses.sort((a, b) => b.score - a.score);
+    // Sort by vote count first, then by maxScore as tie-breaker
+    rootCauses.sort((a, b) => {
+      const aCnt = Math.round(a.score * 3), bCnt = Math.round(b.score * 3);
+      if (aCnt !== bCnt) return bCnt - aCnt;
+      // Tie: use maxScore from original votes (confidence as proxy)
+      return (votes.get(b.name)?.maxScore ?? 0) - (votes.get(a.name)?.maxScore ?? 0);
+    });
     rootCauses.forEach((r, i) => Object.assign(r, { rank: i + 1 }));
 
     return {

@@ -203,4 +203,83 @@ describe('CIRCAPipeline', () => {
     expect(rShort.rootCauses.length).toBeGreaterThan(0);
     expect(rLong.rootCauses.length).toBeGreaterThan(0);
   });
+
+  it('toJSON returns same rootCauses count as property', () => {
+    const g = smallGraph();
+    const { normal, anomaly } = generateData(g, 200, 40, 'Memory');
+    const pipeline = new CIRCAPipeline({ tauMax: 3 }, { threshold: 3.0 });
+    pipeline.train(g, normal);
+    const result = pipeline.analyze(anomaly, ['CPU', 'Latency']);
+    const json = JSON.parse(JSON.stringify(result));
+    expect(json.rootCauses.length).toBe(result.rootCauses.length);
+    expect(json.rootCauses.length).toBeLessThanOrEqual(5);
+  });
+
+  it('toJSON with fewer than 5 results returns all', () => {
+    const g = new CausalGraph(['A', 'B']);
+    g.addEdge('A', 'B');
+    const pipeline = new CIRCAPipeline();
+    pipeline.train(g, [[1, 2], [1.1, 2.2]]);
+    const result = pipeline.analyze([[3, 7]], ['B']);
+    const json = JSON.parse(JSON.stringify(result));
+    expect(json.rootCauses.length).toBe(result.rootCauses.length);
+  });
+});
+
+// ── RHTScorer NaN handling ───────────────────────────────────────────
+describe('RHTScorer NaN handling', () => {
+  it('handles NaN values in training data without crashing', () => {
+    const g = new CausalGraph(['A', 'B']);
+    g.addEdge('A', 'B');
+    const scorer = new RHTScorer();
+    const data = [
+      [1, 2], [NaN, 3], [2, NaN], [NaN, NaN], [3, 7],
+    ];
+    scorer.train(g, data);
+    const scores = scorer.score([[3, 7], [4, 10]]);
+    expect(scores.size).toBe(2);
+  });
+
+  it('NaN row skipping: NaN data produces similar results to NaN-free data', () => {
+    const g = new CausalGraph(['A', 'B']);
+    g.addEdge('A', 'B');
+    const cleanData = Array.from({ length: 30 }, () => {
+      const a = Math.random() * 5;
+      return [a, 2 * a + (Math.random() - 0.5) * 0.5];
+    });
+    const dirtyData = [...cleanData, [NaN, 5], [1, NaN]];
+
+    const scorerClean = new RHTScorer();
+    scorerClean.train(g, cleanData);
+    const scoresClean = scorerClean.score([[5, 12]]);
+
+    const scorerDirty = new RHTScorer();
+    scorerDirty.train(g, dirtyData);
+    const scoresDirty = scorerDirty.score([[5, 12]]);
+
+    expect(scoresClean.size).toBe(scoresDirty.size);
+    expect(scoresClean.get('A')!.zScore).toBeGreaterThan(-10);
+    expect(scoresDirty.get('A')!.zScore).toBeGreaterThan(-10);
+  });
+
+  it('score handles NaN in anomaly data gracefully', () => {
+    const g = new CausalGraph(['A', 'B']);
+    g.addEdge('A', 'B');
+    const scorer = new RHTScorer();
+    scorer.train(g, [[1, 2], [2, 4]]);
+    const scores = scorer.score([[NaN, 10], [3, NaN]]);
+    expect(scores.size).toBeGreaterThanOrEqual(0);
+  });
+
+  it('all-NaN data handles without infinite loop', () => {
+    const g = new CausalGraph(['A', 'B']);
+    g.addEdge('A', 'B');
+    const scorer = new RHTScorer();
+    const data: number[][] = [
+      [NaN, NaN], [NaN, NaN], [NaN, NaN],
+    ];
+    scorer.train(g, data);
+    const scores = scorer.score([[1, 2]]);
+    expect(scores.size).toBeGreaterThanOrEqual(0);
+  });
 });

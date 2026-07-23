@@ -1,3 +1,4 @@
+import { CONSTANTS } from "../constants.js";
 /**
  * CIRCA Algorithm: RHTScorer + DAScorer
  *
@@ -75,6 +76,8 @@ export class RHTScorer {
       }
 
       // OLS regression: X = β₀ + Σ βᵢ * parentᵢ + ε
+      // Every row contributes consistently to XtX and Xty:
+      // if any variable (y or any xi) is NaN, skip the entire row.
       const k = parents.length;
       const XtX = Array.from({ length: k }, () => new Array(k).fill(0));
       const Xty = new Array(k).fill(0);
@@ -83,21 +86,32 @@ export class RHTScorer {
       for (let r = 0; r < n; r++) {
         const y = normalData[r]![nodeIdx]!;
         if (Number.isNaN(y)) continue;
+        const xRow = pIdx.map(i => normalData[r]![i]!);
+        if (xRow.some(x => Number.isNaN(x))) continue; // skip entire row if any parent is NaN
         ySum += y; validN++;
         for (let i = 0; i < k; i++) {
-          const xi = normalData[r]![pIdx[i]!]!;
-          if (Number.isNaN(xi)) continue;
-          Xty[i] += xi * y;
+          Xty[i] += xRow[i]! * y;
           for (let j = 0; j < k; j++) {
-            const xj = normalData[r]![pIdx[j]!]!;
-            if (!Number.isNaN(xj)) XtX[i]![j] += xi * xj;
+            XtX[i]![j] += xRow[i]! * xRow[j]!;
           }
         }
       }
 
       const coef = solveLinear(XtX, Xty);
+      // Compute intercept: y̅ - Σ(β_i * x̅_i)
       const yMean = validN > 0 ? ySum / validN : 0;
-      const intercept = yMean - coef.reduce((s, c, i) => s + c * ((validN > 0 ? Xty[i]! / validN : 0)), 0);
+      const xMeans = pIdx.map((_, i) => {
+        let sum = 0;
+        for (let r = 0; r < n; r++) {
+          const y = normalData[r]![nodeIdx]!;
+          if (Number.isNaN(y)) continue;
+          const xRow = pIdx.map(pi => normalData[r]![pi]!);
+          if (xRow.some(x => Number.isNaN(x))) continue;
+          sum += xRow[i]!;
+        }
+        return validN > 0 ? sum / validN : 0;
+      });
+      const intercept = yMean - coef.reduce((s, c, i) => s + c * (xMeans[i] ?? 0), 0);
 
       // Residual standard deviation
       let ss = 0, cnt = 0;
@@ -200,12 +214,12 @@ export class DAScorer {
         for (const parent of graph.parents(node)) {
           const parentRHT = rhtScores.get(parent);
           if (parentRHT && parentRHT.zScore >= this.config.threshold) {
-            adjustedScore -= parentRHT.zScore * 0.5;
+            adjustedScore -= parentRHT.zScore * CONSTANTS.DA_PARENT_PENALTY;
           }
         }
         // Bonus for having anomalous children
         const childScore = childScores.get(node) ?? 0;
-        if (childScore > 0) adjustedScore += childScore * 0.3;
+        if (childScore > 0) adjustedScore += childScore * CONSTANTS.DA_CHILD_BONUS;
         adjustedScore = Math.max(0, adjustedScore);
       }
 
@@ -217,7 +231,7 @@ export class DAScorer {
 
       results.push({
         name: node,
-        score: Math.min(1, adjustedScore / 10),
+        score: Math.min(1, adjustedScore / CONSTANTS.DA_SCORE_SCALE),
         confidence: rht.confidence,
         rank: 0,
         evidence,
@@ -279,10 +293,11 @@ export class CIRCAPipeline {
 
     const rhtScores = this.rht.score(anomalyData);
     const rootCauses = this.da.adjust(this.graph, rhtScores);
+    const topFive = rootCauses.slice(0, 5);
 
     // Build paths from root causes to anomalous nodes
     const paths: RootCausePath[] = [];
-    for (const rc of rootCauses.slice(0, 5)) {
+    for (const rc of topFive) {
       for (const anom of anomalousNodes) {
         const path = this.shortestPath(rc.name, anom);
         if (path.length > 0) {
@@ -292,10 +307,10 @@ export class CIRCAPipeline {
     }
 
     return {
-      rootCauses: rootCauses.slice(0, 5),
+      rootCauses: topFive,
       paths,
       metadata: { method: 'circa', analyzedAt: Date.now(), durationMs: Date.now() - t0, extra: {} },
-      toJSON() { return { rootCauses, paths, metadata: this.metadata }; },
+      toJSON() { return { rootCauses: topFive, paths, metadata: this.metadata }; },
     };
   }
 

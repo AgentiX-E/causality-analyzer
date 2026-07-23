@@ -4,7 +4,7 @@
 import { describe, it, expect } from 'vitest';
 import { Matrix } from 'ml-matrix';
 import { CausalGraph } from '../graph/causal-graph.js';
-import { BayesianRCA, RandomWalkRCA, HTRCA, FPGrowthRCA } from '../analyze/rca.js';
+import { HeuristicPathRCA, RandomWalkRCA, HTRCA, FPGrowthRCA } from '../analyze/rca.js';
 
 // ── Helper ──────────────────────────────────────────────────────────
 function smallGraph(): CausalGraph {
@@ -26,12 +26,12 @@ function syntheticData(n: number): Matrix {
 }
 
 // ── BayesianRCA ────────────────────────────────────────────────────
-describe('BayesianRCA', () => {
+describe('HeuristicPathRCA', () => {
   it('trains and identifies root causes', () => {
     const g = smallGraph();
     const data = syntheticData(100);
     const anomalies = new Set(['CPU', 'Latency']);
-    const rca = new BayesianRCA();
+    const rca = new HeuristicPathRCA();
     rca.train(g, anomalies, data);
     const result = rca.findRootCauses(['CPU', 'Latency']);
     expect(result.rootCauses.length).toBeGreaterThan(0);
@@ -40,7 +40,7 @@ describe('BayesianRCA', () => {
   });
 
   it('returns empty on untrained graph', () => {
-    const rca = new BayesianRCA();
+    const rca = new HeuristicPathRCA();
     const result = rca.findRootCauses(['A']);
     expect(result.rootCauses).toEqual([]);
   });
@@ -48,7 +48,7 @@ describe('BayesianRCA', () => {
   it('rank is sequential starting from 1', () => {
     const g = smallGraph();
     const data = syntheticData(100);
-    const rca = new BayesianRCA();
+    const rca = new HeuristicPathRCA();
     rca.train(g, new Set(['CPU', 'Latency']), data);
     const result = rca.findRootCauses(['CPU', 'Latency']);
     for (let i = 0; i < result.rootCauses.length; i++) {
@@ -59,7 +59,7 @@ describe('BayesianRCA', () => {
   it('toJSON produces valid output', () => {
     const g = smallGraph();
     const data = syntheticData(50);
-    const rca = new BayesianRCA();
+    const rca = new HeuristicPathRCA();
     rca.train(g, new Set(['CPU']), data);
     const result = rca.findRootCauses(['CPU']);
     const json = result.toJSON();
@@ -195,7 +195,7 @@ describe('RCA ensemble behavior', () => {
     const data = syntheticData(100);
     const anomalies = new Set(['CPU', 'Latency']);
 
-    const bayesian = new BayesianRCA();
+    const bayesian = new HeuristicPathRCA();
     bayesian.train(g, anomalies, data);
     const br = bayesian.findRootCauses(['CPU', 'Latency']);
 

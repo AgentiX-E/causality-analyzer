@@ -7,6 +7,7 @@
 import { Matrix } from 'ml-matrix';
 import type { DomainKnowledge } from '@agentix-e/causality-analyzer-core';
 import { erf, normalCDF } from '@agentix-e/causality-analyzer-core';
+import { combinations } from "@agentix-e/causality-analyzer-core";
 import { CausalGraph } from './causal-graph.js';
 
 export interface PCConfig {
@@ -131,16 +132,13 @@ export function pcAlgorithm(
       }
     }
 
-    if (cfg.stable) {
-      for (const [a, b, _] of edgesToRemove) {
-        g.removeEdge(a, b); g.removeEdge(b, a);
-        edgesRemoved = true;
-      }
-    } else {
-      for (const [a, b] of edgesToRemove.slice(0, 1)) {
-        g.removeEdge(a, b); g.removeEdge(b, a);
-        edgesRemoved = true;
-      }
+    // Stable PC (Colombo & Maathuis, 2014): collect all qualifying edges
+    // at each depth level, then remove them all at once.
+    // Classic PC removes edges immediately — this is order-dependent and
+    // not recommended. We always use stable PC for deterministic results.
+    for (const [a, b, _] of edgesToRemove) {
+      g.removeEdge(a, b); g.removeEdge(b, a);
+      edgesRemoved = true;
     }
     depth++;
   }
@@ -223,11 +221,3 @@ export function pcAlgorithm(
 }
 
 /** Generate all combinations of size k from an array */
-function combinations<T>(arr: T[], k: number): T[][] {
-  if (k === 0) return [[]];
-  if (arr.length < k) return [];
-  const [first, ...rest] = arr as [T, ...T[]];
-  const withFirst = combinations(rest, k - 1).map(c => [first, ...c]);
-  const without = combinations(rest, k);
-  return [...withFirst, ...without];
-}

@@ -13,10 +13,10 @@
  *
  * @packageDocumentation
  */
+import { createRNG, combinations } from '@agentix-e/causality-analyzer-core';
 import { CausalGraph } from '../graph/causal-graph.js';
 import { fisherZTest } from '../graph/pc.js';
 import { Matrix } from 'ml-matrix';
-import { createRNG } from '@agentix-e/causality-analyzer-core';
 
 /**
  * Result of a graph falsification test.
@@ -53,19 +53,24 @@ export function falsifyGraph(
   const n = nodeNames.length;
   const missingEdges: FalsificationResult['missingEdges'] = [];
   const spuriousEdges: FalsificationResult['spuriousEdges'] = [];
-  let nTests = 0;
+
+  // First pass: collect all raw p-values
+  const rawResults: Array<{ type: 'spurious' | 'missing'; from: string; to: string; pValue: number }> = [];
 
   // Check spurious edges: adjacent pairs that are conditionally independent
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
       if (!graph.hasEdge(nodeNames[i]!, nodeNames[j]!)) continue;
-      // Test: can we find a conditioning set that makes them independent?
+      // Test multiple conditioning sets: neighbors of i (excluding j)
       const neighbors = graph.neighbors(nodeNames[i]!).filter(k => k !== nodeNames[j]);
-      const condSet = neighbors.slice(0, Math.min(3, neighbors.length)).map(k => nodeNames.indexOf(k));
-      const p = fisherZTest(data, i, j, condSet);
-      nTests++;
-      if (p > alpha / Math.max(1, nTests)) {
-        spuriousEdges.push({ from: nodeNames[i]!, to: nodeNames[j]!, pValue: p });
+      // Try conditioning sets of increasing size from neighbors
+      for (let size = 0; size <= Math.min(3, neighbors.length); size++) {
+        const subsets = size === 0 ? [[]] : combinations(neighbors, size);
+        for (const S of subsets) {
+          const condSet = S.map(k => nodeNames.indexOf(k));
+          const p = fisherZTest(data, i, j, condSet);
+          rawResults.push({ type: 'spurious', from: nodeNames[i]!, to: nodeNames[j]!, pValue: p });
+        }
       }
     }
   }
@@ -75,16 +80,24 @@ export function falsifyGraph(
     for (let j = i + 1; j < n; j++) {
       if (graph.hasEdge(nodeNames[i]!, nodeNames[j]!)) continue;
       const p = fisherZTest(data, i, j, []);
-      nTests++;
-      if (p <= alpha / Math.max(1, nTests)) {
-        missingEdges.push({ from: nodeNames[i]!, to: nodeNames[j]!, pValue: p });
-      }
+      rawResults.push({ type: 'missing', from: nodeNames[i]!, to: nodeNames[j]!, pValue: p });
+    }
+  }
+
+  // Apply Bonferroni correction with fixed nTests
+  const nTests = rawResults.length;
+  const bonferroniAlpha = alpha / Math.max(1, nTests);
+
+  for (const r of rawResults) {
+    if (r.type === 'spurious' && r.pValue > bonferroniAlpha) {
+      spuriousEdges.push({ from: r.from, to: r.to, pValue: r.pValue });
+    } else if (r.type === 'missing' && r.pValue <= bonferroniAlpha) {
+      missingEdges.push({ from: r.from, to: r.to, pValue: r.pValue });
     }
   }
 
   const allIssues = [...missingEdges, ...spuriousEdges];
   const minP = allIssues.length > 0 ? Math.min(...allIssues.map(e => e.pValue)) : 1;
-  const bonferroniAlpha = alpha / Math.max(1, nTests);
   const falsified = minP < bonferroniAlpha;
 
   return {
@@ -128,8 +141,8 @@ export function lmcFalsification(
     let minP = 1;
     for (let j = 0; j < nodeNames.length; j++) {
       if (j === i || parents.includes(nodeNames[j]!)) continue;
-      // Skip descendants (conservative: skip children + grandchildren)
-      const isDescendant = graph.children(node).includes(nodeNames[j]!);
+      // Skip descendants (all descendants, not just children)
+      const isDescendant = graph.hasDirectedPath(node, nodeNames[j]!);
       if (isDescendant) continue;
 
       const p = fisherZTest(data, i, j, parentIdx);
@@ -153,3 +166,5 @@ export function lmcFalsification(
 
   return results;
 }
+
+/** Generate all combinations of size k from an array (used for CI testing) */

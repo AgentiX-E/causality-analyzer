@@ -124,3 +124,16 @@ export function createRNG(seed: number | null): () => number {
     return s / 0x100000000;
   };
 }
+
+/**
+ * Generate all k-element combinations from an array.
+ * Recursive formulation: C(n,k) = first × C(n-1,k-1) ∪ C(n-1,k).
+ */
+export function combinations<T>(arr: T[], k: number): T[][] {
+  if (k === 0) return [[]];
+  if (arr.length < k) return [];
+  const [first, ...rest] = arr as [T, ...T[]];
+  const withFirst = combinations(rest, k - 1).map(c => [first, ...c]);
+  const without = combinations(rest, k);
+  return [...withFirst, ...without];
+}

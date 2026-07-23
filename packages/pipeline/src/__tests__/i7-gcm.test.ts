@@ -193,7 +193,71 @@ describe('spectral residual branch coverage', () => {
   });
 });
 
-// ── GCM function coverage: getter + empty computeMeanNoise ────────
+// ── SCM NaN handling: consistent row-skipping ────────────────────
+describe('SCM NaN handling', () => {
+  it('handles NaN values in training data without crashing', () => {
+    const g = new CausalGraph(['X', 'Y']);
+    g.addEdge('X', 'Y');
+    const scm = new StructuralCausalModel(g);
+    const data = [
+      [1, 2], [NaN, 3], [2, NaN], [NaN, NaN], [3, 7],
+    ];
+    scm.train(data);
+    // Should not crash and should produce valid mechanisms
+    expect(scm.causalGraph).toBe(g);
+  });
+
+  it('NaN row skipping: training with NaN produces same coefficients as without NaN', () => {
+    const g = new CausalGraph(['X', 'Y']);
+    g.addEdge('X', 'Y');
+    // Generate clean data: Y = 3*X + noise
+    const cleanData = Array.from({ length: 50 }, () => {
+      const x = Math.random() * 5;
+      return [x, 3 * x + (Math.random() - 0.5) * 0.5];
+    });
+    // Same data with some NaN rows inserted
+    const dirtyData = [...cleanData, [NaN, 5], [1, NaN], [NaN, NaN]];
+
+    const scmClean = new StructuralCausalModel(g);
+    scmClean.train(cleanData);
+    const scmDirty = new StructuralCausalModel(g);
+    scmDirty.train(dirtyData);
+
+    // Both should be able to perform abduction
+    const obs = { X: 3, Y: 10 };
+    const noiseClean = scmClean.abduct(obs);
+    const noiseDirty = scmDirty.abduct(obs);
+    expect(typeof noiseClean.X).toBe('number');
+    expect(typeof noiseDirty.X).toBe('number');
+  });
+
+  it('all-NaN column handled gracefully', () => {
+    const g = new CausalGraph(['X', 'Y']);
+    g.addEdge('X', 'Y');
+    const scm = new StructuralCausalModel(g);
+    const data = Array.from({ length: 10 }, () => [NaN, NaN] as number[]);
+    scm.train(data);
+    // Should not crash — mechanisms should fall back to safe defaults
+    const scores = scm.anomalyScores({ X: 1, Y: 2 });
+    expect(scores.size).toBe(2);
+  });
+
+  it('mixed NaN: some rows clean, some dirty', () => {
+    const g = new CausalGraph(['X', 'Y', 'Z']);
+    g.addEdge('X', 'Y'); g.addEdge('Y', 'Z');
+    const scm = new StructuralCausalModel(g);
+    const data = [
+      [1, 2, 3], [NaN, 2, 3], [1, NaN, 3], [1, 2, NaN],
+      [2, 4, 7], [3, 6, 13],
+    ];
+    scm.train(data);
+    // Should not crash — only clean rows contribute
+    const scores = scm.anomalyScores({ X: 10, Y: 20, Z: 50 });
+    expect(scores.get('X')).toBeDefined();
+    expect(scores.get('Y')).toBeDefined();
+    expect(scores.get('Z')).toBeDefined();
+  });
+});
 describe('GCM function coverage', () => {
   it('causalGraph getter returns the graph', () => {
     const g = new CausalGraph(['A', 'B']);

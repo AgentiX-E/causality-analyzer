@@ -1,29 +1,138 @@
+import { CONSTANTS } from "../constants.js";
 /**
- * CATE, IPW, DR-Learner, and Counterfactual Fairness.
+ * CATE, IPW, and Counterfactual Fairness.
  *
  * CATE (Conditional Average Treatment Effect): identifies heterogeneous
  * effects — which specific instances are most impacted by the treatment.
  *
  * IPW (Inverse Probability Weighting): handles unbalanced data (common
- * in AIOps where failures are rare events).
- *
- * DR-Learner: combines propensity score + outcome model for doubly-robust
- * heterogeneous effect estimation.
+ * in AIOps where failures are rare events). Uses logistic regression
+ * via IRLS to estimate propensity scores from covariates.
  *
  * Counterfactual Fairness: ensures RCA decisions are fair across
  * protected groups (teams, regions, instance types).
  *
  * @packageDocumentation
  */
-import { solveLinear, colMean } from '@agentix-e/causality-analyzer-core';
+import { solveLinear } from '@agentix-e/causality-analyzer-core';
+
+// ── IRLS Logistic Regression (shared utility) ────────────────────────
+
+/**
+ * Fit a logistic regression model using Iterative Reweighted Least Squares.
+ *
+ * @returns coefficient vector β of length `1 + nCovariates`
+ */
+function fitLogistic(
+  data: number[][],
+  treatmentIdx: number,
+  covariateIndices: number[],
+  maxIter: number = 25,
+  tol: number = 1e-6,
+): Float64Array {
+  const n = data.length;
+  const p = covariateIndices.length;
+  const k = 1 + p; // intercept + covariates
+  if (k === 1) {
+    // No covariates: just return the log-odds of the marginal probability
+    let tCount = 0;
+    for (let r = 0; r < n; r++) if ((data[r]![treatmentIdx] ?? 0) > 0.5) tCount++;
+    const prob = Math.max(0.05, Math.min(0.95, tCount / n));
+    return Float64Array.from([Math.log(prob / (1 - prob))]);
+  }
+
+  const X = new Float64Array(n * k);
+  for (let r = 0; r < n; r++) {
+    X[r * k] = 1; // intercept
+    for (let i = 0; i < p; i++) {
+      X[r * k + i + 1] = data[r]![covariateIndices[i]!] ?? 0;
+    }
+  }
+
+  let beta = new Float64Array(k);
+  for (let iter = 0; iter < maxIter; iter++) {
+    // Compute probabilities p_i = sigmoid(X_i · β)
+    const prob = new Float64Array(n);
+    for (let r = 0; r < n; r++) {
+      let dot = 0;
+      for (let j = 0; j < k; j++) dot += X[r * k + j]! * beta[j]!;
+      prob[r] = 1 / (1 + Math.exp(-Math.min(Math.max(dot, -15), 15)));
+    }
+
+    // IRLS update: β_new = (XᵀWX)⁻¹ XᵀWz
+    const XtWX = new Float64Array(k * k);
+    const XtWz = new Float64Array(k);
+    for (let r = 0; r < n; r++) {
+      const w = Math.max(1e-10, prob[r]! * (1 - prob[r]!));
+      const t = (data[r]![treatmentIdx] ?? 0) > 0.5 ? 1 : 0;
+      const workingResponse = Math.log(Math.max(1e-10, prob[r]! / (1 - prob[r]!))) +
+        (t - prob[r]!) / w;
+
+      for (let i = 0; i < k; i++) {
+        XtWz[i] += X[r * k + i]! * w * workingResponse;
+        for (let j = 0; j < k; j++) {
+          XtWX[i * k + j] += X[r * k + i]! * w * X[r * k + j]!;
+        }
+      }
+    }
+
+    // Solve XtWX · newBeta = XtWz
+    const XtWX2d: number[][] = new Array(k);
+    const XtWz1d: number[] = new Array(k);
+    for (let i = 0; i < k; i++) {
+      XtWX2d[i] = new Array(k);
+      for (let j = 0; j < k; j++) XtWX2d[i]![j] = XtWX[i * k + j]!;
+      XtWz1d[i] = XtWz[i]!;
+    }
+    const newBeta = solveLinear(XtWX2d, XtWz1d);
+
+    // Check convergence
+    let delta = 0;
+    for (let j = 0; j < k; j++) delta += (newBeta[j]! - beta[j]!) ** 2;
+    beta = Float64Array.from(newBeta);
+    if (Math.sqrt(delta) < tol) break;
+  }
+  return beta;
+}
+
+/**
+ * Compute propensity scores π̂(X_i) = P(T=1 | X_i) from logistic coefficients.
+ */
+function computePropensityScores(
+  data: number[][],
+  beta: Float64Array,
+  covariateIndices: number[],
+): Float64Array {
+  const n = data.length;
+  const p = covariateIndices.length;
+  const k = 1 + p;
+  const scores = new Float64Array(n);
+
+  for (let r = 0; r < n; r++) {
+    let dot = beta[0]!; // intercept
+    for (let i = 0; i < p; i++) {
+      dot += (beta[i + 1] ?? 0) * (data[r]![covariateIndices[i]!] ?? 0);
+    }
+    scores[r] = Math.max(0.05, Math.min(0.95, 1 / (1 + Math.exp(-Math.min(Math.max(dot, -15), 15)))));
+  }
+  return scores;
+}
+
+// ── CATE ──────────────────────────────────────────────────────────────
 
 /**
  * Estimate Conditional Average Treatment Effect (CATE).
  *
- * CATE = E[Y(1) - Y(0) | X = x]
+ * CATE(x) = E[Y(1) - Y(0) | X = x]
  *
- * For linear models: CATE(x) = β_treatment + Σ β_interaction_i * (x_i - x̄_i)
- * where β_interaction = X × T coefficients.
+ * Fits an interaction model Y ~ 1 + T + X + T×X.
+ * For linear models: CATE(x) = β_T + Σ β_T×X_i · (x_i - x̄_i)
+ *
+ * @param data — observation array (rows × columns)
+ * @param treatmentIdx — column index of binary treatment variable
+ * @param outcomeIdx — column index of outcome variable
+ * @param featureIndices — column indices of feature/covariate variables
+ * @returns CATE function and baseline ATE
  */
 export function estimateCATE(
   data: number[][],
@@ -31,18 +140,30 @@ export function estimateCATE(
   outcomeIdx: number,
   featureIndices: number[],
 ): { cateFn: (features: number[]) => number; baselineATE: number } {
-  // Fit: Y ~ T + X + T×X (interaction model)
   const n = data.length;
-  const k = 1 + featureIndices.length + featureIndices.length; // intercept impl + T + X + T×X
+  const p = featureIndices.length;
+  // Columns: 0=intercept, 1=T, 2..2+p-1=X, 2+p..2+2p-1=T×X
+  const k = 2 + 2 * p;
   const X = new Float64Array(n * k);
+
+  // Compute feature means for centering
+  const xBar = new Float64Array(p);
+  for (let i = 0; i < p; i++) {
+    let sum = 0, cnt = 0;
+    for (let r = 0; r < n; r++) {
+      const val = data[r]![featureIndices[i]!];
+      if (val != null && !Number.isNaN(val)) { sum += val; cnt++; }
+    }
+    xBar[i] = cnt > 0 ? sum / cnt : 0;
+  }
 
   for (let r = 0; r < n; r++) {
     const t = data[r]![treatmentIdx] ?? 0;
     X[r * k] = 1; // intercept
     X[r * k + 1] = t;
-    for (let i = 0; i < featureIndices.length; i++) {
+    for (let i = 0; i < p; i++) {
       X[r * k + 2 + i] = data[r]![featureIndices[i]!] ?? 0;
-      X[r * k + 2 + featureIndices.length + i] = t * (data[r]![featureIndices[i]!] ?? 0);
+      X[r * k + 2 + p + i] = t * (data[r]![featureIndices[i]!] ?? 0);
     }
   }
 
@@ -67,21 +188,27 @@ export function estimateCATE(
     baselineATE,
     cateFn: (features: number[]) => {
       let cate = baselineATE;
-      for (let i = 0; i < featureIndices.length; i++) {
-        cate += coef[2 + featureIndices.length + i]! * (features[i] ?? 0);
+      for (let i = 0; i < p; i++) {
+        // CATE for feature x_i, centered at mean
+        cate += coef[2 + p + i]! * ((features[i] ?? 0) - xBar[i]!);
       }
       return cate;
     },
   };
 }
 
+// ── IPW ───────────────────────────────────────────────────────────────
+
 /**
- * Inverse Probability Weighting (IPW) estimator.
+ * Inverse Probability Weighting (IPW) estimator with proper propensity score fitting.
  *
- * ATE = (1/n) Σ [ T_i * Y_i / π̂(X_i) - (1-T_i) * Y_i / (1-π̂(X_i)) ]
+ * ATE = (1/n) Σ [ T_i · Y_i / π̂(X_i) − (1−T_i) · Y_i / (1−π̂(X_i)) ]
  *
- * where π̂(X_i) is the estimated propensity score (P(T=1|X)).
- * Handles unbalanced treatment/control groups by reweighting.
+ * where π̂(X_i) is estimated via logistic regression (IRLS).
+ * Propensity scores are clamped to [0.05, 0.95] for numerical stability.
+ *
+ * @param covariateIndices — column indices to use for propensity score model.
+ *   When empty, falls back to marginal treatment probability (randomized assignment).
  */
 export function estimateIPW(
   data: number[][],
@@ -90,14 +217,12 @@ export function estimateIPW(
   covariateIndices: number[] = [],
 ): { ate: number; se: number } {
   const n = data.length;
-  // Estimate propensity scores via logistic regression (simplified to linear for efficiency)
-  const pi = new Float64Array(n);
-  let tCount = 0;
-  for (let r = 0; r < n; r++) if ((data[r]![treatmentIdx] ?? 0) > 0.5) tCount++;
-  const pTreat = tCount / n;
-  for (let r = 0; r < n; r++) pi[r] = Math.max(0.05, Math.min(0.95, pTreat));
 
-  // IPW estimator
+  // Fit propensity scores via logistic regression
+  const beta = fitLogistic(data, treatmentIdx, covariateIndices);
+  const pi = computePropensityScores(data, beta, covariateIndices);
+
+  // IPW ATE
   let ipwSum = 0;
   for (let r = 0; r < n; r++) {
     const t = (data[r]![treatmentIdx] ?? 0) > 0.5 ? 1 : 0;
@@ -106,7 +231,7 @@ export function estimateIPW(
   }
   const ate = ipwSum / n;
 
-  // Influence-function based SE
+  // Influence-function based standard error
   let ifVar = 0;
   for (let r = 0; r < n; r++) {
     const t = (data[r]![treatmentIdx] ?? 0) > 0.5 ? 1 : 0;
@@ -154,7 +279,7 @@ export function checkFairness(
     }
   }
 
-  const fair = maxDisparity < 0.2;
+  const fair = maxDisparity < CONSTANTS.FAIRNESS_DISPARITY_THRESHOLD;
   return {
     fair,
     disparity: maxDisparity,

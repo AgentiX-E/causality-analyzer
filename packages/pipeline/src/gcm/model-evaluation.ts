@@ -172,31 +172,61 @@ export function shapleyAttribute(
     const m = others.length;
     if (m === 0) continue;
 
-    // Use approximate Shapley via Monte Carlo permutations
+    // Approximate Shapley via Monte Carlo permutations
     const nPermutations = Math.min(200, 1 << Math.min(m, 10));
     let shapleySum = 0;
 
-    for (let perm = 0; perm < nPermutations; perm++) {
-      // Random permutation of other nodes
-      const shuffled = [...others].sort(() => rng() - 0.5);
-      const baseline = baselineScores.get(target) ?? 0;
-
-      // Compute marginal contribution: v(S ∪ {i}) - v(S)
-      // S = first k nodes in permutation
-      const k = perm % shuffled.length;
-      const subset = new Set(shuffled.slice(0, k));
-
-      // Create counterfactual: subset nodes → predicted, rest → observed
-      const cf: Record<string, number> = { ...observation };
-      for (const n of subset) {
-        const parents = graph.parents(n);
+    // Pre-compute SCM predicted values for the baseline (all nodes normal)
+    const allNormal: Record<string, number> = {};
+    for (const n of graph.nodes) {
+      const parents = graph.parents(n);
+      if (parents.length === 0) {
+        allNormal[n] = 0; // root — will be set by value function
+      } else {
+        // Predicted value = SCM forward(intervention-free)
         let pred = 0;
-        for (const p of parents) pred += (cf[p] ?? 0) / Math.max(1, parents.length);
-        cf[n] = pred * 0.5 + (cf[n] ?? 0) * 0.5; // blend toward predicted
+        for (const p of parents) pred += (observation[p] ?? 0) / Math.max(1, parents.length);
+        allNormal[n] = pred;
+      }
+    }
+
+    for (let perm = 0; perm < nPermutations; perm++) {
+      // Random permutation of other nodes  
+      const shuffled = [...others].sort(() => rng() - 0.5);
+
+      // v(S): subset S has their values set to SCM normal predictions,
+      // nodes outside S keep observed anomalous values.
+      const subsetIdx = perm % (m + 1); // size of subset S
+      const inSubset = new Set(shuffled.slice(0, subsetIdx));
+
+      // Build the hybrid observation
+      const hybrid: Record<string, number> = {};
+      for (const n of graph.nodes) {
+        if (n === target || inSubset.has(n)) {
+          // In S (or is the target): use normal/SCM-predicted value
+          hybrid[n] = allNormal[n] ?? (observation[n] ?? 0);
+        } else {
+          // Not in S: keep observed anomalous value
+          hybrid[n] = observation[n] ?? 0;
+        }
       }
 
-      const cfScores = computeAnomalyZ(scm, cf);
-      const marginal = baseline - (cfScores.get(target) ?? 0);
+      // v(S) = anomaly score of target when S nodes are "normalized"
+      const vWithS = computeAnomalyZ(scm, hybrid).get(target) ?? 0;
+
+      // v(S ∪ {target}): also normalize the target
+      const inSubsetWithTarget = new Set(inSubset);
+      inSubsetWithTarget.add(target);
+      const hybridWithTarget: Record<string, number> = {};
+      for (const n of graph.nodes) {
+        hybridWithTarget[n] = inSubsetWithTarget.has(n)
+          ? (allNormal[n] ?? (observation[n] ?? 0))
+          : (observation[n] ?? 0);
+      }
+      const vWithTarget = computeAnomalyZ(scm, hybridWithTarget).get(target) ?? 0;
+
+      // Marginal contribution of target = v(S ∪ {target}) - v(S)
+      const marginal = vWithTarget - vWithS;
       shapleySum += marginal;
     }
 

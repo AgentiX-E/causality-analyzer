@@ -1,3 +1,4 @@
+import { CONSTANTS } from "../constants.js";
 /**
  * RCA Analysis Algorithms.
  *
@@ -21,13 +22,37 @@ function buildResult(rootCauses: RootCause[], paths: RootCausePath[], method: st
   };
 }
 
-// ── Bayesian Network RCA ──────────────────────────────────────────────
+// ── Heuristic Path-based RCA ──────────────────────────────────────────
+
+/**
+ * Heuristic path-based root cause analysis.
+ *
+ * **Note**: This is NOT a proper Bayesian network inference engine.
+ * It uses a heuristic scoring formula:
+ *   score = P(root) × 0.8^connected × 0.5^not_connected
+ * where "connected" means a path exists from root to anomalous node.
+ * For rigorous Bayesian inference, use a library with variable elimination
+ * or belief propagation.
+ *
+ * @deprecated Use `HeuristicPathRCA` instead. `BayesianRCA` is kept
+ *   as a backward-compatible alias and will be removed in v1.0.0.
+ */
 interface CPT { [parentState: string]: number; }
 
-export class BayesianRCA {
+/** @deprecated Use `HeuristicPathRCA` instead. */
+export { HeuristicPathRCA as BayesianRCA };
+
+export class HeuristicPathRCA {
   private graph: CausalGraph | null = null;
   private cpts = new Map<string, CPT>();
 
+  /**
+   * Train the heuristic path model.
+   *
+   * @param graph — causal DAG
+   * @param anomalies — set of known anomalous node names (used to boost prior)
+   * @param data — observational data matrix
+   */
   train(graph: CausalGraph, anomalies: Set<string>, data: Matrix): void {
     this.graph = graph;
     const nodes = [...graph.nodes];
@@ -40,7 +65,7 @@ export class BayesianRCA {
       for (let r = 0; r < n; r++) { const v = data.get(r, nodeIdx); colSum += v; colSq += v * v; }
       const colMean = colSum / n;
       const colStd = Math.sqrt(Math.max(1e-10, colSq / n - colMean * colMean));
-      const threshold = colMean + 2.5 * colStd; // >2.5σ = anomalous
+      const threshold = colMean + CONSTANTS.ANOMALY_THRESHOLD_SIGMA * colStd; // >2.5σ = anomalous
       const isAnomalous = (r: number) => data.get(r, nodeIdx) > threshold;
 
       // Estimate CPT: P(node=anomalous | parent configuration)
@@ -48,7 +73,9 @@ export class BayesianRCA {
       if (parents.length === 0) {
         let anomCount = 0;
         for (let r = 0; r < n; r++) if (isAnomalous(r)) anomCount++;
-        cpt['root'] = Math.max(0.01, Math.min(0.99, anomCount / n));
+        // Boost prior for nodes listed in the anomalies set
+        const basePrior = Math.max(0.01, Math.min(0.99, anomCount / n));
+        cpt['root'] = anomalies.has(node) ? Math.min(0.99, basePrior * CONSTANTS.ANOMALY_PRIOR_BOOST) : basePrior;
       } else {
         const counts: Record<string, { anom: number; total: number }> = {};
         const pIndices = parents.map(p => nodes.indexOf(p));
@@ -56,7 +83,7 @@ export class BayesianRCA {
         const parentThresholds = pIndices.map(pi => {
           let s2 = 0, c2 = 0;
           for (let r = 0; r < n; r++) { const v = data.get(r, pi); s2 += v; c2 += v * v; }
-          const m2 = s2 / n; const sd2 = Math.sqrt(Math.max(1e-10, c2 / n - m2 * m2)); return m2 + 2.5 * sd2;
+          const m2 = s2 / n; const sd2 = Math.sqrt(Math.max(1e-10, c2 / n - m2 * m2)); return m2 + CONSTANTS.ANOMALY_THRESHOLD_SIGMA * sd2;
         });
         for (let r = 0; r < n; r++) {
           const key = parents.map((_, i) => data.get(r, pIndices[i]!) > parentThresholds[i]! ? '1' : '0').join('');
@@ -73,7 +100,7 @@ export class BayesianRCA {
   }
 
   findRootCauses(anomalousNodes: string[]): RCAResult {
-    if (!this.graph) return buildResult([], [], 'bayesian');
+    if (!this.graph) return buildResult([], [], 'heuristic_path');
     const anomalous = new Set(anomalousNodes);
     const rootNodes = [...this.graph.nodes].filter(n => this.graph!.parents(n).length === 0);
 
@@ -87,8 +114,8 @@ export class BayesianRCA {
       for (const node of anomalousNodes) {
         if (node === root) continue;
         const path = shortestPath(this.graph, root, node);
-        if (path.length > 0) likelihood *= 0.8; // simplified evidence propagation
-        else likelihood *= 0.5;
+        if (path.length > 0) likelihood *= CONSTANTS.PATH_LIKELIHOOD_CONNECTED; // simplified evidence propagation
+        else likelihood *= CONSTANTS.PATH_LIKELIHOOD_DISCONNECTED;
       }
       const posterior = pRoot * likelihood;
       scores.push({ name: root, score: Math.min(1, posterior), confidence: pRoot, rank: 0, evidence: [] });
@@ -105,7 +132,7 @@ export class BayesianRCA {
       }
     }
 
-    return buildResult(scores, paths, 'bayesian');
+    return buildResult(scores, paths, 'heuristic_path');
   }
 }
 

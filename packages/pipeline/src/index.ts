@@ -14,7 +14,7 @@ export { CausalGraph, pcAlgorithm, fisherZTest } from './graph/index.js';
 export type { PCConfig } from './graph/index.js';
 
 // Analyze (RCA)
-export { BayesianRCA, RandomWalkRCA, HTRCA, FPGrowthRCA } from './analyze/index.js';
+export { HeuristicPathRCA, BayesianRCA, RandomWalkRCA, HTRCA, FPGrowthRCA } from './analyze/index.js';
 export { RHTScorer, DAScorer, CIRCAPipeline } from './analyze/index.js';
 export type { RHTConfig, DAConfig } from './analyze/index.js';
 
