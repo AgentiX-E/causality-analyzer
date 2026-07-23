@@ -21,7 +21,7 @@ jobs:
         with:
           node-version: ${{ inputs.node_version }}
           cache: 'pnpm'
-      - run: pnpm config set approve-builds true 2>/dev/null || true
+      - run: pnpm config set approve-builds true
       - run: pnpm install --frozen-lockfile
       - run: pnpm -r lint
 
@@ -37,10 +37,17 @@ jobs:
         with:
           node-version: ${{ inputs.node_version }}
           cache: 'pnpm'
-      - run: pnpm config set approve-builds true 2>/dev/null || true
-      - run: sudo apt-get update -qq && sudo apt-get install -y -qq build-essential python3 make g++ 2>/dev/null || true
+      - run: pnpm config set approve-builds true
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq build-essential python3 make g++ || \
+            echo "::warning ::System deps install failed — native module builds may be affected"
       - run: pnpm install --frozen-lockfile
-      - run: pnpm rebuild --filter @agentix-e/causality-analyzer-storage-embed 2>/dev/null || true
+      - name: Rebuild native modules
+        run: |
+          pnpm rebuild --filter @agentix-e/causality-analyzer-storage-embed || \
+            echo "::warning ::better-sqlite3 rebuild failed — embed storage tests use fallback"
       - run: pnpm run --filter @agentix-e/causality-analyzer-core build
       - run: pnpm -r typecheck
 
@@ -57,10 +64,17 @@ jobs:
         with:
           node-version: ${{ inputs.node_version }}
           cache: 'pnpm'
-      - run: pnpm config set approve-builds true 2>/dev/null || true
-      - run: sudo apt-get update -qq && sudo apt-get install -y -qq build-essential python3 make g++ 2>/dev/null || true
+      - run: pnpm config set approve-builds true
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq build-essential python3 make g++ || \
+            echo "::warning ::System deps install failed — native module tests may be affected"
       - run: pnpm install --frozen-lockfile
-      - run: pnpm rebuild --filter @agentix-e/causality-analyzer-storage-embed 2>/dev/null || true
+      - name: Rebuild native modules
+        run: |
+          pnpm rebuild --filter @agentix-e/causality-analyzer-storage-embed || \
+            echo "::warning ::better-sqlite3 rebuild failed — embed storage tests use fallback"
       - run: pnpm run --filter @agentix-e/causality-analyzer-core build
       - run: pnpm -r test
       - name: Collect coverage
@@ -87,15 +101,18 @@ jobs:
         with:
           node-version: ${{ inputs.node_version }}
           cache: 'pnpm'
-      - run: pnpm config set approve-builds true 2>/dev/null || true
-      - run: sudo apt-get update -qq && sudo apt-get install -y -qq build-essential python3 make g++ 2>/dev/null || true
+      - run: pnpm config set approve-builds true
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq build-essential python3 make g++ || \
+            echo "::warning ::System deps install failed"
       - run: pnpm install --frozen-lockfile
       - run: pnpm run --filter @agentix-e/causality-analyzer-core build
       - run: npx playwright install chromium --with-deps
       - run: pnpm run --filter @agentix-e/causality-analyzer-visual browser-test
 
   neo4j-test:
-    continue-on-error: true
     needs: [build]
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -108,17 +125,24 @@ jobs:
         with:
           node-version: ${{ inputs.node_version }}
           cache: 'pnpm'
-      - run: pnpm config set approve-builds true 2>/dev/null || true
-      - run: sudo apt-get update -qq && sudo apt-get install -y -qq build-essential python3 make g++ 2>/dev/null || true
+      - run: pnpm config set approve-builds true
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq build-essential python3 make g++ || \
+            echo "::warning ::System deps install failed"
       - run: pnpm install --frozen-lockfile
-      - run: pnpm rebuild --filter @agentix-e/causality-analyzer-storage-embed 2>/dev/null || true
+      - name: Rebuild native modules
+        run: |
+          pnpm rebuild --filter @agentix-e/causality-analyzer-storage-embed || \
+            echo "::warning ::better-sqlite3 rebuild failed"
       - run: pnpm run --filter @agentix-e/causality-analyzer-core build
 
       - name: Start Neo4j
         run: |
           echo "=== Checking Docker ==="
           docker version 2>&1 || { echo "DOCKER_UNAVAILABLE=true" >> "$GITHUB_ENV"; exit 0; }
-          docker rm -f neo4j-mtls 2>/dev/null || true
+          docker rm -f neo4j-mtls 2>/dev/null; true
           echo "=== Starting Neo4j container ==="
           docker run -d --name neo4j-mtls \
             -p 7687:7687 \
@@ -148,4 +172,3 @@ jobs:
       - name: Stop Neo4j
         if: always()
         run: docker stop neo4j-mtls 2>/dev/null; docker rm neo4j-mtls 2>/dev/null; true
-
