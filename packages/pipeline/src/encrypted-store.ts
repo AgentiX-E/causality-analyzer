@@ -32,8 +32,10 @@ export class EncryptedStore {
   /** Initialize the crypto key (async — call before encrypt/decrypt) */
   async init(): Promise<void> {
     if (typeof crypto === 'undefined' || !crypto.subtle) return;
+    // Web Crypto types vary between Node and browser — suppress TS2769
+    // @ts-expect-error TS2769 importKey overload resolution
     this.key = await crypto.subtle.importKey(
-      'raw', this.rawKey, { name: 'AES-GCM' } as const, false, ['encrypt', 'decrypt'],
+      'raw', this.rawKey, 'AES-GCM', false, ['encrypt', 'decrypt'],
     );
   }
 

@@ -51,7 +51,7 @@ export function directLiNGAM(
   const weights = new Map<string, Map<string, number>>();
 
   // Storage for residuals
-  let residuals = X.map(col => new Float64Array(col));
+  const residuals = X.map(col => new Float64Array(col));
 
   for (let step = 0; step < n - 1; step++) {
     // Find the most exogenous variable among remaining
