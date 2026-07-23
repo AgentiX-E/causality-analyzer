@@ -13,6 +13,7 @@
  * @packageDocumentation
  */
 import { CausalGraph } from '../graph/causal-graph.js';
+import { solveLinear } from '@agentix-e/causality-analyzer-core';
 
 /**
  * Result of mediation analysis.
@@ -133,43 +134,21 @@ function multipleRegression(
 ): { coefs: number[]; intercept: number } {
   const n = data.length;
   const k = xIndices.length;
-  const XtX = Array.from({ length: k }, () => new Float64Array(k));
-  const Xty = new Float64Array(k);
+  const XtX = Array.from({ length: k }, () => Array(k).fill(0) as number[]);
+  const Xty = Array(k).fill(0) as number[];
   let ySum = 0;
 
   for (let r = 0; r < n; r++) {
     const y = data[r]![yIdx] ?? 0;
     ySum += y;
     for (let i = 0; i < k; i++) {
-      Xty[i] += (data[r]![xIndices[i]!] ?? 0) * y;
-      for (let j = 0; j < k; j++) {
-        XtX[i]![j] += (data[r]![xIndices[i]!] ?? 0) * (data[r]![xIndices[j]!] ?? 0);
-      }
+      const xi = data[r]![xIndices[i]!] ?? 0;
+      Xty[i] += xi * y;
+      for (let j = 0; j < k; j++) XtX[i]![j] += xi * (data[r]![xIndices[j]!] ?? 0);
     }
   }
 
-  // Solve via Gaussian elimination
-  const aug = XtX.map((row, ri) => [...Array.from(row), Xty[ri]!]);
-  for (let col = 0; col < k; col++) {
-    let pivot = col;
-    for (let row = col + 1; row < k; row++) {
-      if (Math.abs(aug[row]![col]!) > Math.abs(aug[pivot]![col]!)) pivot = row;
-    }
-    [aug[col], aug[pivot]] = [aug[pivot]!, aug[col]!];
-    if (Math.abs(aug[col]![col]!) < 1e-12) continue;
-    for (let row = col + 1; row < k; row++) {
-      const f = aug[row]![col]! / aug[col]![col]!;
-      for (let j = col; j <= k; j++) aug[row]![j]! -= f * aug[col]![j]!;
-    }
-  }
-  // Back-substitution
-  const coefs = new Array(k).fill(0);
-  for (let i = k - 1; i >= 0; i--) {
-    let sum = aug[i]![k]!;
-    for (let j = i + 1; j < k; j++) sum -= aug[i]![j]! * coefs[j]!;
-    coefs[i] = Math.abs(aug[i]![i]!) > 1e-12 ? sum / aug[i]![i]! : 0;
-  }
-
+  const coefs = solveLinear(XtX, Xty);
   const yMean = ySum / n;
   const intercept = yMean - coefs.reduce((s, c, i) => s + c * colMean(data, xIndices[i]!), 0);
   return { coefs, intercept };
