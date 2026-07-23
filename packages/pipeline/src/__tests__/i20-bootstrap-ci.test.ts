@@ -137,3 +137,20 @@ describe('bootstrap edge cases', () => {
     expect(typeof result.ate).toBe('number');
   });
 });
+
+describe('branch coverage', () => {
+  it('parallelBootstrap with nTasks > 1', async () => {
+    const data = Array.from({ length: 10 }, () => [Math.random()]);
+    const results = await parallelBootstrap(
+      data, (d, _s) => d.length, 5, 42,
+    );
+    expect(results.length).toBe(5);
+  });
+
+  it('bootstrapATE with alpha=0.5 (wide CI)', () => {
+    const data = Array.from({ length: 20 }, () => [Math.random() > 0.5 ? 1 : 0, Math.random()]);
+    const est = (d: number[][]) => { let s = 0; for (const r of d) s += r[1]!; return s / d.length; };
+    const result = bootstrapATE(data, est, 100, 0.5, 42);
+    expect(result.ciLow).toBeLessThanOrEqual(result.ciHigh);
+  });
+});

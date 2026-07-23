@@ -79,3 +79,26 @@ describe('arrowStrength', () => {
     }
   });
 });
+
+describe('mediation branches', () => {
+  it('naturalDirectEffect with n=2 (insufficient data branch)', () => {
+    const result = naturalDirectEffect(
+      [[1, 2, 3], [4, 5, 6]], 0, 2, 1,
+    );
+    expect(result.nde).toBe(0);
+    expect(result.explanation).toContain('Insufficient');
+  });
+
+  it('naturalDirectEffect with data where mediator is strongly correlated', () => {
+    const data: number[][] = [];
+    for (let i = 0; i < 30; i++) {
+      const t = Math.random();
+      const m = t * 0.8 + Math.random() * 0.2;
+      const y = t * 0.3 + m * 0.5 + Math.random() * 0.1;
+      data.push([t, m, y]);
+    }
+    const result = naturalDirectEffect(data, 0, 2, 1);
+    expect(result.totalEffect).toBeGreaterThan(0);
+    expect(result.proportionMediated).toBeGreaterThanOrEqual(0);
+  });
+});
