@@ -63,6 +63,18 @@ export { BaseConfig } from './config/index.js';
 // ── DI ────────────────────────────────────────────────────────────
 export type { CausalityAnalyzerConfig } from './di/index.js';
 
+// ── Errors ─────────────────────────────────────────────────────────
+export {
+  CausalityError,
+  StoreError,
+  ValidationError,
+  ConfigError,
+  NotFoundError,
+  ConvergenceError,
+  ErrorCode,
+} from './errors.js';
+export type { ErrorCodeType } from './errors.js';
+
 // ── Math ─────────────────────────────────────────────────────────
 export { solveLinear, solveLinearSafe, normalTail, normalCDFTail, normalCDF, erf, colMean, createRNG, combinations } from './math.js';
 
