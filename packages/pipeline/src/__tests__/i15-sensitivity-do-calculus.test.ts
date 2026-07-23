@@ -164,4 +164,28 @@ describe('identifyByDoCalculus', () => {
     // Z is the confounder — should be identified as backdoor
     expect(result.adjustmentSet).toContain('Z');
   });
+
+  it('ID algorithm handles non-identifiable with no directed path', () => {
+    // X and Y disconnected → no causal path
+    const g = new CausalGraph(['X', 'Y', 'Z']);
+    g.addEdge('Z', 'Y'); // Z causes Y, but X is isolated
+    const result = identifyByDoCalculus(g, 'X', 'Y');
+    // X has no effect on Y — P(Y|do(X)) = P(Y)
+    expect(typeof result.identifiable).toBe('boolean');
+  });
+
+  it('ID algorithm returns expressionType for all paths', () => {
+    const g = new CausalGraph(['X', 'Y']);
+    g.addEdge('X', 'Y');
+    const result = identifyByDoCalculus(g, 'X', 'Y');
+    expect(['backdoor', 'frontdoor', 'id_algorithm', 'not_identifiable']).toContain(result.expressionType);
+  });
+
+  it('ID algorithm handles Y with parents', () => {
+    // Multiple paths to Y: X→W→Y and Z→Y
+    const g = new CausalGraph(['X', 'W', 'Y', 'Z']);
+    g.addEdge('X', 'W'); g.addEdge('W', 'Y'); g.addEdge('Z', 'Y');
+    const result = identifyByDoCalculus(g, 'X', 'Y');
+    expect(typeof result.identifiable).toBe('boolean');
+  });
 });

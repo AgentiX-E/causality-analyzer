@@ -93,4 +93,15 @@ describe('parallelBootstrap', () => {
     expect(results.length).toBe(1);
     expect(results[0]).toBe(3);
   });
+
+  it('parallel bootstrap ATE produces valid CI', async () => {
+    const data: number[][] = Array.from({ length: 30 }, () => [Math.random() > 0.5 ? 1 : 0, Math.random()]);
+    const est = (d: number[][]) => {
+      let s = 0; for (const r of d) s += r[1]!; return s / d.length;
+    };
+    const result = await bootstrapATEParallel(data, est, 50, 2, 0.05, 42);
+    expect(result.ciLow).toBeLessThanOrEqual(result.ate);
+    expect(result.ciHigh).toBeGreaterThanOrEqual(result.ate);
+    expect(result.se).toBeGreaterThanOrEqual(0);
+  });
 });

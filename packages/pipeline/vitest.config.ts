@@ -12,7 +12,7 @@ export default defineConfig({
         'src/**/*.test.ts',
         'src/**/index.ts',    // barrel exports — no executable logic
       ],
-      thresholds: { statements: 94, branches: 80, functions: 95, lines: 94 }
+      thresholds: { statements: 95, branches: 83, functions: 95, lines: 95 }
     }
   }
 });
