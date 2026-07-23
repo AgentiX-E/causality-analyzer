@@ -51,3 +51,9 @@ export type { FusionConfig, FusionStrategy } from './viz/index.js';
 // ── Observability ──────────────────────────────────────────────
 export { AuditLogger, MetricsRegistry } from './observability.js';
 export type { AuditEntry, MetricCounter, MetricHistogram } from './observability.js';
+
+// ── Infrastructure ───────────────────────────────────────────
+export { RateLimiter } from './rate-limiter.js';
+export type { RateLimiterConfig, RateLimitResult, OverflowStrategy } from './rate-limiter.js';
+export { EncryptedStore } from './encrypted-store.js';
+export type { EncryptedStoreConfig } from './encrypted-store.js';
