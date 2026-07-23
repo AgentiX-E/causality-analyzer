@@ -69,3 +69,10 @@ describe('clamp / safeDiv / safeLog', () => {
   it('safeDiv with valid denominator returns ratio', () => { expect(safeDiv(6, 3)).toBe(2); });
   it('safeLog of 1 returns 0', () => { expect(safeLog(1)).toBe(0); });
 });
+
+describe('SingularMatrixError branches', () => {
+  it('includes context in message when provided', () => {
+    const e = new SingularMatrixError('GPD estimation');
+    expect(e.message).toContain('GPD estimation');
+  });
+});
