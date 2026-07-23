@@ -206,6 +206,8 @@ export interface MetricQuery {
   readonly end: number;
   /** Metric column names to retrieve (empty = all) */
   readonly metrics?: ReadonlyArray<string>;
+  /** AbortSignal for cancellation */
+  readonly signal?: AbortSignal;
 }
 
 /** A query for retrieving historical RCA results */

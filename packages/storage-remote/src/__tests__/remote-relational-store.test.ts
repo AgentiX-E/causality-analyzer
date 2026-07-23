@@ -217,3 +217,55 @@ describe('healthCheck + gracefulShutdown', () => {
     expect(store).toBeDefined();
   });
 });
+
+// ── AbortSignal ─────────────────────────────────────────────────────
+
+describe('AbortSignal support', () => {
+  it('aborted signal throws before operation', async () => {
+    const { Client } = newDb().adapters.createPg();
+    const client = new Client() as unknown as PgClientLike;
+    const store = new RemoteRelationalStore({ client });
+    const ac = new AbortController();
+    ac.abort();
+
+    await expect(store.saveCPT('g1', 'A', { node: 'A', parents: [], entries: { '': 0.5 } }, ac.signal))
+      .rejects.toThrow();
+    await store.close();
+  });
+
+  it('writeDetections with aborted signal throws', async () => {
+    const { Client } = newDb().adapters.createPg();
+    const client = new Client() as unknown as PgClientLike;
+    const store = new RemoteRelationalStore({ client });
+    const ac = new AbortController();
+    ac.abort();
+
+    await expect(store.writeDetections([] as any, ac.signal))
+      .rejects.toThrow();
+    await store.close();
+  });
+
+  it('beginTransaction with aborted signal throws', async () => {
+    const { Client } = newDb().adapters.createPg();
+    const client = new Client() as unknown as PgClientLike;
+    const store = new RemoteRelationalStore({ client });
+    const ac = new AbortController();
+    ac.abort();
+
+    await expect(store.beginTransaction('s1', ac.signal))
+      .rejects.toThrow();
+    await store.close();
+  });
+
+  it('non-aborted signal does not interfere', async () => {
+    const { Client } = newDb().adapters.createPg();
+    const client = new Client() as unknown as PgClientLike;
+    const store = new RemoteRelationalStore({ client });
+
+    // AbortController not aborted — operation should succeed
+    await store.saveCPT('ok-g', 'B', { node: 'B', parents: [], entries: { '': 0.3 } }, undefined);
+    const loaded = await store.loadCPT('ok-g', 'B');
+    expect(loaded).not.toBeNull();
+    await store.close();
+  });
+});

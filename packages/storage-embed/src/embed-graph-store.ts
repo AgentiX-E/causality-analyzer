@@ -19,16 +19,16 @@ export class EmbedGraphStore implements IGraphStore {
     this.vers = new Map(); // graphId → version count
   }
 
-  async saveGraph(graph: CausalGraph, m: GraphMetadata): Promise<string> {
+  async saveGraph(graph: CausalGraph, m: GraphMetadata, signal?: AbortSignal): Promise<string> { signal?.throwIfAborted();
     const id = m.id;
     const v = (this.vers.get(id) ?? 0) + 1;
     this.vers.set(id, v);
     const lid = `g_${id}_v${v}`; // graph+version-specific label
     const nodeIds: Record<string, number> = {};
-    for (const n of graph.nodes) {
+    for (const n of graph.nodes) { signal?.throwIfAborted();
       nodeIds[n] = this.g.upsertNode(lid, `${id}_${n}`, {});
     }
-    for (const e of graph.edges) {
+    for (const e of graph.edges) { signal?.throwIfAborted();
       const f = nodeIds[e.source], t = nodeIds[e.target];
       if (f != null && t != null) this.g.upsertEdge(f, t, e.directed ? 'DEPENDS_ON_dir' : 'DEPENDS_ON_undir');
     }
@@ -36,7 +36,7 @@ export class EmbedGraphStore implements IGraphStore {
   }
 
 
-  async loadGraph(id: string): Promise<CausalGraph | null> {
+  async loadGraph(id: string, signal?: AbortSignal): Promise<CausalGraph | null> { signal?.throwIfAborted();
     const v = this.vers.get(id) ?? 0;
     if (v === 0) return null;
     return this._loadGraphByLabel(`g_${id}_v${v}`);
@@ -74,17 +74,17 @@ export class EmbedGraphStore implements IGraphStore {
   }
 
 
-  async loadGraphVersion(id: string, ver: number): Promise<CausalGraph | null> {
+  async loadGraphVersion(id: string, ver: number, signal?: AbortSignal): Promise<CausalGraph | null> { signal?.throwIfAborted();
     return this._loadGraphByLabel(`g_${id}_v${ver}`);
   }
 
-  async listGraphVersions(id: string): Promise<GraphVersion[]> {
+  async listGraphVersions(id: string, signal?: AbortSignal): Promise<GraphVersion[]> { signal?.throwIfAborted();
     const count = this.vers.get(id) ?? 0;
     if (count === 0) return [];
     return Array.from({ length: count }, (_, i) => ({ graphId: id, version: i + 1, timestamp: Date.now() }));
   }
 
-  async findSimilarGraphs(_t: CausalGraph, lim: number): Promise<CausalGraph[]> {
+  async findSimilarGraphs(_t: CausalGraph, lim: number, signal?: AbortSignal): Promise<CausalGraph[]> { signal?.throwIfAborted();
     const r: CausalGraph[] = [];
     for (const [id] of this.vers) { const g = await this.loadGraph(id); if (g) r.push(g); if (r.length >= lim) break; }
     return r;

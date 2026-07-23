@@ -249,7 +249,7 @@ export class RemoteGraphStore implements IGraphStore {
 
   // ── IGraphStore implementation ──────────────────────────────────────
 
-  async saveGraph(graph: CausalGraph, metadata: GraphMetadata): Promise<string> {
+  async saveGraph(graph: CausalGraph, metadata: GraphMetadata, signal?: AbortSignal): Promise<string> {
     return this.retry(async () => {
       const id = metadata.id;
       const ver = (this.versionCounter.get(id) ?? 0) + 1;
@@ -297,7 +297,7 @@ export class RemoteGraphStore implements IGraphStore {
     }, 'saveGraph');
   }
 
-  async loadGraph(graphId: string): Promise<CausalGraph | null> {
+  async loadGraph(graphId: string, signal?: AbortSignal): Promise<CausalGraph | null> {
     return this.retry(async () => {
       const s = this.driver.session({ defaultAccessMode: 'READ' });
       try {
@@ -363,7 +363,7 @@ export class RemoteGraphStore implements IGraphStore {
     }, 'loadGraphVersion');
   }
 
-  async listGraphVersions(graphId: string): Promise<GraphVersion[]> {
+  async listGraphVersions(graphId: string, signal?: AbortSignal): Promise<GraphVersion[]> {
     return this.retry(async () => {
       const s = this.driver.session({ defaultAccessMode: 'READ' });
       try {

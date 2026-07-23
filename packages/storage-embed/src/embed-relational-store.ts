@@ -17,6 +17,10 @@ export interface EmbedStoreOptions {
   dbPath?: string;
 }
 
+function checkAborted(signal?: AbortSignal): void {
+  signal?.throwIfAborted();
+}
+
 export class EmbedRelationalStore implements IRelationalStore {
   private db: any;
   private q: Record<string,any> = {};
@@ -42,6 +46,7 @@ export class EmbedRelationalStore implements IRelationalStore {
   private esc(s: string): string { return s.replace(/"/g, '""'); }
 
   async readMetrics<S extends TableSchema>(query: MetricQuery): Promise<ColumnarTable<S>> {
+    checkAborted(query.signal);
     const rows = this.q.mRead.all(query.start, query.end) as Array<{ts:number;metric_name:string;value:number}>;
     const metricFilter = query.metrics ? new Set(query.metrics) : null;
     const filtered = metricFilter ? rows.filter(r => metricFilter.has(r.metric_name)) : rows;
@@ -51,45 +56,55 @@ export class EmbedRelationalStore implements IRelationalStore {
       value: new Float64Array(filtered.map(r=>r.value)),
     }) as any;
   }
-  async writeDetections(d: DetectionResult[]): Promise<void> {
+  async writeDetections(d: DetectionResult[], signal?: AbortSignal): Promise<void> {
+    checkAborted(signal);
     this.db.transaction(()=>{for(const x of d)for(let i=0;i<x.scores.length;i++)this.q.mInsert.run(x.timestamp,x.scores[i]!,'m'+i);})();
   }
-  async saveCPT(gid: string, node: string, cpt: ConditionalProbabilityTable): Promise<void> {
+  async saveCPT(gid: string, node: string, cpt: ConditionalProbabilityTable, signal?: AbortSignal): Promise<void> {
+    checkAborted(signal);
     this.db.transaction(()=>{for(const[s,p]of Object.entries(cpt.entries))this.q.cSave.run(gid,node,s,p);})();
   }
-  async loadCPT(gid: string, node: string): Promise<ConditionalProbabilityTable|null> {
+  async loadCPT(gid: string, node: string, signal?: AbortSignal): Promise<ConditionalProbabilityTable|null> {
+    checkAborted(signal);
     const rows=this.q.cLoad.all(gid,node) as Array<{parent_state:string;prob:number}>;
     if(!rows.length)return null;
     const e:Record<string,number>={};for(const r of rows)e[r.parent_state]=r.prob;
     return {node,parents:[],entries:e};
   }
-  async saveRegressionModel(gid: string, node: string, m: RegressionParams): Promise<void> {
+  async saveRegressionModel(gid: string, node: string, m: RegressionParams, signal?: AbortSignal): Promise<void> {
+    checkAborted(signal);
     this.q.rSave.run(gid,node,JSON.stringify(m.coefficients),m.intercept,m.residualStdDev);
   }
-  async loadRegressionModel(gid: string, node: string): Promise<RegressionParams|null> {
+  async loadRegressionModel(gid: string, node: string, signal?: AbortSignal): Promise<RegressionParams|null> {
+    checkAborted(signal);
     const r=this.q.rLoad.get(gid,node) as any;
     return r?{coefficients:JSON.parse(r.coefficients),intercept:r.intercept,residualStdDev:r.residual_std}:null;
   }
-  async saveRCAResult(cid: string, r: RCAResult): Promise<void> {
+  async saveRCAResult(cid: string, r: RCAResult, signal?: AbortSignal): Promise<void> {
+    checkAborted(signal);
     this.q.aSave.run(cid,JSON.stringify(r.toJSON()),Date.now(),r.rootCauses[0]?.name??null);
   }
   async queryHistoricalResults(q: ResultQuery): Promise<RCAResult[]> {
     const rows=this.q.aQuery.all(q.start??null,q.start??0,q.end??null,q.end??Number.MAX_SAFE_INTEGER,q.rootCause??null,q.rootCause??null,q.limit??100) as Array<{result_json:string}>;
     return rows.map(r=>JSON.parse(r.result_json));
   }
-  async beginTransaction(sid: string): Promise<void> {
+  async beginTransaction(sid: string, signal?: AbortSignal): Promise<void> {
+    checkAborted(signal);
     this.db.exec('BEGIN');
     this.db.exec('SAVEPOINT "'+this.esc(sid)+'"');
     this.q.sUpsert.run(sid,'started',null,null);
   }
-  async commitTransaction(sid: string): Promise<void> {
+  async commitTransaction(sid: string, signal?: AbortSignal): Promise<void> {
+    checkAborted(signal);
     this.db.exec('RELEASE SAVEPOINT "'+this.esc(sid)+'"');
     this.db.exec('COMMIT');
   }
-  async rollbackToCheckpoint(sid: string, cp: string): Promise<void> {
+  async rollbackToCheckpoint(sid: string, cp: string, signal?: AbortSignal): Promise<void> {
+    checkAborted(signal);
     this.db.exec('ROLLBACK TO SAVEPOINT "'+this.esc(cp)+'"');
   }
-  async setCheckpoint(sid: string, name: string): Promise<void> {
+  async setCheckpoint(sid: string, name: string, signal?: AbortSignal): Promise<void> {
+    checkAborted(signal);
     this.db.exec('SAVEPOINT "'+this.esc(name)+'"');
     this.q.sUpsert.run(sid,'checkpoint',name,null);
   }
