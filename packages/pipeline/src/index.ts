@@ -47,3 +47,7 @@ export type {
 } from './viz/index.js';
 export { FusionAnalyzer } from './viz/index.js';
 export type { FusionConfig, FusionStrategy } from './viz/index.js';
+
+// ── Observability ──────────────────────────────────────────────
+export { AuditLogger, MetricsRegistry } from './observability.js';
+export type { AuditEntry, MetricCounter, MetricHistogram } from './observability.js';
