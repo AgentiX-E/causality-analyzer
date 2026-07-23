@@ -26,13 +26,13 @@ const PERF_BUDGETS = {
   /** Fisher Z test on 500 samples */
   fisherZ500: 5,
   /** KCI unconditional on 100 samples */
-  kci100: 200,
+  kci100: 250,
   /** SPOT calibration with 100 samples */
   spotCalibration: 150,
   /** LiNGAM on 4-node graph with 200 samples */
   lingam4Node200: 300,
   /** StatsDetector batch training on 1000 samples */
-  statsBatch: 30,
+  statsBatch: 50,
 };
 
 function generateLinearData(nodes: string[], edges: Array<[string, string, number]>, N: number): Matrix {

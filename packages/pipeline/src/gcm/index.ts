@@ -1,4 +1,9 @@
-export { StructuralCausalModel, cateToRCA } from './structural-causal-model.js';
+export {
+  StructuralCausalModel,
+  CausalModel,
+  cateToRCA,
+} from './structural-causal-model.js';
+export type { MechanismType } from './structural-causal-model.js';
 export {
   evaluateMechanismR2, evaluateMSE,
   shapleyAttribute, bootstrapRCA,

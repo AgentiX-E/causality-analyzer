@@ -145,20 +145,61 @@ function tryIDAlgorithm(
   yAncestors.add(treatment);
   const subNodes = [...yAncestors];
 
-  // Check hedge criterion: if there's a c-component where X affects Y
-  // through latent confounding that cannot be eliminated
   const cComps = findCComponents(graph, subNodes);
   if (cComps.length > 1) {
-    // Multiple c-components: effect may be identifiable via factorization
-    // Simplified: check if treatment-outcome component has identifiable structure
-    const toComp = cComps.find(c => c.has(treatment) && c.has(outcome));
-    if (toComp && toComp.size <= 3) {
+    // Multiple c-components: check if the effect is identifiable via
+    // the hedge criterion (Shpitser & Pearl 2006, Theorem 4).
+    // A hedge exists for P(Y|do(X)) if there is a c-component S ⊂ V
+    // that contains no variable in X, but is not empty in An(Y).
+    const treatCompIdx = cComps.findIndex(c => c.has(treatment));
+    if (treatCompIdx >= 0) {
+      const treatComp = cComps[treatCompIdx]!;
+      // Check if treatment c-component has a hedge: S ⊆ treatComp, S ∩ X = ∅, S ≠ ∅
+      const hedge = [...treatComp].filter(n => n !== treatment && yAncestors.has(n));
+      if (hedge.length > 0) {
+        // Non-X nodes in the same c-component as treatment that are ancestors of Y
+        // → these form a hedge → effect may be identifiable via do-calculus step 4
+        return {
+          identifiable: true,
+          expressionType: 'id_algorithm',
+          adjustmentSet: hedge,
+          explanation: `ID: identified via c-component decomposition — adjust for hedge {${hedge.join(', ')}} in treatment component`,
+        };
+      }
+    }
+
+    // Check if treatment and outcome are in different c-components
+    const outcomeCompIdx = cComps.findIndex(c => c.has(outcome));
+    if (outcomeCompIdx >= 0 && treatCompIdx >= 0 && treatCompIdx !== outcomeCompIdx) {
+      // Different c-components: use factorized formula from the ID algorithm
       return {
         identifiable: true,
         expressionType: 'id_algorithm',
         adjustmentSet: backdoorInXbar,
-        explanation: `ID: identified via c-component decomposition (${cComps.length} components)`,
+        explanation: `ID: identified via ${cComps.length} c-component factorization — treat/outcome in separate components`,
       };
+    }
+  }
+
+  // Rule 4.5: Single c-component with X and Y
+  if (cComps.length === 1) {
+    const comp = cComps[0]!;
+    // Hedge criterion: a hedge for P(Y|do(X)) exists if there's a
+    // subset F ⊆ V\X such that F is non-empty but F ⟂ Y in G[X̅]
+    // and F shares a c-component with X.
+    const nonTreatNodes = [...comp].filter(n => n !== treatment);
+    if (nonTreatNodes.length > 0) {
+      // These nodes share a c-component with treatment
+      // If any of them are ancestors of Y, we have a hedge
+      const hedgeNodes = nonTreatNodes.filter(n => yAncestors.has(n));
+      if (hedgeNodes.length > 0) {
+        return {
+          identifiable: true,
+          expressionType: 'id_algorithm',
+          adjustmentSet: hedgeNodes,
+          explanation: `ID: single c-component with hedge {${hedgeNodes.join(', ')}} — identifiable via factorized expression`,
+        };
+      }
     }
   }
 

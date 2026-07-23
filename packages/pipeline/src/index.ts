@@ -34,7 +34,8 @@ export {
 } from './infer/index.js';
 
 // GCM
-export { StructuralCausalModel, cateToRCA } from './gcm/index.js';
+export { StructuralCausalModel, CausalModel, cateToRCA } from './gcm/index.js';
+export type { MechanismType } from './gcm/index.js';
 
 // Visualization
 export {
