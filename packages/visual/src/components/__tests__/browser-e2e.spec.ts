@@ -151,7 +151,7 @@ test.describe('CaRootCauseRanking', () => {
 
       // Check shadow DOM content
       const hasContent = !!el.shadowRoot?.querySelector('.root-cause-item') ||
-                         el.shadowRoot?.innerHTML.length! > 0;
+                         (el.shadowRoot?.innerHTML?.length ?? 0) > 0;
       const childrenCount = el.shadowRoot?.children.length ?? 0;
 
       document.body.removeChild(el);

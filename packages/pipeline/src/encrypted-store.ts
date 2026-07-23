@@ -33,7 +33,7 @@ export class EncryptedStore {
   async init(): Promise<void> {
     if (typeof crypto === 'undefined' || !crypto.subtle) return;
     this.key = await crypto.subtle.importKey(
-      'raw', this.rawKey, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt'],
+      'raw', this.rawKey, { name: 'AES-GCM' } as AesKeyAlgorithm, false, ['encrypt', 'decrypt'],
     );
   }
 
