@@ -26,3 +26,9 @@ export {
 } from './sensitivity.js';
 export { identifyByDoCalculus } from './do-calculus.js';
 export type { DoCalculusResult } from './do-calculus.js';
+
+// Collider bias detection (I8)
+export {
+  detectColliderBias, findColliders, isColliderBias, removeColliderBiasedAdjustments,
+} from './collider-bias.js';
+export type { ColliderBiasWarning } from './collider-bias.js';
