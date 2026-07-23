@@ -67,6 +67,10 @@ export {
 export type { ValidationResult, BaseConfigOptions } from './config/index.js';
 export { BaseConfig } from './config/index.js';
 
+// ── Logger ────────────────────────────────────────────────────────
+export { ConsoleLogger, NoopLogger, LogLevel } from './logger.js';
+export type { Logger } from './logger.js';
+
 // ── DI ────────────────────────────────────────────────────────────
 export type { CausalityAnalyzerConfig } from './di/index.js';
 

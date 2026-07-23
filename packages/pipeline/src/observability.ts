@@ -8,6 +8,8 @@
  * @packageDocumentation
  */
 
+import type { Logger } from '@agentix-e/causality-analyzer-core';
+
 // ── Audit Logger ───────────────────────────────────────────────────────
 
 export interface AuditEntry {
@@ -28,23 +30,41 @@ export interface AuditEntry {
 /**
  * Immutable audit logger — produces JSON-streamable audit entries
  * for downstream consumption (files, databases, SIEM systems).
+ * Optionally forwards entries through a structured Logger for real-time monitoring.
  */
 export class AuditLogger {
   private entries: AuditEntry[] = [];
+  private logger: Logger | null = null;
+
+  constructor(logger?: Logger) {
+    this.logger = logger ?? null;
+  }
 
   /**
    * Record an auditable event.
    * Thread-safe for sequential use; not designed for concurrent writes.
    */
   log(event: string, durationMs: number, success: boolean, context?: Record<string, unknown>, error?: string): void {
-    this.entries.push({
+    const entry: AuditEntry = {
       timestamp: new Date().toISOString(),
       event,
       durationMs: Math.round(durationMs * 100) / 100,
       success,
       context,
       error,
-    });
+    };
+    this.entries.push(entry);
+
+    // Forward to structured logger for real-time monitoring
+    if (this.logger) {
+      const level = success ? 'info' : 'error';
+      this.logger[level]?.(`[audit] ${event}`, {
+        durationMs,
+        success,
+        ...context,
+        ...(error ? { error } : {}),
+      });
+    }
   }
 
   /** Return all entries as a JSON-encodable array (immutable copy) */
