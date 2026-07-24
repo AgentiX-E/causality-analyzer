@@ -98,8 +98,8 @@ importers:
         specifier: workspace:*
         version: link:../core
       overgraph:
-        specifier: ^0.16.0
-        version: 0.16.0
+        specifier: ^0.17.0
+        version: 0.17.0
     devDependencies:
       '@vitest/coverage-v8':
         specifier: ^3.0.0
@@ -1306,8 +1306,8 @@ packages:
     resolution: {integrity: sha512-6IpQ7mKUxRcZNLIObR0hz7lxsapSSIYNZJwXPGeF0mTVqGKFIXj1DQcMoT22S3ROcLyY/rz0PWaWZ9ayWmad9g==}
     engines: {node: '>= 0.8.0'}
 
-  overgraph@0.16.0:
-    resolution: {integrity: sha512-q0frTyqZCsm+Lib6c6RrFwLadkCi1WmrExMKIL9UWw5o7guYt+K4OZTrayScGPWGmhNrhKeOQ8NY0pz2Jsscjg==}
+  overgraph@0.17.0:
+    resolution: {integrity: sha512-bGhH0kGyq81NqY8oHIml1ZhXWSmIokqFM/iZduszVRSfrTRDFv14+7CfKbmxsVcfT7tQZp6jp+7dzMUJwqeIWQ==}
 
   p-limit@3.1.0:
     resolution: {integrity: sha512-TYOanM3wGwNGsZN2cVTYPArw454xnXj5qmWF1bEoAc4+cU/ol7GVh7odevjp1FNHduHc3KZMcFduxU5Xc6uJRQ==}
@@ -2885,7 +2885,7 @@ snapshots:
       type-check: 0.4.0
       word-wrap: 1.2.5
 
-  overgraph@0.16.0: {}
+  overgraph@0.17.0: {}
 
   p-limit@3.1.0:
     dependencies:

@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@agentix-e/causality-analyzer-core": "workspace:*",
-    "overgraph": "^0.16.0"
+    "overgraph": "^0.17.0"
   },
   "optionalDependencies": {
     "better-sqlite3": "^12.11.1"
