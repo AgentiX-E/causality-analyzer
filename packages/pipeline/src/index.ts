@@ -10,8 +10,18 @@ export { VotingDetector } from './detect/voting-detector.js';
 export type { VotingStrategy, VotingDetectorConfig } from './detect/voting-detector.js';
 
 // Graph
-export { CausalGraph, pcAlgorithm, fisherZTest } from './graph/index.js';
-export type { PCConfig } from './graph/index.js';
+export {
+  CausalGraph, pcAlgorithm, fisherZTest,
+  fciAlgorithm, growShrink, targetedDiscovery,
+  kciTest, gesAlgorithm, directLiNGAM,
+  ginAlgorithm, cdnodAlgorithm, graspAlgorithm,
+  camuvAlgorithm, exactSearchAlgorithm,
+} from './graph/index.js';
+export type {
+  PCConfig, KCIConfig, GESConfig,
+  GINConfig, CDNODConfig, GRaSPConfig,
+  CAMUVConfig, ExactSearchConfig,
+} from './graph/index.js';
 
 // Analyze (RCA)
 export { HeuristicPathRCA, RandomWalkRCA, HTRCA, FPGrowthRCA } from './analyze/index.js';
