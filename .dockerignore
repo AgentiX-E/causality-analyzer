@@ -1,0 +1,14 @@
+node_modules/
+dist/
+*.tsbuildinfo
+coverage/
+.vite/
+.git/
+.gitignore
+.env
+*.md
+docs/
+scripts/
+.github/
+**/__tests__/
+**/*.test.ts

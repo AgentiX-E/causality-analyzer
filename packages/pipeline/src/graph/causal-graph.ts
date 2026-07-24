@@ -472,6 +472,22 @@ export class CausalGraph {
     return { nodes: this.nodes, adjacency: this.adj.to2DArray(), edges: this.edges };
   }
 
+  /** Reconstruct a CausalGraph from its JSON representation. */
+  static fromJSON(json: { nodes: string[]; adjacency: number[][]; edges?: CausalEdge[] }): CausalGraph {
+    const n = json.nodes.length;
+
+    // Prefer adjacency matrix for exact reconstruction
+    if (json.adjacency && json.adjacency.length === n) {
+      const adj = new Matrix(json.adjacency);
+      return new CausalGraph([...json.nodes], adj);
+    }
+
+    // Fallback: reconstruct from edge list
+    if (json.edges) return CausalGraph.fromEdges(json.nodes, json.edges);
+
+    return new CausalGraph(json.nodes);
+  }
+
   static fromEdges(nodes: string[], edges: CausalEdge[]): CausalGraph {
     const g = new CausalGraph(nodes);
     for (const e of edges) {

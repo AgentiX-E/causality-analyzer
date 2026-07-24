@@ -87,3 +87,14 @@ export { RateLimiter } from './rate-limiter.js';
 export type { RateLimiterConfig, RateLimitResult, OverflowStrategy } from './rate-limiter.js';
 export { EncryptedStore } from './encrypted-store.js';
 export type { EncryptedStoreConfig } from './encrypted-store.js';
+
+// ── HTTP Server ──────────────────────────────────────────────
+export { CausalityServer } from './server.js';
+
+// ── Streaming ────────────────────────────────────────────────
+export { StreamingPipeline } from './streaming.js';
+export type { StreamingConfig, StreamingResult } from './streaming.js';
+
+// ── Health Check ─────────────────────────────────────────────
+export { HealthChecker } from './health.js';
+export type { HealthStatus, HealthCheckResult } from './health.js';

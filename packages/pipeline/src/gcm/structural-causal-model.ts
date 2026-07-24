@@ -46,6 +46,11 @@ class AdditiveNoiseMechanism implements CausalMechanism {
   invert(x: number, parentValues: number[]): number {
     return x - this.forward(parentValues);
   }
+
+  /** Serialize mechanism parameters for persistence. */
+  toJSON(): { nodeName: string; coef: number[]; intercept: number; noiseStd: number } {
+    return { nodeName: this.nodeName, coef: [...this.coef], intercept: this.intercept, noiseStd: this.noiseStd };
+  }
 }
 
 // ── Structural Causal Model ──────────────────────────────────────────
@@ -217,6 +222,35 @@ export class StructuralCausalModel {
   }
 
   get causalGraph(): CausalGraph { return this.graph; }
+
+  // ── Serialization ──────────────────────────────────────────────────
+
+  /**
+   * Serialize the full SCM state to JSON.
+   * Includes graph topology, mechanism parameters, and node ordering.
+   * Version field enables forward compatibility.
+   */
+  toJSON() {
+    return {
+      version: 1,
+      graph: this.graph.toJSON(),
+      mechanisms: [...this.mechanisms.entries()].map(([name, m]) => (m as AdditiveNoiseMechanism).toJSON()),
+      nodeOrder: [...this.nodeOrder],
+    };
+  }
+
+  /**
+   * Reconstruct an SCM from its JSON representation.
+   */
+  static fromJSON(json: { version: number; graph: { nodes: string[]; adjacency: number[][]; edges?: import('@agentix-e/causality-analyzer-core').CausalEdge[] }; mechanisms: Array<{ nodeName: string; coef: number[]; intercept: number; noiseStd: number }>; nodeOrder: string[] }): StructuralCausalModel {
+    const graph = CausalGraph.fromJSON(json.graph);
+    const scm = new StructuralCausalModel(graph);
+    scm.nodeOrder = [...json.nodeOrder];
+    for (const m of json.mechanisms) {
+      scm.mechanisms.set(m.nodeName, new AdditiveNoiseMechanism(m.nodeName, m.coef, m.intercept, m.noiseStd));
+    }
+    return scm;
+  }
 }
 
 // ── CATE → RCA Bridge ─────────────────────────────────────────────

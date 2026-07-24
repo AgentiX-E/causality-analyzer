@@ -11,11 +11,11 @@
  * @packageDocumentation
  */
 import { readFileSync } from 'fs';
-import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { Matrix } from 'ml-matrix';
 import { CausalGraph } from './graph/causal-graph.js';
 import { pcAlgorithm } from './graph/pc.js';
 import { CIRCAPipeline } from './analyze/circa.js';
+import { CausalityServer } from './server.js';
 
 interface CliArgs {
   file?: string;
@@ -103,12 +103,17 @@ function execAnalyze(args: CliArgs): void {
 
 function execServe(args: CliArgs): void {
   const port = args.port ?? 3000;
-  const server = createServer((_req: IncomingMessage, res: ServerResponse) => {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ status: 'ok', version: '1.0.0' }));
-  });
-  server.listen(port, () => {
-    console.log(`Causality Analyzer REST API listening on http://localhost:${port}`);
+  const server = new CausalityServer();
+  server.start(port).then(() => {
+    console.log(`Causality Analyzer API v2.0.0 listening on http://localhost:${port}`);
+    console.log(`Endpoints:`);
+    console.log(`  GET  /health  — health check`);
+    console.log(`  GET  /ready   — readiness probe`);
+    console.log(`  GET  /live    — liveness probe`);
+    console.log(`  GET  /metrics — Prometheus metrics`);
+    console.log(`  POST /discover  — causal discovery`);
+    console.log(`  POST /analyze   — root cause analysis`);
+    console.log(`  POST /estimate  — effect estimation`);
   });
 }
 
