@@ -1,12 +1,12 @@
 /**
  * @agentix-e/causality-analyzer-core
  *
- * Core package for Causality Analyzer — type definitions, interfaces,
+ * Core package for Causality Analyzer �? type definitions, interfaces,
  * plugin registry, configuration system, and universal data primitives.
  *
  * This package defines the contracts that every other package in the
  * causality-analyzer ecosystem depends on. It contains exactly ONE
- * implementation class (ColumnarTable) — by explicit design exception,
+ * implementation class (ColumnarTable) �? by explicit design exception,
  * as it serves the same foundational role as `Array` in the runtime.
  */
 
@@ -87,7 +87,7 @@ export {
 export type { ErrorCodeType } from './errors.js';
 
 // ── Math ─────────────────────────────────────────────────────────
-export { solveLinear, solveLinearSafe, normalTail, normalCDFTail, normalCDF, erf, colMean, createRNG, combinations } from './math.js';
+export { solveLinear, solveLinearSafe, normalTail, normalCDFTail, normalCDF, erf, colMean, createRNG, combinations, fisherZTest, partialCorrelationFromCov, invertMatrix, solveOLS, bicScore } from './math.js';
 
 // ── Visualization Types ───────────────────────────────────────────
 export type {

@@ -425,8 +425,7 @@ export function estimateDoublyRobust(
   const n = data.length;
   const scores = estimatePropensityScore(data, treatmentIdx, covariateIndices);
 
-  // Outcome models: E[Y|T=1,Z] and E[Y|T=0,Z]
-  // Simplified: linear regression per stratum
+  // Split data by treatment
   const treatedData: number[][] = [];
   const controlData: number[][] = [];
   for (let r = 0; r < n; r++) {
@@ -434,38 +433,37 @@ export function estimateDoublyRobust(
     else controlData.push(data[r]!);
   }
 
-  const mu1 = (z: number[]): number => {
-    if (treatedData.length < 2) return 0;
-    return linearPredict(treatedData, outcomeIdx, covariateIndices, z);
-  };
-  const mu0 = (z: number[]): number => {
-    if (controlData.length < 2) return 0;
-    return linearPredict(controlData, outcomeIdx, covariateIndices, z);
-  };
+  // Pre-fit outcome models ONCE (not per-observation)
+  const beta1 = treatedData.length >= 2
+    ? fitOLS(treatedData, outcomeIdx, covariateIndices)
+    : null;
+  const beta0 = controlData.length >= 2
+    ? fitOLS(controlData, outcomeIdx, covariateIndices)
+    : null;
 
-  // DR computation
+  // DR computation: apply pre-fitted models
   let drSum = 0;
+  const drValues = new Float64Array(n);
   for (let r = 0; r < n; r++) {
     const t = (data[r]![treatmentIdx] ?? 0) > 0.5 ? 1 : 0;
     const y = data[r]![outcomeIdx] ?? 0;
-    const z = covariateIndices.map(ci => data[r]![ci] ?? 0);
-    const pi = Math.min(Math.max(scores[r]!, 0.05), 0.95); // trim to avoid division by zero
-    const m1 = mu1(z);
-    const m0 = mu0(z);
+    const pi = Math.min(Math.max(scores[r]!, 0.05), 0.95);
+    const m1 = beta1 ? predictFromBeta(covariateIndices, beta1, data[r]!) : 0;
+    const m0 = beta0 ? predictFromBeta(covariateIndices, beta0, data[r]!) : 0;
     const dr = m1 - m0 + t * (y - m1) / pi - (1 - t) * (y - m0) / (1 - pi);
     drSum += dr;
+    drValues[r] = dr;
   }
   const ate = drSum / n;
 
-  // Influence-function based SE
+  // Influence-function based SE (reuses pre-fitted betas)
   let ifVar = 0;
   for (let r = 0; r < n; r++) {
     const t = (data[r]![treatmentIdx] ?? 0) > 0.5 ? 1 : 0;
     const y = data[r]![outcomeIdx] ?? 0;
-    const z = covariateIndices.map(ci => data[r]![ci] ?? 0);
     const pi = Math.min(Math.max(scores[r]!, 0.05), 0.95);
-    const m1 = mu1(z);
-    const m0 = mu0(z);
+    const m1 = beta1 ? predictFromBeta(covariateIndices, beta1, data[r]!) : 0;
+    const m0 = beta0 ? predictFromBeta(covariateIndices, beta0, data[r]!) : 0;
     const dr = m1 - m0 + t * (y - m1) / pi - (1 - t) * (y - m0) / (1 - pi);
     ifVar += (dr - ate) ** 2;
   }
@@ -509,13 +507,17 @@ function pooledVar(
   return ss / (n - 1);
 }
 
-function linearPredict(
+/**
+ * Fit OLS regression: y ~ X (X = covariate columns from data).
+ * Returns coefficients β [β₀, β₁, ..., β_{k-1}] where β₀ corresponds to covariateIndices[0].
+ */
+function fitOLS(
   data: number[][], outcomeIdx: number,
-  covariateIndices: number[], z: number[],
-): number {
+  covariateIndices: number[],
+): number[] {
   const n = data.length;
   const k = covariateIndices.length;
-  if (n < k + 1) return 0;
+  if (n < k + 1) return new Array(k).fill(0);
 
   const XtX = Array.from({ length: k }, () => new Float64Array(k));
   const Xty = new Float64Array(k);
@@ -531,12 +533,31 @@ function linearPredict(
     }
   }
 
-  const coef = solveLinear(
+  return solveLinear(
     XtX.map(row => Array.from(row)),
     Array.from(Xty),
   );
+}
 
+/**
+ * Predict outcome from pre-fitted OLS coefficients.
+ * ŷ = Σ βᵢ·xᵢ  where xᵢ = row[covariateIndices[i]]
+ */
+function predictFromBeta(
+  covariateIndices: number[], beta: number[], row: number[],
+): number {
   let pred = 0;
-  for (let i = 0; i < k; i++) pred += coef[i]! * z[i]!;
+  for (let i = 0; i < covariateIndices.length; i++) {
+    pred += (beta[i] ?? 0) * (row[covariateIndices[i]!] ?? 0);
+  }
   return pred;
+}
+
+// Kept for backward compatibility — prefer fitOLS + predictFromBeta for bulk predictions
+function linearPredict(
+  data: number[][], outcomeIdx: number,
+  covariateIndices: number[], z: number[],
+): number {
+  const coef = fitOLS(data, outcomeIdx, covariateIndices);
+  return predictFromBeta(covariateIndices, coef, z);
 }

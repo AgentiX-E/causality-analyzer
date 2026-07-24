@@ -66,7 +66,10 @@ export class CausalityServer {
     return new Promise((resolve, reject) => {
       this.server = createServer((req, res) => this.handleRequest(req, res));
       this.startTime = Date.now();
-      this.server.listen(port, host, () => resolve());
+      this.server.listen(port, host, () => {
+        this.healthChecker.markReady();
+        resolve();
+      });
       this.server.on('error', reject);
     });
   }

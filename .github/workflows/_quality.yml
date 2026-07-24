@@ -41,13 +41,11 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq build-essential python3 make g++ || \
-            echo "::warning ::System deps install failed — native module builds may be affected"
+          sudo apt-get install -y -qq build-essential python3 make g++
       - run: pnpm install --frozen-lockfile
       - name: Rebuild native modules
         run: |
-          pnpm rebuild --filter @agentix-e/causality-analyzer-storage-embed || \
-            echo "::warning ::better-sqlite3 rebuild failed — embed storage tests use fallback"
+          pnpm rebuild --filter @agentix-e/causality-analyzer-storage-embed
       - run: pnpm run --filter @agentix-e/causality-analyzer-core build
       - run: pnpm -r typecheck
 
@@ -68,13 +66,11 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq build-essential python3 make g++ || \
-            echo "::warning ::System deps install failed — native module tests may be affected"
+          sudo apt-get install -y -qq build-essential python3 make g++
       - run: pnpm install --frozen-lockfile
       - name: Rebuild native modules
         run: |
-          pnpm rebuild --filter @agentix-e/causality-analyzer-storage-embed || \
-            echo "::warning ::better-sqlite3 rebuild failed — embed storage tests use fallback"
+          pnpm rebuild --filter @agentix-e/causality-analyzer-storage-embed
       - run: pnpm run --filter @agentix-e/causality-analyzer-core build
       - run: pnpm -r test
       - name: Collect coverage
@@ -105,8 +101,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq build-essential python3 make g++ || \
-            echo "::warning ::System deps install failed"
+          sudo apt-get install -y -qq build-essential python3 make g++
       - run: pnpm install --frozen-lockfile
       - run: pnpm run --filter @agentix-e/causality-analyzer-core build
       - run: npx playwright install chromium --with-deps
@@ -129,13 +124,11 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq build-essential python3 make g++ || \
-            echo "::warning ::System deps install failed"
+          sudo apt-get install -y -qq build-essential python3 make g++
       - run: pnpm install --frozen-lockfile
       - name: Rebuild native modules
         run: |
-          pnpm rebuild --filter @agentix-e/causality-analyzer-storage-embed || \
-            echo "::warning ::better-sqlite3 rebuild failed"
+          pnpm rebuild --filter @agentix-e/causality-analyzer-storage-embed
       - run: pnpm run --filter @agentix-e/causality-analyzer-core build
 
       - name: Start Neo4j

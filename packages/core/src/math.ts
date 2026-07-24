@@ -174,3 +174,185 @@ export function combinations<T>(arr: T[], k: number): T[][] {
   const without = combinations(rest, k);
   return [...withFirst, ...without];
 }
+
+// ── Fisher's Z Conditional Independence Test ──────────────────────────
+
+/**
+ * Fisher's Z conditional independence test.
+ *
+ * Tests the null hypothesis X_i ⟂ X_j | X_S (conditional independence).
+ * Returns a p-value — reject independence if p < alpha.
+ *
+ * Algorithm:
+ *  1. Extract sub-matrix for indices [i, j, ...S]
+ *  2. Compute partial correlation ρ_{ij|S}
+ *  3. Transform to z = 0.5·ln((1+ρ)/(1-ρ))·√(n-|S|-3)
+ *  4. Two-tailed p-value via normal CDF
+ *
+ * Complexity: O(n·d²) where d = |S| + 2.
+ */
+export function fisherZTest(
+  data: number[][],
+  i: number,
+  j: number,
+  condSet: number[],
+): number {
+  const n = data.length;
+  const indices = [i, j, ...condSet];
+  const k = condSet.length;
+
+  // Compute means
+  const means = new Array(indices.length).fill(0);
+  for (let c = 0; c < indices.length; c++) {
+    const ci = indices[c]!;
+    let sum = 0;
+    for (let r = 0; r < n; r++) sum += data[r]?.[ci] ?? 0;
+    means[c] = sum / n;
+  }
+
+  // Compute covariance matrix
+  const cov = Array.from({ length: indices.length }, () => new Array(indices.length).fill(0));
+  for (let a = 0; a < indices.length; a++) {
+    const ai = indices[a]!;
+    for (let b = a; b < indices.length; b++) {
+      const bi = indices[b]!;
+      let sum = 0;
+      for (let r = 0; r < n; r++)
+        sum += ((data[r]?.[ai] ?? 0) - means[a]!) * ((data[r]?.[bi] ?? 0) - means[b]!);
+      cov[a]![b] = sum / (n - 1);
+      cov[b]![a] = cov[a]![b]!;
+    }
+  }
+
+  // Partial correlation via precision matrix
+  const rho = partialCorrelationFromCov(cov, 0, 1);
+  if (Math.abs(rho) >= 1) return 0;
+
+  const z = 0.5 * Math.log((1 + rho) / (1 - rho)) * Math.sqrt(n - k - 3);
+  return 2 * (1 - normalCDF(Math.abs(z)));
+}
+
+/**
+ * Compute partial correlation ρ_{ij|rest} from a covariance matrix.
+ * Uses precision (inverse covariance) method.
+ *
+ * ρ_{ij|rest} = -Ω_{ij} / √(Ω_{ii}·Ω_{jj})
+ * where Ω = Σ^{-1} is the precision matrix.
+ */
+export function partialCorrelationFromCov(
+  cov: number[][],
+  i: number,
+  j: number,
+): number {
+  const m = cov.length;
+  if (m === 2) {
+    const cii = cov[i]![i]!;
+    const cjj = cov[j]![j]!;
+    return cii > 0 && cjj > 0 ? cov[i]![j]! / Math.sqrt(cii * cjj) : 0;
+  }
+  const prec = invertMatrix(cov);
+  const denominator = Math.sqrt(Math.abs(prec[i]![i]! * prec[j]![j]!));
+  if (denominator < 1e-12) return 0;
+  const r = -prec[i]![j]! / denominator;
+  return Math.max(-1, Math.min(1, r));
+}
+
+// ── Matrix Inversion (Gauss-Jordan) ──────────────────────────────────
+
+const MATRIX_PIVOT_THRESHOLD = 1e-12;
+
+/**
+ * Gauss-Jordan full matrix inversion.
+ *
+ * Augments A with identity I, then reduces [A|I] → [I|A⁻¹].
+ * Partial pivoting for numerical stability.
+ *
+ * @returns A⁻¹ as number[][] (may be inaccurate if |pivot| < 1e-12)
+ */
+export function invertMatrix(m: number[][]): number[][] {
+  const n = m.length;
+  const aug = m.map((row, ri) => [
+    ...row,
+    ...Array.from({ length: n }, (_, ci) => (ri === ci ? 1 : 0)),
+  ]);
+
+  for (let col = 0; col < n; col++) {
+    // Partial pivoting
+    let pivot = col;
+    for (let row = col + 1; row < n; row++)
+      if (Math.abs(aug[row]![col]!) > Math.abs(aug[pivot]![col]!)) pivot = row;
+    [aug[col], aug[pivot]] = [aug[pivot]!, aug[col]!];
+
+    const pv = aug[col]![col]!;
+    if (Math.abs(pv) < MATRIX_PIVOT_THRESHOLD) continue;
+
+    // Normalize pivot row
+    for (let j = col; j < 2 * n; j++) aug[col]![j]! /= pv;
+
+    // Eliminate all other rows
+    for (let row = 0; row < n; row++) {
+      if (row === col) continue;
+      const factor = aug[row]![col]!;
+      for (let j = col; j < 2 * n; j++) aug[row]![j]! -= factor * aug[col]![j]!;
+    }
+  }
+
+  return aug.map(row => row.slice(n));
+}
+
+// ── OLS via Normal Equations ────────────────────────────────────────
+
+/**
+ * Solve ordinary least squares regression: y ≈ X·β.
+ *
+ * Uses normal equations: β̂ = (XᵀX)⁻¹ Xᵀy.
+ * Suitable for small to moderate number of features (k ≤ 20).
+ * Falls back gracefully for singular XᵀX (zero coefficients).
+ *
+ * @param X — design matrix (n×k), must include column of 1s for intercept
+ * @param y — response vector (n)
+ * @returns best-fit coefficients β̂ (length k)
+ */
+export function solveOLS(X: number[][], y: number[]): number[] {
+  const n = X.length;
+  const k = X[0]?.length ?? 0;
+  if (n === 0 || k === 0) return [];
+
+  // XᵀX
+  const XtX = Array.from({ length: k }, () => new Float64Array(k));
+  const Xty = new Float64Array(k);
+  for (let i = 0; i < n; i++) {
+    const row = X[i];
+    const yi = y[i] ?? 0;
+    for (let a = 0; a < k; a++) {
+      const xVal = row?.[a] ?? 0;
+      Xty[a] = (Xty[a] ?? 0) + xVal * yi;
+      for (let b = a; b < k; b++)
+        XtX[a]![b] = (XtX[a]![b] ?? 0) + xVal * (row?.[b] ?? 0);
+    }
+  }
+  for (let a = 0; a < k; a++)
+    for (let b = 0; b < a; b++)
+      XtX[a]![b] = XtX[b]![a]!;
+
+  // Convert to number[][] for solveLinear
+  const A = XtX.map(row => Array.from(row) as number[]);
+  const b = Array.from(Xty) as number[];
+  return solveLinear(A, b);
+}
+
+/**
+ * Bayesian Information Criterion for linear Gaussian model.
+ *
+ * BIC = n·ln(RSS/n) + k·ln(n)
+ *
+ * Lower BIC = better model (penalizes complexity).
+ *
+ * @param rss — Residual Sum of Squares
+ * @param n — sample size
+ * @param k — number of parameters
+ */
+export function bicScore(rss: number, n: number, k: number): number {
+  if (n <= 0) return Infinity;
+  return n * Math.log(Math.max(1e-10, rss / n)) + k * Math.log(Math.max(2, n));
+}
