@@ -42,10 +42,18 @@ export function cdnodAlgorithm(
   const changingEdges = new Map<string, boolean>();
 
   // Phase 1: Skeleton detection (PC-style)
+  // Start with a complete undirected graph — edges will be removed when
+  // variables are conditionally independent (p > alpha means fail to reject
+  // the null hypothesis of independence).
   for (let i = 0; i < n; i++)
     for (let j = i + 1; j < n; j++)
-    if (fisherZ(data, i, j, [], alpha) > alpha)
       g.undirectedEdge(nodeNames[i]!, nodeNames[j]!);
+
+  // Remove edges where variables are unconditionally independent
+  for (let i = 0; i < n; i++)
+    for (let j = i + 1; j < n; j++)
+      if (fisherZ(data, i, j, [], alpha) > alpha)
+        g.removeEdge(nodeNames[i]!, nodeNames[j]!);
 
   let depth = 1;
   const maxDepth = maxDegree === -1 ? n : maxDegree;
@@ -93,7 +101,7 @@ export function cdnodAlgorithm(
 
   // Phase 3: Non-stationarity detection
   // For each undirected edge, test if conditioning on domain changes independence
-  if (domains.length >= N) {
+  if (domains.length === N) {
     for (let i = 0; i < n; i++) {
       for (let j = i + 1; j < n; j++) {
         if (!g.hasEdge(nodeNames[i]!, nodeNames[j]!) || !g.hasEdge(nodeNames[j]!, nodeNames[i]!)) continue;
@@ -128,16 +136,11 @@ export function cdnodAlgorithm(
     }
   }
 
-  // Cycle safety
-  if (g.hasCycle()) {
-    for (const e of [...g.edges].filter(e => e.directed)) {
-      g.removeEdge(e.source, e.target);
-      if (!g.hasCycle()) break;
-    }
-  }
+  // Convert CPDAG to DAG using Dor-Tarsi (1992) algorithm
+  const dag = g.pdag2dag();
 
-  if (domainKnowledge) g.applyDomainKnowledge(domainKnowledge);
-  return { graph: g, changingEdges };
+  if (domainKnowledge) dag.applyDomainKnowledge(domainKnowledge);
+  return { graph: dag, changingEdges };
 }
 
 function fisherZ(data: Matrix, i: number, j: number, condSet: number[], _alpha?: number): number {

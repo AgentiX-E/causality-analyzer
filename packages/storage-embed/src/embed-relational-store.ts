@@ -90,14 +90,14 @@ export class EmbedRelationalStore implements IRelationalStore {
   }
   async beginTransaction(sid: string, signal?: AbortSignal): Promise<void> {
     checkAborted(signal);
-    this.db.exec('BEGIN');
+    // SAVEPOINT works standalone — no preceding BEGIN needed.
+    // BEGIN would conflict with existing transactions in SQLite.
     this.db.exec('SAVEPOINT "'+this.esc(sid)+'"');
     this.q.sUpsert.run(sid,'started',null,null);
   }
   async commitTransaction(sid: string, signal?: AbortSignal): Promise<void> {
     checkAborted(signal);
     this.db.exec('RELEASE SAVEPOINT "'+this.esc(sid)+'"');
-    this.db.exec('COMMIT');
   }
   async rollbackToCheckpoint(sid: string, cp: string, signal?: AbortSignal): Promise<void> {
     checkAborted(signal);

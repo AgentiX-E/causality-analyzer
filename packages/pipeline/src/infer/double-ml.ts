@@ -97,7 +97,9 @@ export function doubleMLCATE(
 
   // For CATE, fit a linear interaction model on the orthogonalized scores
   // This provides a simple parametric approximation to τ(x)
-  const scores: number[] = [];
+  // Pre-fill with zeros to avoid sparse array NaN — only test-fold positions
+  // are populated during cross-fitting below.
+  const scores: number[] = new Array(n).fill(0);
   const foldSize = Math.floor(n / nFolds);
   const indices = shuffle(Array.from({ length: n }, (_, i) => i));
 
