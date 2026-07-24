@@ -10,6 +10,7 @@
  * @packageDocumentation
  */
 import { CausalGraph } from './graph/causal-graph.js';
+import { Matrix } from 'ml-matrix';
 import { pcAlgorithm } from './graph/pc.js';
 import { gesAlgorithm } from './graph/ges.js';
 import { fciAlgorithm } from './graph/advanced-discovery.js';
@@ -163,19 +164,20 @@ export function runBenchmark(
   data: number[][],
   nodeNames: string[],
 ): BenchmarkResult {
-  const algorithms: Array<{ name: string; fn: (d: number[][], nodes: string[]) => CausalGraph }> = [
+  const algorithms: Array<{ name: string; fn: (d: Matrix, nodes: string[]) => CausalGraph }> = [
     { name: 'PC', fn: (d, n) => (pcAlgorithm as any)(d, n).graph },
     { name: 'GES', fn: (d, n) => gesAlgorithm(d as any, n) },
-    { name: 'NOTEARS', fn: (d, n) => notearsAlgorithm(d, n, { lambda1: 0.1, maxOuterIter: 10, wThreshold: 0.2 }).graph },
+    { name: 'NOTEARS', fn: (_d, n) => notearsAlgorithm([...Array(_d.rows)].map((_, i) => [...Array(_d.columns)].map((_, j) => _d.get(i, j))), n, { lambda1: 0.1, maxOuterIter: 10, wThreshold: 0.2 }).graph },
     { name: 'LiNGAM', fn: (d, n) => (directLiNGAM as any)(d, n).graph },
     { name: 'FCI', fn: (d, n) => (fciAlgorithm as any)(d, n).graph },
   ];
 
   const results: AlgorithmResult[] = [];
+  const matrix = new Matrix(data);
 
   for (const alg of algorithms) {
     const t0 = performance.now();
-    const predicted = alg.fn(data, nodeNames);
+    const predicted = alg.fn(matrix, nodeNames);
     const timeMs = performance.now() - t0;
 
     const metrics = computeSHD(predicted, truth);

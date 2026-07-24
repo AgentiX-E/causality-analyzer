@@ -9,3 +9,5 @@ export type { GESConfig } from './ges.js';
 export { directLiNGAM } from './lingam.js';
 export { notearsAlgorithm } from './notears.js';
 export type { NOTEARSConfig } from './notears.js';
+export { graspAlgorithm } from './grasp.js';
+export type { GRaSPConfig } from './grasp.js';
