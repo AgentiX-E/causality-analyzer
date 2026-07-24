@@ -91,3 +91,7 @@ export { RateLimiter, TokenBucket } from './rate-limiter.js';
 export type { RateLimiterConfig, TokenBucketConfig, RateLimitResult, OverflowStrategy } from './rate-limiter.js';
 export { EncryptedStore } from './encrypted-store.js';
 export type { EncryptedStoreConfig } from './encrypted-store.js';
+
+// ── Parallel ────────────────────────────────────────────────
+export { parallelMap, parallelPermutationTest, chunkedPC } from './parallel.js';
+export type { ParallelBootstrapConfig, ParallelPermutationConfig } from './parallel.js';
