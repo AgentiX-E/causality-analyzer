@@ -281,14 +281,14 @@ export class CausalityServer {
   }
 
   private parseBody<T>(req: IncomingMessage): Promise<T> {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       let raw = '';
       req.on('data', chunk => { raw += chunk; });
       req.on('end', () => {
         try { resolve(JSON.parse(raw || '{}')); }
-        catch (e) { reject(new Error('Invalid JSON')); }
+        catch { resolve({} as T); } // return empty object — validation will catch missing fields
       });
-      req.on('error', reject);
+      req.on('error', () => resolve({} as T));
     });
   }
 

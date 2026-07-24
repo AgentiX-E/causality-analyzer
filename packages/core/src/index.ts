@@ -100,3 +100,7 @@ export type {
   PropagationPath,
   RCARankingData,
 } from './types/index.js';
+
+// ── Optimization ─────────────────────────────────────────────
+export { lbfgs, adam } from './optimize.js';
+export type { LBFGSConfig, LBFGSResult, AdamConfig } from './optimize.js';

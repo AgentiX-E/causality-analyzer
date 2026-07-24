@@ -29,6 +29,10 @@
     "./config": {
       "import": "./dist/config/index.js",
       "types": "./dist/config/index.d.ts"
+    },
+    "./optimize": {
+      "import": "./dist/optimize.js",
+      "types": "./dist/optimize.d.ts"
     }
   },
   "scripts": {

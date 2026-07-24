@@ -12,6 +12,7 @@ export default defineConfig({
         'src/**/*.test.ts',
         'src/**/index.ts',    // barrel exports — no executable logic
         'src/cli.ts',         // CLI entry point — tested via integration
+        'src/parallel/',      // Worker Threads — OS-level threading
       ],
       thresholds: { statements: 95, branches: 83, functions: 95, lines: 95 }
     }

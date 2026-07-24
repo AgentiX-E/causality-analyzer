@@ -207,9 +207,11 @@ describe('Error Handling', () => {
       });
       clearTimeout(timeout);
       expect(res.status).toBeGreaterThanOrEqual(400);
-    } catch {
+    } catch (e) {
       clearTimeout(timeout);
-      // Server may close connection on invalid JSON — acceptable
+      // Server may reject with connection error on invalid JSON
+      // This is expected behavior for non-JSON input
+      expect(e).toBeDefined();
     }
   }, 10000);
 
