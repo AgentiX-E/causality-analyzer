@@ -98,3 +98,7 @@ export type { StreamingConfig, StreamingResult } from './streaming.js';
 // ── Health Check ─────────────────────────────────────────────
 export { HealthChecker } from './health.js';
 export type { HealthStatus, HealthCheckResult } from './health.js';
+
+// ── Benchmark ────────────────────────────────────────────────
+export { runBenchmark, computeSHD, formatBenchmarkTable, asiaGraph, sachsGraph, mBiasGraph, butterflyGraph, randomDAG, generateLinearData } from './benchmark.js';
+export type { BenchmarkResult, AlgorithmResult } from './benchmark.js';
