@@ -71,6 +71,13 @@ export type {
   RCAExplanation, SensitivityExplanation, EstimateExplanation,
 } from './explainer.js';
 
+// ── LLM-Powered Explainer ────────────────────────────────────
+export {
+  explainRCAWithLLM,
+  explainSensitivityWithLLM,
+  explainEstimateWithLLM,
+} from './explain/llm-explainer.js';
+
 // ── Observability ──────────────────────────────────────────────
 export { AuditLogger, MetricsRegistry } from './observability.js';
 export type { AuditEntry, MetricCounter, MetricHistogram } from './observability.js';

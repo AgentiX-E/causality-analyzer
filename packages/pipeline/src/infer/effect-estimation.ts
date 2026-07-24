@@ -17,6 +17,7 @@
 import { CausalGraph } from '../graph/causal-graph.js';
 import { solveLinear, colMean, createRNG } from '@agentix-e/causality-analyzer-core';
 import type { IdentifiedEstimand } from '@agentix-e/causality-analyzer-core';
+import { findBackdoorAdjustmentSet } from './backdoor.js';
 
 // ── Backdoor Adjustment ───────────────────────────────────────────────
 
@@ -27,24 +28,11 @@ import type { IdentifiedEstimand } from '@agentix-e/causality-analyzer-core';
  * 1. No node in Z is a descendant of X
  * 2. Z d-separates every path from X to Y that contains an arrow into X
  *
- * Returns the minimal sufficient adjustment set.
+ * Uses the unified findBackdoorAdjustmentSet from backdoor.ts
+ * which properly verifies d-separation-based path blocking.
  */
 export function findBackdoorSet(graph: CausalGraph, treatment: string, outcome: string): string[] {
-  const treatDescendants = collectDescendants(graph, treatment);
-  // Pearl's backdoor criterion: adjust for variables that block all
-  // backdoor paths without opening new ones. Simplification: use
-  // common causes (ancestors of both) that are not treatment descendants.
-  const result: string[] = [];
-
-  for (const node of graph.nodes) {
-    if (node === treatment || node === outcome) continue;
-    if (treatDescendants.has(node)) continue;
-    // Node must be a common cause or block backdoor paths
-    const isCommonCause = hasDirectedPath(graph, node, treatment) && hasDirectedPath(graph, node, outcome);
-    if (isCommonCause) result.push(node);
-  }
-
-  return result;
+  return findBackdoorAdjustmentSet(graph, treatment, outcome);
 }
 
 /**

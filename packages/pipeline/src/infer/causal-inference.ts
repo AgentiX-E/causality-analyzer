@@ -12,13 +12,14 @@
 import { CausalGraph } from '../graph/causal-graph.js';
 import type { IdentifiedEstimand, CausalEstimate, CausalEdge } from '@agentix-e/causality-analyzer-core';
 import { solveLinear, normalTail, createRNG } from '@agentix-e/causality-analyzer-core';
+import { findBackdoorAdjustmentSet, findMediators } from './backdoor.js';
 
 // ── Estimand Identification ────────────────────────────────────────────
 
 export function identifyBackdoor(
   graph: CausalGraph, treatment: string, outcome: string,
 ): IdentifiedEstimand {
-  const backdoorVars = findBackdoorAdjustment(graph, treatment, outcome);
+  const backdoorVars = findBackdoorAdjustmentSet(graph, treatment, outcome);
   return {
     estimandType: 'nonparametric_ate',
     treatmentVariables: [treatment],
@@ -43,64 +44,6 @@ export function identifyFrontdoor(
     instrumentalVariables: [],
     frontdoorVariables: mediators,
   };
-}
-
-function findBackdoorAdjustment(graph: CausalGraph, treatment: string, outcome: string): string[] {
-  // Standard backdoor criterion: adjust for variables that block all
-  // backdoor paths from treatment to outcome without opening new paths.
-  // Simplified: return common causes (parents of both treatment and outcome in
-  // the moralized graph, excluding treatment descendants).
-  const candidates: string[] = [];
-  const treatDescendants = descendants(graph, treatment);
-  for (const node of graph.nodes) {
-    if (node === treatment || node === outcome) continue;
-    if (treatDescendants.has(node)) continue;
-    // Check if node is a common cause (ancestor of both)
-    if (isAncestor(graph, node, treatment) || isAncestor(graph, node, outcome)) {
-      candidates.push(node);
-    }
-  }
-  return candidates;
-}
-
-function findMediators(graph: CausalGraph, treatment: string, outcome: string): string[] {
-  const mediators: string[] = [];
-  for (const node of graph.nodes) {
-    if (node === treatment || node === outcome) continue;
-    if (hasDirectedPath(graph, treatment, node) && hasDirectedPath(graph, node, outcome)) {
-      mediators.push(node);
-    }
-  }
-  return mediators;
-}
-
-function descendants(graph: CausalGraph, node: string): Set<string> {
-  const result = new Set<string>();
-  const stack = [node];
-  while (stack.length > 0) {
-    const u = stack.pop()!;
-    for (const v of graph.children(u)) {
-      if (!result.has(v)) { result.add(v); stack.push(v); }
-    }
-  }
-  return result;
-}
-
-function isAncestor(graph: CausalGraph, ancestor: string, node: string): boolean {
-  return hasDirectedPath(graph, ancestor, node);
-}
-
-function hasDirectedPath(graph: CausalGraph, from: string, to: string): boolean {
-  const visited = new Set<string>();
-  const stack = [from];
-  while (stack.length > 0) {
-    const u = stack.pop()!;
-    if (u === to) return true;
-    if (visited.has(u)) continue;
-    visited.add(u);
-    for (const v of graph.children(u)) if (!visited.has(v)) stack.push(v);
-  }
-  return false;
 }
 
 // ── Effect Estimation ──────────────────────────────────────────────────
