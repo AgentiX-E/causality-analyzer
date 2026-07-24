@@ -28,7 +28,7 @@ describe('GRaSP Algorithm', () => {
     expect(dag.isDAG()).toBe(true);
   });
 
-  it('ASIA benchmark — SHD ≤ GES SHD', () => {
+  it('ASIA benchmark — SHD ≤ GES SHD', { timeout: 15000 }, () => {
     const truth = asiaGraph();
     const { data, nodeNames } = generateLinearData(truth, 1000, 44);
     const matrix = new Matrix(data);

@@ -27,13 +27,13 @@ services:
     ports:
       - '5432:5432'
     environment:
-      POSTGRES_USER: causality
-      POSTGRES_PASSWORD: causality
-      POSTGRES_DB: causality_analyzer
+      POSTGRES_USER: ${POSTGRES_USER:-causality}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-causality}
+      POSTGRES_DB: ${POSTGRES_DB:-causality_analyzer}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U causality']
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER}']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -44,14 +44,14 @@ services:
       - '7474:7474'
       - '7687:7687'
     environment:
-      NEO4J_AUTH: neo4j/causality
+      NEO4J_AUTH: ${NEO4J_AUTH:-neo4j/causality}
       NEO4J_server_memory_heap_initial__size: 256m
       NEO4J_server_memory_heap_max__size: 512m
     volumes:
       - neo4jdata:/data
       - neo4jlogs:/logs
     healthcheck:
-      test: ['CMD-SHELL', 'cypher-shell -u neo4j -p causality "RETURN 1"']
+      test: ['CMD-SHELL', 'cypher-shell -u $${NEO4J_USER:-neo4j} -p $${NEO4J_PASSWORD:-causality} "RETURN 1"']
       interval: 10s
       timeout: 5s
       retries: 10
