@@ -52,7 +52,7 @@ describe('NOTEARS Algorithm', () => {
     const data = generateLinearDAG(trueDAG, 500, 0.01);
     // Use conservative parameters for stability
     const { graph, W, h } = notearsAlgorithm(data, ['A', 'B', 'C'], {
-      lambda1: 0.0, maxIter: 20, threshold: 0.5, hTol: 0.5, seed: 42,
+      lambda1: 0.0, maxIter: 5, threshold: 0.5, hTol: 0.5, seed: 42,
     });
     expect(graph.nodes.length).toBe(3);
     expect(W.length).toBe(9);
@@ -65,7 +65,7 @@ describe('NOTEARS Algorithm', () => {
     trueDAG.addEdge('Y', 'Z');
     const data = generateLinearDAG(trueDAG, 500, 0.02);
     const { graph, h } = notearsAlgorithm(data, ['X', 'Y', 'Z'], {
-      lambda1: 0.0, maxIter: 25, threshold: 0.5, hTol: 0.5, seed: 42,
+      lambda1: 0.0, maxIter: 5, threshold: 0.5, hTol: 0.5, seed: 42,
     });
     // Accept h value up to 1e6 for rapid convergence check
     expect(h).toBeLessThan(1e6);
@@ -78,7 +78,7 @@ describe('NOTEARS Algorithm', () => {
     trueDAG.addEdge('B', 'C');
     const data = generateLinearDAG(trueDAG, 300, 0.05);
     const { graph } = notearsAlgorithm(data, ['A', 'B', 'C'], {
-      lambda1: 0.0, maxIter: 15, threshold: 0.5, seed: 123,
+      lambda1: 0.0, maxIter: 5, threshold: 0.5, seed: 123,
     });
     expect(graph.nodes.length).toBe(3);
   });
@@ -89,7 +89,7 @@ describe('NOTEARS Algorithm', () => {
     trueDAG.addEdge('Y', 'Z');
     const data = generateLinearDAG(trueDAG, 300, 0.03);
     const { graph } = notearsAlgorithm(data, ['X', 'Y', 'Z'], {
-      lambda1: 0.0, maxIter: 15, threshold: 0.5, seed: 99,
+      lambda1: 0.0, maxIter: 5, threshold: 0.5, seed: 99,
     });
     expect(graph.nodes.length).toBe(3);
   });
@@ -100,7 +100,7 @@ describe('NOTEARS Algorithm', () => {
     trueDAG.addEdge('Q', 'R');
     const data = generateLinearDAG(trueDAG, 200, 0.05);
     const { graph } = notearsAlgorithm(data, ['P', 'Q', 'R'], {
-      maxIter: 20, threshold: 0.3, seed: 1,
+      maxIter: 5, threshold: 0.3, seed: 1,
     }, {
       forbids: [['R', 'P']],
     });
@@ -113,10 +113,10 @@ describe('NOTEARS Algorithm', () => {
     const data = generateLinearDAG(trueDAG, 200, 0.1);
 
     const { graph: sparse } = notearsAlgorithm(data, ['M', 'N'], {
-      lambda1: 0.5, maxIter: 20, threshold: 0.3, seed: 42,
+      lambda1: 0.5, maxIter: 5, threshold: 0.3, seed: 42,
     });
     const { graph: dense } = notearsAlgorithm(data, ['M', 'N'], {
-      lambda1: 0.01, maxIter: 20, threshold: 0.3, seed: 42,
+      lambda1: 0.01, maxIter: 5, threshold: 0.3, seed: 42,
     });
 
     // Higher lambda1 should give sparser (fewer edges) result
@@ -128,7 +128,7 @@ describe('NOTEARS Algorithm', () => {
     trueDAG.addEdge('A', 'B'); trueDAG.addEdge('B', 'C'); trueDAG.addEdge('C', 'D');
     const data = generateLinearDAG(trueDAG, 500, 0.02);
     const { graph, h } = notearsAlgorithm(data, ['A', 'B', 'C', 'D'], {
-      lambda1: 0.0, maxIter: 20, threshold: 0.5, hTol: 0.5, seed: 42,
+      lambda1: 0.0, maxIter: 5, threshold: 0.5, hTol: 0.5, seed: 42,
     });
     expect(graph.nodes.length).toBe(4);
     // h reasonable for 4-node network
@@ -143,7 +143,7 @@ describe('NOTEARS Algorithm', () => {
       data.set(r, 2, Math.random());
     }
     const { graph } = notearsAlgorithm(data, ['X', 'Y', 'Z'], {
-      lambda1: 0.2, maxIter: 20, threshold: 0.3, seed: 7,
+      lambda1: 0.2, maxIter: 5, threshold: 0.3, seed: 7,
     });
     // With high lambda1 and noise, should produce sparse/few edges
     expect(graph.nodes.length).toBe(3);

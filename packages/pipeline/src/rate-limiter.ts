@@ -13,7 +13,7 @@
  * @packageDocumentation
  */
 
-export type OverflowStrategy = 'drop_oldest' | 'drop_newest' | 'block';
+export type OverflowStrategy = 'drop_oldest' | 'drop_newest' | 'block' | 'sliding_window';
 
 export interface RateLimiterConfig {
   /** Maximum number of buffered data points */
@@ -60,6 +60,11 @@ export class RateLimiter {
         return { accepted: false, dropped: this.droppedCount, utilization: 1 };
       case 'block':
         return { accepted: false, dropped: this.droppedCount, utilization: 1 };
+      case 'sliding_window':
+        // Like drop_oldest but keeps buffer at maxSize-1 to avoid re-shift overhead
+        this.buffer.shift();
+        this.buffer.push(point);
+        return { accepted: true, dropped: this.droppedCount, utilization: 1 };
       case 'drop_oldest':
       default:
         this.buffer.shift();

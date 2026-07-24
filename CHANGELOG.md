@@ -2,6 +2,44 @@
 
 All notable changes to Causality Analyzer.
 
+## [1.0.0] — 2026-07-24
+
+### I12: Deep Learning Causal Discovery
+- **NOTEARS** (Zheng et al. NeurIPS 2018): Continuous optimization for DAG learning
+  - Padé(3,3) matrix exponential with scaling & squaring
+  - Augmented Lagrangian with L-BFGS inner optimization
+  - l1 regularization for sparsity control
+  - 11 test cases: chain, fork, collider, 4-node, domain knowledge, lambda sweep
+
+### I11: Effect Estimation & Refutation Enhancement
+- **DML** (Chernozhukov et al. 2018): Double ML with K-fold cross-fitting
+- **Meta-Learners**: S-Learner, T-Learner, X-Learner for heterogeneous ATE
+- **RidgeRegressor** / **LogisticClassifier**: built-in ML backends
+- **Extended Refutation** (3 new methods):
+  - `refuteRandomCommonCause` — sensitivity to unobserved confounding
+  - `refuteDummyOutcome` — null effect verification
+  - `refuteUnobservedConfounder` — parametric sensitivity analysis
+  - `comprehensiveRefutation` — all 6 methods in one call
+- 28 test cases: DML + MetaLearners + Refutation + cross-method agreement
+
+### I10: Core Implementation Deep Fixes
+- **do-calculus**: complete hedge criterion (Shpitser & Pearl 2006), Union-Find c-components
+- **JunctionTree**: Hugin collect+distribute message passing, Kruskal MST clique tree
+- Both: correct induced subgraph, separator management, edge case handling
+
+### I9: Discovery Breadth — 4→9 Algorithm Suite
+- **GIN** (Xie et al. UAI 2020): Group Independence-based discovery
+- **CD-NOD** (Huang et al. AAAI 2020): Non-stationary domain-varying Fisher Z
+- **GRaSP** (Lam et al. AIStats 2022): Greedy permutation search with BIC
+- **CAM-UV** (Bühlmann et al. 2014): Additive models with unobserved confounders
+- **ExactSearch** (Yuan & Malone JMLR 2013): A* optimal DAG search
+- 46 test cases: ASIA benchmark, continuous/discrete/nonlinear scenarios
+
+### I8: Release Readiness
+- Version badges unified: 5 packages → 1.0.0
+- Performance test budgets sandbox/CI-safe (fisherZ: 150ms, kci: 250ms, dsep: 50ms)
+- Removed placeholder `_quality.yml.nodeversion` file
+
 ## [1.0.0] — 2026-07-23
 
 ### Breaking Changes

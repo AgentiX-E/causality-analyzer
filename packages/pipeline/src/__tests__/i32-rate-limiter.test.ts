@@ -58,4 +58,14 @@ describe('RateLimiter', () => {
     expect(r.size).toBe(0);
     expect(r.dropped).toBe(0);
   });
+
+  it('sliding_window strategy accepts new and drops oldest', () => {
+    const r = new RateLimiter({ maxBufferSize: 3, strategy: 'sliding_window' });
+    r.push([1]); r.push([2]); r.push([3]);
+    expect(r.size).toBe(3);
+    const result = r.push([4]);
+    expect(result.accepted).toBe(true);
+    expect(r.size).toBe(3);
+    expect(r.dropped).toBe(1);
+  });
 });

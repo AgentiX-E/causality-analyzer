@@ -1,5 +1,22 @@
 # Causal Discovery
 
+## Algorithm Selection Guide
+
+| Algorithm | Family | Strength | Best For |
+|-----------|--------|----------|----------|
+| **PC** | Constraint-based | Fast, well-studied | Linear Gaussian data |
+| **FCI** | Constraint-based | Handles latent confounders | Data with hidden variables |
+| **GES** | Score-based (BIC) | Global optimum search | Small-medium DAGs |
+| **LiNGAM** | Non-Gaussian | Directed edges (not just CPDAG) | Non-Gaussian continuous data |
+| **GIN** | Group Independence | Domain-shift resistant | Heterogeneous environments |
+| **CD-NOD** | Non-stationary | Domain variable included in CI | Multi-domain data |
+| **GRaSP** | Permutation score | Sparse permutation search | High-dimensional data |
+| **CAM-UV** | Additive models | Handles unobserved confounders | Nonlinear additive data |
+| **ExactSearch** | A* optimal | Globally optimal DAG | ≤12 variables |
+| **NOTEARS** | Continuous optimization | Gradient-based, GPU-friendly | Continuous optimization, DL integration |
+
+---
+
 ## PC Algorithm
 
 **Family:** Constraint-based  
