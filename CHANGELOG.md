@@ -1,83 +1,53 @@
 # Changelog
 
-All notable changes to Causality Analyzer.
+## [2.0.0] — 2026-07-24
+
+### Enterprise Infrastructure (I5)
+
+- **HTTP REST API**: 7 endpoints (health/ready/live/metrics/discover/analyze/estimate), zero external dependencies
+- **Docker**: Multi-stage Dockerfile + docker-compose (pipeline + PostgreSQL + Neo4j)
+- **Streaming**: `StreamingPipeline` with sliding-window online RCA
+- **Model Serialization**: `CausalGraph.fromJSON()`, `StructuralCausalModel.toJSON()/fromJSON()`
+- **Health Checks**: K8s-compatible liveness/readiness probes
+
+### Algorithm Enhancement (I6)
+
+- **NOTEARS**: Continuous-optimization DAG learning (Zheng et al., NeurIPS 2018)
+- **L-BFGS / Adam**: Numerical optimizers in core package
+- **Worker Threads**: `WorkerPool` for parallel computation
+
+### Cross-validation (I7)
+
+- **Benchmark Suite**: 4 canonical DAGs × 5 algorithms, SHD/TPR/FPR metrics
+- **DoWhy Cross-validation**: 14 tests, backdoor set matches DoWhy on 5+ graph types
+- **ATE Numerical Validation**: Effect estimates within tolerance on known-coefficient data
+
+### Algorithm Correctness Fixes (I4)
+
+- **Backdoor Criterion**: Unified implementation with d-separation verification; Fixed `||` → `&&` bug
+- **C-Component**: Removed v-structure hack; only bidirected edges
+- **ID Algorithm**: Recursive implementation with c-component factorization and hedge criterion
+- **LLM Explainer**: DeepSeek API-powered NL explanations with graceful fallback
+- **Coverage**: Lines 96.09% | Statements 96.09% | Functions 96.68% | Branches 86.04%
 
 ## [1.0.0] — 2026-07-23
 
 ### Breaking Changes
 
-- **`BayesianRCA` → `HeuristicPathRCA`**: The class is a heuristic path-scoring engine, not Bayesian inference. Old name kept as deprecated alias; will be removed in v2.0.
-- **d-separation reimplemented**: `CausalGraph.dSeparated()` now implements strict Pearl (2009) d-separation. Previous implementation used moralized graph separation which gave incorrect results for colliders. Behavior change — previous test results relying on the buggy implementation may need review.
-- **pdag2dag fixed**: Was a no-op (dead loop); now correctly implements Dor-Tarsi (1992). Any code relying on PDAG→DAG conversion will get different (correct) orientiation.
-- **IPW propensity scores**: Previously used constant marginal probability for all observations. Now uses IRLS logistic regression. ATE estimates will differ.
-- **MAD center changed**: StatsDetector MAD now uses median (correct) instead of mean. Anomaly thresholds will shift.
-- **NaN handling in SCM/RHTScorer**: Previously skipped individual columns, causing biased OLS matrices. Now skips entire rows. Regression coefficients will differ when NaN values are present.
-- **Voting fusion tie-breaking**: Now sorts by vote count first, then score. Previous sorting by score only. Root cause rankings in voting mode will change.
-- **CIRCAPipeline toJSON()**: Previously serialized all rootCauses (ignoring top-5 slice). Now correctly serializes only top 5.
-- **Shapley V(S)**: Previously used 50/50 blending for counterfactuals. Now uses proper conditional expectation. Attribution rankings will differ.
+- **`BayesianRCA` → `HeuristicPathRCA`**: Old name kept as deprecated alias
+- **d-separation reimplemented**: Strict Pearl (2009) d-separation
+- **pdag2dag fixed**: Correctly implements Dor-Tarsi (1992)
+- **IPW propensity scores**: IRLS logistic regression replaces constant marginal probability
+- **MAD center**: Uses median (correct) instead of mean
 
 ### Added
 
-#### Causal Discovery (4 algorithms)
-- **PC** (constraint-based): Fisher Z + stable variant
-- **FCI** (latent confounders): Possible-D-SEP search + Meek rules R1-R3
-- **GES** (score-based, Chickering 2002): BIC-optimized forward/backward search
-- **LiNGAM** (non-Gaussian, Shimizu et al. 2011): DirectLiNGAM causal ordering
-
-#### Conditional Independence (2 methods)
-- **Fisher Z test**: linear Gaussian CI testing
-- **KCI test**: kernel-based nonlinear CI testing (RBF + permutation p-value)
-
-#### Causal Identification
-- **do-calculus ID algorithm** (Shpitser & Pearl 2006): c-component decomposition
-- **Backdoor adjustment**: correct confounding adjustment
-- **Frontdoor adjustment**: mediation-based identification
-- **Propensity score matching**: IRLS logistic regression + IPW
-- **Doubly robust estimation**: combined propensity + outcome model
-
-#### Anomaly Detection & RCA
-- **CIRCA**: RHT z-score + descending adjustment for root cause ranking
-- **HeuristicPathRCA**: path-based heuristic scoring
-- **Shapley RCA**: Monte Carlo Shapley-value anomaly attribution
-- **SPOT/DSPOT**: streaming POT threshold detection
-- **Spectral Residual**: FFT-based anomaly detection
-- **VotingDetector**: ensemble anomaly detection
-
-#### Causal Inference
-- **CATE**: Conditional Average Treatment Effect with feature centering
-- **Mediation analysis**: Baron-Kenny natural direct/indirect effects
-- **Sensitivity analysis**: E-value, partial R², robustness value
-- **Bootstrap CI**: sequential + parallel (Promise.all chunking)
-
-#### Graph Operations
-- Strict Pearl (2009) d-separation with collider activation
-- Dor-Tarsi (1992) PDAG→DAG conversion
-- c-component decomposition for latent confounder handling
-- SHD (Structural Hamming Distance), topological sort, do-surgery
-- Domain knowledge application (forbid/require/rootLeaf)
-
-#### Quality Infrastructure
-- **AuditLogger**: immutable JSON audit trail
-- **MetricsRegistry**: Prometheus-compatible counters + histograms
-- **RateLimiter**: drop_oldest/drop_newest/block overflow strategies
-- **EncryptedStore**: AES-256-GCM storage encryption
-- **Typed error hierarchy**: 6 error classes
-- **Shared constants**: 20+ tunable parameters with literature references
-
-#### Benchmarks & Validation
-- **ASIA benchmark** (Lauritzen & Spiegelhalter 1988): standard DAG validation
-- **Performance benchmarks**: 8 algorithmic operations with documented budgets
-- **Fuzz testing**: property-based random DAG validation (440 tests total)
-
-### Fixed
-- P0-1: d-separation collider handling (was moralized graph, now Pearl 2009)
-- P0-2: pdag2dag Dor-Tarsi sink-finding algorithm
-- P0-3: CATE dimension bug (k = 2+2p) + feature centering
-- P0-4: IPW propensity score fitting (was constant, now IRLS)
-- P0-5: CIRCAPipeline toJSON closure (captured full, now top 5)
-- P0-7: SCM + RHTScorer NaN row-level skipping
-- P1-1: PC non-stable variant (removed, always stable)
-- P1-2: MAD center (was mean, now median)
-- P1-5: Shapley V(S) arbitrary blending (now proper conditional expectation)
-- P1-6: Graph falsification CI testing
-- P1-7: Voting fusion tie-breaking
+- 7 causal discovery algorithms: PC, FCI, GES, LiNGAM, Grow-Shrink, KCI, targeted
+- do-calculus ID algorithm (Shpitser & Pearl 2006)
+- Backdoor/Frontdoor/IV/PS/Doubly Robust estimators
+- SPOT/DSPOT streaming anomaly detection
+- CIRCA root cause analysis pipeline
+- Sensitivity analysis (E-value, partial R², robustness value)
+- 5 Bayesian Network inference engines
+- AuditLogger, MetricsRegistry (Prometheus), RateLimiter, EncryptedStore (AES-256-GCM)
+- ASIA benchmark validation

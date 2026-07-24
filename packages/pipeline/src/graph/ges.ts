@@ -200,6 +200,18 @@ export function gesAlgorithm(
 
   if (domainKnowledge) g.applyDomainKnowledge(domainKnowledge);
 
+  // Safety: if the learned graph contains cycles (possible with
+  // small samples or pathological data), break them by removing
+  // edges to restore DAG property.
+  if (g.hasCycle()) {
+    const edges = [...g.edges].filter(e => e.directed);
+    // Remove edges greedily until cycle-free
+    for (const e of edges) {
+      g.removeEdge(e.source, e.target);
+      if (!g.hasCycle()) break;
+    }
+  }
+
   return g;
 }
 
