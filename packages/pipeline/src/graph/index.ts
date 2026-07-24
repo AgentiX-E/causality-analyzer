@@ -11,3 +11,7 @@ export { notearsAlgorithm } from './notears.js';
 export type { NOTEARSConfig } from './notears.js';
 export { graspAlgorithm } from './grasp.js';
 export type { GRaSPConfig } from './grasp.js';
+export { rcdAlgorithm } from './rcd.js';
+export type { RCDConfig } from './rcd.js';
+export { cdnodAlgorithm } from './cdnod.js';
+export type { CDNODConfig } from './cdnod.js';
