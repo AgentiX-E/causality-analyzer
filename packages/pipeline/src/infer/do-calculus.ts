@@ -14,6 +14,12 @@
  *   Systematic procedure for applying do-calculus rules to derive
  *   an expression for P(Y|do(X)) when identifiable.
  *
+ * Hedge Criterion (Shpitser & Pearl, 2006):
+ *   P(Y|do(X)) is NOT identifiable iff there exists a hedge for
+ *   some X' ⊆ X, Y' ⊆ Y in the induced subgraph over An(Y)_G.
+ *   A hedge F is a subset of a c-component where F has both
+ *   an X-node and a Y-node, connected via bidirected paths.
+ *
  * @packageDocumentation
  */
 import { CausalGraph } from '../graph/causal-graph.js';
@@ -34,16 +40,6 @@ export interface DoCalculusResult {
 
 /**
  * Apply do-calculus rules to determine if P(Y|do(X)) is identifiable.
- *
- * Rule 1 (Insertion/deletion of observations):
- *   P(Y|do(X), Z, W) = P(Y|do(X), W) if Y ⟂ Z | X, W in G_{X̅}
- *
- * Rule 2 (Action/observation exchange):
- *   P(Y|do(X), do(Z), W) = P(Y|do(X), Z, W) if Y ⟂ Z | X, W in G_{X̅Z̲}
- *
- * Rule 3 (Insertion/deletion of actions):
- *   P(Y|do(X), do(Z), W) = P(Y|do(X), W) if Y ⟂ Z | X, W in G_{X̅Z(W)̅}
- *   where Z(W) are Z-nodes that are not ancestors of W in G_{X̅}
  */
 export function identifyByDoCalculus(
   graph: CausalGraph,
@@ -72,8 +68,7 @@ export function identifyByDoCalculus(
     };
   }
 
-  // Step 3: ID algorithm — check if P(Y|do(X)) is identifiable via
-  // systematic graph manipulation
+  // Step 3: ID algorithm with hedge criterion
   const idResult = tryIDAlgorithm(graph, treatment, outcome);
   if (idResult.identifiable) {
     return idResult;
@@ -87,20 +82,28 @@ export function identifyByDoCalculus(
   };
 }
 
+// ── ID Algorithm with Proper Hedge Criterion ─────────────────────────
+
 /**
- * ID Algorithm (Shpitser & Pearl, 2006).
+ * ID Algorithm (Shpitser & Pearl, 2006) with hedge criterion.
  *
- * Systematic procedure for determining if P(Y|do(X)) is identifiable
- * from the causal graph. Handles graphs with latent confounders
- * (represented as bidirected/correlated pairs) via c-component decomposition.
+ * Steps:
+ *  1. If Y contains no X-nodes, recurse
+ *  2. If X = ∅, return Σ_{V\Y} P(V) (marginalization)
+ *  3. Let AnY = ancestors of Y in G
+ *  4. If X ≠ AnY, return ID(X ∩ AnY, Y, G[AnY])
+ *  5. Find c-components of G[AnY]
+ *  6. If multiple c-components: factorize — Σ ∏ ID(...)
+ *  7. If single c-component — C = AnY:
+ *     a. If C = X, return fail (not identifiable — hedge)
+ *     b. If C ≠ X, return Σ_{D\Y} ∏ P(V_i|pa(V_i))
  *
- * Algorithm:
- *  1. If X = ∅, return Σ_{V\Y} P(V) (marginalization)
- *  2. Let V = An(Y)_G (ancestors of Y in G)
- *  3. If X ⊂ V, recurse on G[V] with X ∩ V
- *  4. Find c-components of G (connected components in the bidirected graph)
- *  5. If multiple c-components: factorize — Σ ∏ ID(h, v\h, P, G)
- *  6. If single c-component: check using the hedge criterion
+ * Hedge Criterion:
+ *   A hedge for P(Y|do(X)) exists when:
+ *   - The entire An(Y) is a single c-component C
+ *   - X is a strict subset of C (i.e., C\X ≠ ∅)
+ *   This means there are latent confounders that cannot be eliminated
+ *   between X and Y, making the effect non-identifiable.
  */
 function tryIDAlgorithm(
   graph: CausalGraph, treatment: string, outcome: string,
@@ -108,7 +111,7 @@ function tryIDAlgorithm(
   // Build G_Xbar: remove incoming edges to X (simulates do(X))
   const gXbar = removeIncomingEdges(graph, [treatment]);
 
-  // Rule 1: If X and Y are d-separated in G_Xbar, P(Y|do(X)) = P(Y)
+  // Step 1: If X and Y are d-separated in G_Xbar, P(Y|do(X)) = P(Y)
   if (gXbar.dSeparated(treatment, outcome, [])) {
     return {
       identifiable: true,
@@ -118,7 +121,7 @@ function tryIDAlgorithm(
     };
   }
 
-  // Rule 2: Backdoor check in G_Xbar (ID algorithm step 3)
+  // Step 2: Backdoor check in G_Xbar (ID algorithm step 3)
   const backdoorInXbar = findDoCalculusBackdoor(gXbar, treatment, outcome);
   if (backdoorInXbar.length > 0) {
     return {
@@ -129,7 +132,7 @@ function tryIDAlgorithm(
     };
   }
 
-  // Rule 3: Check if Y is a descendant of X (necessary condition)
+  // Step 3: Check if Y is a descendant of X (necessary condition)
   if (!graph.hasDirectedPath(treatment, outcome)) {
     return {
       identifiable: true,
@@ -139,31 +142,77 @@ function tryIDAlgorithm(
     };
   }
 
-  // Rule 4: c-component decomposition for graphs with latent confounders
-  // Extract the induced subgraph over ancestors of Y ∪ {X}
+  // Step 4: An(Y)_G induced subgraph
   const yAncestors = graph.ancestors([outcome]);
   yAncestors.add(treatment);
-  const subNodes = [...yAncestors];
+  const anNodes = [...yAncestors];
 
-  // Check hedge criterion: if there's a c-component where X affects Y
-  // through latent confounding that cannot be eliminated
-  const cComps = findCComponents(graph, subNodes);
-  if (cComps.length > 1) {
-    // Multiple c-components: effect may be identifiable via factorization
-    // Simplified: check if treatment-outcome component has identifiable structure
-    const toComp = cComps.find(c => c.has(treatment) && c.has(outcome));
-    if (toComp && toComp.size <= 3) {
-      return {
-        identifiable: true,
-        expressionType: 'id_algorithm',
-        adjustmentSet: backdoorInXbar,
-        explanation: `ID: identified via c-component decomposition (${cComps.length} components)`,
-      };
+  // Step 5: Build subgraph over An(Y) ∪ {X}
+  const subGraph = buildInducedSubgraph(graph, anNodes);
+
+  // Step 6: Find c-components in the induced subgraph
+  const cComps = findCComponents(subGraph, anNodes);
+
+  // Step 7: Check hedge criterion
+  if (cComps.length === 1) {
+    // Single c-component: check if it's a hedge
+    const cc = cComps[0]!;
+    const inComp = cc.has(treatment);
+    const nodesBeyondX = [...cc].filter(n => n !== treatment);
+
+    if (inComp && nodesBeyondX.length > 0) {
+      // HEDGE detected: the single c-component contains X and other nodes
+      // that are connected via bi directed paths — effect is NOT identifiable
+      const hedgeNodes = nodesBeyondX.filter(n =>
+        graph.hasDirectedPath(n, outcome) || graph.hasDirectedPath(treatment, n),
+      );
+
+      if (hedgeNodes.length > 0) {
+        return {
+          identifiable: false,
+          expressionType: 'not_identifiable',
+          adjustmentSet: [],
+          explanation: `Hedge detected in c-component {${[...cc].join(', ')}}: effect not identifiable due to latent confounding between X and Y`,
+        };
+      }
     }
+  } else if (cComps.length > 1) {
+    // Multiple c-components: check for hedge in components containing Y
+    const yComponents = cComps.filter(c => c.has(outcome));
+    for (const yc of yComponents) {
+      if (yc.has(treatment)) continue; // X and Y in same component — handled above
+
+      // Check if Y's component has a backdoor to X's component
+      // via latent confounders (bidirected paths connecting components)
+      const xComponents = cComps.filter(c => c.has(treatment));
+      for (const xc of xComponents) {
+        if (hasHedgePath(subGraph, xc, yc, anNodes)) {
+          return {
+            identifiable: false,
+            expressionType: 'not_identifiable',
+            adjustmentSet: [],
+            explanation: `Hedge detected: latent confounding connects X-component and Y-component`,
+          };
+        }
+      }
+    }
+
+    // No hedge: factorization approach
+    // P(Y|do(X)) = Σ_{D\Y} ∏_{i} P(V_i|pa_G(V_i)) where V_i are c-components
+    const allCCompVars = new Set<string>();
+    for (const cc of cComps) {
+      for (const n of cc) allCCompVars.add(n);
+    }
+
+    return {
+      identifiable: true,
+      expressionType: 'id_algorithm',
+      adjustmentSet: backdoorInXbar,
+      explanation: `ID: identified via c-component decomposition (${cComps.length} components, no hedge)`,
+    };
   }
 
-  // Rule 5: Final check — if X can be isolated from latent confounders
-  // by conditioning on its parents that are not descendants of X
+  // Step 8: Final check — if X can be isolated from latent confounders
   const xParents = graph.parents(treatment);
   const nonDescendants = xParents.filter(p => !graph.hasDirectedPath(treatment, p));
   if (nonDescendants.length > 0) {
@@ -179,60 +228,127 @@ function tryIDAlgorithm(
 }
 
 /**
+ * Check if there exists a hedge path — a bidirected path connecting
+ * two c-components that prevents factorization.
+ */
+function hasHedgePath(
+  graph: CausalGraph,
+  compA: Set<string>,
+  compB: Set<string>,
+  allNodes: string[],
+): boolean {
+  // A hedge path exists if there is a node in compA and a node in compB
+  // connected by bidirected edges AND a node in compA is an ancestor
+  // of some node in compB via directed paths
+
+  for (const a of compA) {
+    for (const b of compB) {
+      // Check bidirected connection
+      if (graph.hasEdge(a, b) && graph.hasEdge(b, a)) {
+        return true;
+      }
+      // Check if a is ancestor of b (directed path)
+      if (graph.hasDirectedPath(a, b)) return true;
+    }
+  }
+
+  // Check via intermediate nodes
+  for (const a of compA) {
+    for (const n of allNodes) {
+      if (compB.has(n)) continue;
+      if (graph.hasEdge(a, n) && graph.hasEdge(n, a)) {
+        // a bidirected to n — check if n is in compB or connects to compB
+        for (const b of compB) {
+          if (graph.hasEdge(n, b) && graph.hasEdge(b, n)) return true;
+          if (graph.hasDirectedPath(n, b)) return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Build induced subgraph over specified nodes.
+ * Only includes edges where both endpoints are in `nodes`.
+ */
+function buildInducedSubgraph(graph: CausalGraph, nodes: string[]): CausalGraph {
+  const nodeSet = new Set(nodes);
+  const sub = new CausalGraph(nodes);
+  for (const src of nodes) {
+    for (const tgt of graph.children(src)) {
+      if (nodeSet.has(tgt)) {
+        sub.addEdge(src, tgt);
+      }
+    }
+  }
+  return sub;
+}
+
+/**
  * Find c-components (confounded components) in the induced subgraph.
  * Two nodes are in the same c-component if they are connected by
  * a bidirected path (i.e., share a latent confounder).
  *
  * In our causal graph, bidirected edges represent latent common causes.
+ * Hash-based union-find for efficient component merging.
  */
 function findCComponents(
   graph: CausalGraph, nodes: string[],
 ): Set<string>[] {
-  const nodeSet = new Set(nodes);
-  // Build bidirected adjacency: nodes i, j are bidirected-connected
-  // if they share a latent confounder (both have a common parent that is unobserved)
-  // For our purposes: two nodes are in the same c-component if they
-  // have a bidirected edge or share children with bidirected patterns
-  const visited = new Set<string>();
-  const components: Set<string>[] = [];
+  // Union-Find over node indices
+  const idx = new Map(nodes.map((n, i) => [n, i]));
+  const parent = nodes.map((_, i) => i);
 
-  for (const node of nodes) {
-    if (visited.has(node)) continue;
-    const comp = new Set<string>();
-    const stack = [node];
-    while (stack.length > 0) {
-      const u = stack.pop()!;
-      if (comp.has(u)) continue;
-      comp.add(u);
-      visited.add(u);
+  const find = (x: number): number => {
+    let root = x;
+    while (parent[root] !== root) root = parent[root]!;
+    // Path compression
+    while (x !== root) {
+      const next = parent[x]!;
+      parent[x] = root;
+      x = next;
+    }
+    return root;
+  };
 
-      // Find all nodes bidirected-connected to u
-      // (i) Direct bidirected edges (both directions exist)
-      for (const v of nodes) {
-        if (v === u || visited.has(v)) continue;
-        if (graph.hasEdge(u, v) && graph.hasEdge(v, u)) {
-          stack.push(v);
-        }
-      }
+  const union = (a: number, b: number): void => {
+    const ra = find(a);
+    const rb = find(b);
+    if (ra !== rb) parent[ra] = rb;
+  };
 
-      // (ii) Share a common child that has both as parents
-      // This indicates a latent confounder (v-structure creates dependency)
-      for (const child of graph.children(u)) {
-        if (!nodeSet.has(child)) continue;
-        for (const otherParent of graph.parents(child)) {
-          if (otherParent !== u && nodeSet.has(otherParent) && !visited.has(otherParent)) {
-            // u and otherParent share child — possible c-component link
-            // Only connect if there's no directed path through child
-            if (graph.hasEdge(otherParent, child) && graph.hasEdge(u, child)) {
-              stack.push(otherParent);
-            }
-          }
-        }
+  // Connect nodes sharing bidirected edges
+  for (const u of nodes) {
+    for (const v of nodes) {
+      if (u >= v) continue;
+      if (graph.hasEdge(u, v) && graph.hasEdge(v, u)) {
+        union(idx.get(u)!, idx.get(v)!);
       }
     }
-    components.push(comp);
   }
-  return components;
+
+  // Connect nodes sharing a common child (v-structure → latent confounder)
+  for (const child of nodes) {
+    const parents = graph.parents(child);
+    const nodeParents = parents.filter(p => idx.has(p));
+    for (let i = 0; i < nodeParents.length; i++) {
+      for (let j = i + 1; j < nodeParents.length; j++) {
+        union(idx.get(nodeParents[i]!)!, idx.get(nodeParents[j]!)!);
+      }
+    }
+  }
+
+  // Collect components
+  const compMap = new Map<number, Set<string>>();
+  for (const node of nodes) {
+    const root = find(idx.get(node)!);
+    if (!compMap.has(root)) compMap.set(root, new Set());
+    compMap.get(root)!.add(node);
+  }
+
+  return [...compMap.values()];
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -251,7 +367,6 @@ function findDoCalculusBackdoor(graph: CausalGraph, treatment: string, outcome: 
   for (const node of graph.nodes) {
     if (node === treatment || node === outcome) continue;
     if (treatDescendants.has(node)) continue;
-    // Node must be related to both treatment and outcome
     const relatedToTreatment = hasPathTo(graph, node, treatment);
     const relatedToOutcome = hasPathTo(graph, node, outcome);
     if (relatedToTreatment || relatedToOutcome) {
@@ -270,14 +385,14 @@ function findMediators(graph: CausalGraph, treatment: string, outcome: string): 
       if (!treatDescendants.has(v)) { treatDescendants.add(v); stack.push(v); }
     }
   }
-  return [...treatDescendants].filter(m => graph.children(m).includes(outcome) || hasPathTo(graph, m, outcome));
+  return [...treatDescendants].filter(m =>
+    graph.children(m).includes(outcome) || hasPathTo(graph, m, outcome),
+  );
 }
 
 function isFrontdoorIdentifiable(
   graph: CausalGraph, treatment: string, outcome: string, mediators: string[],
 ): boolean {
-  // All mediators must be on directed paths from treatment to outcome
-  // and there must be no backdoor path from treatment to any mediator
   for (const m of mediators) {
     const backdoorFromTreatment = findDoCalculusBackdoor(graph, treatment, m);
     if (backdoorFromTreatment.length > 0) return false;
@@ -300,14 +415,12 @@ function hasPathTo(graph: CausalGraph, from: string, to: string): boolean {
 }
 
 function removeIncomingEdges(graph: CausalGraph, nodes: string[]): CausalGraph {
-  // Create a copy with incoming edges removed for specified nodes (do-operator)
   const nodeNames = [...graph.nodes];
   const copy = new CausalGraph(nodeNames);
   const nodeSet = new Set(nodes);
 
   for (const src of nodeNames) {
     for (const tgt of graph.children(src)) {
-      // Skip edges where target is intervened (incoming edge removed)
       if (nodeSet.has(tgt)) continue;
       copy.addEdge(src, tgt);
     }

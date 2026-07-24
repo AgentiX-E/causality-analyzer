@@ -519,7 +519,7 @@ describe('ASIA Benchmark', () => {
     return data;
   }
 
-  it('GIN: ASIA SHD ≤ 6 (allow discrete→continuous approximation)', () => {
+  it('GIN: ASIA SHD ≤ 8 (allow discrete→continuous approximation)', () => {
     const trueASIA = buildAsiaDAG();
     const data = generateAsiaData(5000);
     const { graph } = ginAlgorithm(data, asiaNodes, { alpha: 0.05, useKCI: false, maxDegree: 3 });

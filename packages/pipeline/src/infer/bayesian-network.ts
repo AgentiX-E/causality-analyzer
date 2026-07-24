@@ -277,20 +277,43 @@ export function junctionTreeInference(
     return r;
   }).filter(f => f.table.size > 0);
 
+  if (reducedFactors.length === 0) {
+    const posteriors = new Map<string, Map<number, number>>();
+    for (const v of allVars) posteriors.set(v, new Map([[0, 0.5], [1, 0.5]]));
+    return { posteriors, messageCount: 0 };
+  }
+
   // Build factor graph adjacency (which factors share variables)
   const adjacency = buildFactorAdjacency(reducedFactors);
   const ordering = eliminationOrder(reducedFactors);
 
-  // Triangulate by elimination ordering
-  const { cliques, messages } = triangulate(reducedFactors, adjacency, ordering);
+  // Triangulate by elimination ordering → get cliques
+  const { cliques } = triangulate(reducedFactors, adjacency, ordering);
 
-  // Message passing: collect phase (leaves → root)
-  const calibrated = passMessages(cliques, messages);
+  // Hugin message passing: collect + distribute along junction tree
+  // For small networks (≤3 cliques): use exact multiplication (equivalent to brute-force)
+  // For larger networks: use Hugin collect+distribute
+  const calibrated = cliques.length <= 3
+    ? exactJunctionTree(cliques)
+    : passMessages(cliques, new Map());
+
+/**
+ * Exact multiplication of all cliques — equivalent to brute-force joint.
+ * Used for small networks where message passing overhead exceeds direct computation.
+ */
+function exactJunctionTree(cliques: Factor[]): Factor[] {
+  if (cliques.length === 0) return [];
+  let result = cliques[0]!;
+  for (let i = 1; i < cliques.length; i++) {
+    result = factorMultiply(result, cliques[i]!);
+  }
+  return [factorNormalize(result)];
+}
 
   // Compute posteriors from calibrated cliques
   const posteriors = extractPosteriors(calibrated, [...allVars]);
 
-  return { posteriors, messageCount: messages.size };
+  return { posteriors, messageCount: 2 * (cliques.length - 1) };
 }
 
 // ── CPT Estimation from Data ────────────────────────────────────────────
@@ -412,7 +435,7 @@ function enumerateAssignmentsRaw(nVars: number, domainSize: number): string[] {
 
 // ── Junction Tree Utilities ─────────────────────────────────────────────
 
-interface FactorNode { factor: Factor; neighbors: Set<number>; }
+interface CliqueEdge { i: number; j: number; weight: number; }
 
 function buildFactorAdjacency(factors: Factor[]): Map<number, Set<number>> {
   const adj = new Map<number, Set<number>>();
@@ -432,8 +455,11 @@ function shareVariable(a: Factor, b: Factor): boolean {
   return a.variables.some(v => b.variables.includes(v));
 }
 
+function sharedVarCount(a: Factor, b: Factor): number {
+  return a.variables.filter(v => b.variables.includes(v)).length;
+}
+
 function eliminationOrder(factors: Factor[]): string[] {
-  // Min-degree heuristic
   const varDegrees = new Map<string, number>();
   for (const f of factors) {
     for (const v of f.variables) {
@@ -447,47 +473,205 @@ function eliminationOrder(factors: Factor[]): string[] {
 
 function triangulate(
   factors: Factor[],
-  adjacency: Map<number, Set<number>>,
+  _adjacency: Map<number, Set<number>>,
   ordering: string[],
-): { cliques: Factor[]; messages: Map<string, Factor> } {
-  // Simplified triangulation: merge factors by elimination ordering
-  const remaining = new Set(factors.keys());
+): { cliques: Factor[] } {
+  // Standard variable elimination clique discovery:
+  // For each variable in elimination order, multiply all factors
+  // containing it → produce a clique, then marginalize out the variable.
+  // The product BEFORE marginalization is the clique.
+  let active = [...factors];
   const cliques: Factor[] = [];
-  const messageMap = new Map<string, Factor>();
 
   for (const v of ordering) {
     // Find factors containing this variable
     const group: number[] = [];
-    for (const idx of remaining) {
-      if (factors[idx]!.variables.includes(v)) group.push(idx);
+    const others: number[] = [];
+    for (let i = 0; i < active.length; i++) {
+      if (active[i]!.variables.includes(v)) group.push(i);
+      else others.push(i);
     }
 
     if (group.length === 0) continue;
 
-    // Create clique by multiplying factors
-    let clique = factors[group[0]!]!;
+    // Multiply factors containing v → this forms a clique
+    let clique = active[group[0]!]!;
     for (let i = 1; i < group.length; i++) {
-      clique = factorMultiply(clique, factors[group[i]!]!);
+      clique = factorMultiply(clique, active[group[i]!]!);
     }
 
-    // Marginalize out the eliminated variable
-    const message = factorMarginalize(clique, v);
     cliques.push(clique);
 
-    for (const idx of group) remaining.delete(idx);
+    // Marginalize out v → create the message/separator
+    const message = factorMarginalize(clique, v);
+
+    // Replace the group with the marginalized message
+    const newActive: Factor[] = [];
+    for (const idx of others) newActive.push(active[idx]!);
+    if (message.table.size > 0) newActive.push(message);
+    active = newActive;
   }
 
-  return { cliques, messages: messageMap };
+  // Any remaining factors are also cliques
+  for (const f of active) cliques.push(f);
+
+  return { cliques };
+}
+
+/**
+ * Hugin message passing (collect + distribute) on the junction tree.
+ *
+ * Builds a maximum spanning tree among cliques, then:
+ * 1. Collect: propagate messages from leaves to root (inward)
+ * 2. Distribute: propagate messages from root to leaves (outward)
+ * 3. Each calibrated clique now contains the correct marginal
+ *
+ * Reference: Koller & Friedman (2009), Chapter 10.2
+ */
+function buildJunctionTree(cliques: Factor[]): {
+  tree: Map<number, Set<number>>;
+  separators: Map<string, Set<string>>;
+  root: number;
+} {
+  if (cliques.length <= 1) {
+    const tree = new Map<number, Set<number>>();
+    tree.set(0, new Set());
+    return { tree, separators: new Map(), root: 0 };
+  }
+
+  // Build candidate edges with weights = |shared variables|
+  const candidates: CliqueEdge[] = [];
+  for (let i = 0; i < cliques.length; i++) {
+    for (let j = i + 1; j < cliques.length; j++) {
+      const w = sharedVarCount(cliques[i]!, cliques[j]!);
+      if (w > 0) {
+        candidates.push({ i, j, weight: w });
+      }
+    }
+  }
+
+  // Maximum spanning tree (Kruskal's algorithm)
+  candidates.sort((a, b) => b.weight - a.weight);
+  const parent: number[] = cliques.map((_, i) => i);
+  const find = (x: number): number => {
+    while (parent[x] !== x) { parent[x] = parent[parent[x]!]!; x = parent[x]!; }
+    return x;
+  };
+  const union = (a: number, b: number): boolean => {
+    const ra = find(a), rb = find(b);
+    if (ra === rb) return false;
+    parent[ra] = rb;
+    return true;
+  };
+
+  const tree = new Map<number, Set<number>>();
+  const separators = new Map<string, Set<string>>();
+  for (let i = 0; i < cliques.length; i++) tree.set(i, new Set());
+
+  for (const { i, j } of candidates) {
+    if (union(i, j)) {
+      tree.get(i)!.add(j);
+      tree.get(j)!.add(i);
+      // Separator = shared variables between clique i and clique j
+      const sepVars = cliques[i]!.variables.filter(v => cliques[j]!.variables.includes(v));
+      separators.set(`${Math.min(i, j)}-${Math.max(i, j)}`, new Set(sepVars));
+    }
+  }
+
+  // Choose root: clique with most variables
+  let root = 0;
+  let maxVars = cliques[0]!.variables.length;
+  for (let i = 1; i < cliques.length; i++) {
+    if (cliques[i]!.variables.length > maxVars) {
+      maxVars = cliques[i]!.variables.length;
+      root = i;
+    }
+  }
+
+  return { tree, separators, root };
 }
 
 function passMessages(cliques: Factor[], _messages: Map<string, Factor>): Factor[] {
-  // For small networks, use direct multiplication of all cliques
   if (cliques.length === 0) return [];
-  let result = cliques[0]!;
-  for (let i = 1; i < cliques.length; i++) {
-    result = factorMultiply(result, cliques[i]!);
+  if (cliques.length === 1) return [factorNormalize(cliques[0]!)];
+
+  const { tree, separators, root } = buildJunctionTree(cliques);
+
+  // Initialize potentials: each clique = its original factor
+  const potentials = cliques.map(c => c);
+
+  // Store separators: for each edge, store the current separator potential
+  const sepPotentials = new Map<string, Factor>();
+
+  // Helper: send message from source to target
+  const sendMessage = (src: number, tgt: number): void => {
+    const sepKey = `${Math.min(src, tgt)}-${Math.max(src, tgt)}`;
+    const sepVars = separators.get(sepKey);
+    if (!sepVars || sepVars.size === 0) return;
+
+    // Collect all incoming messages to src (from neighbors except tgt)
+    let srcPot = potentials[src]!;
+    for (const neighbor of tree.get(src) ?? []) {
+      if (neighbor === tgt) continue;
+      const nKey = `${Math.min(src, neighbor)}-${Math.max(src, neighbor)}`;
+      const incoming = sepPotentials.get(nKey);
+      if (incoming) srcPot = factorMultiply(srcPot, incoming);
+    }
+
+    // Marginalize src to separator variables: φ_S = Σ_{C\S} φ_C
+    const toRemove = srcPot.variables.filter(v => !sepVars.has(v));
+    let message = srcPot;
+    for (const v of toRemove) {
+      message = factorMarginalize(message, v);
+    }
+
+    sepPotentials.set(sepKey, message);
+  };
+
+  // Collect phase: DFS post-order from root
+  const visitedCollect = new Set<number>();
+  const collectOrder: Array<{ node: number; parent: number }> = [];
+  const dfsCollect = (node: number, parent: number): void => {
+    visitedCollect.add(node);
+    for (const child of tree.get(node) ?? []) {
+      if (child === parent || visitedCollect.has(child)) continue;
+      dfsCollect(child, node);
+    }
+    if (parent !== -1) {
+      collectOrder.push({ node, parent });
+    }
+  };
+  dfsCollect(root, -1);
+
+  // Execute collect (leaves → root)
+  for (const { node, parent } of collectOrder) {
+    sendMessage(node, parent);
   }
-  return [factorNormalize(result)];
+
+  // Distribute phase: DFS pre-order from root
+  const visitedDist = new Set<number>();
+  const dfsDistribute = (node: number): void => {
+    visitedDist.add(node);
+    for (const child of tree.get(node) ?? []) {
+      if (visitedDist.has(child)) continue;
+      sendMessage(node, child);
+      dfsDistribute(child);
+    }
+  };
+  dfsDistribute(root);
+
+  // Calibrate: multiply each clique with all incoming separator messages
+  const calibrated = cliques.map((c, i) => {
+    let result = c;
+    for (const neighbor of tree.get(i) ?? []) {
+      const sepKey = `${Math.min(i, neighbor)}-${Math.max(i, neighbor)}`;
+      const msg = sepPotentials.get(sepKey);
+      if (msg) result = factorMultiply(result, msg);
+    }
+    return factorNormalize(result);
+  });
+
+  return calibrated;
 }
 
 function extractPosteriors(
