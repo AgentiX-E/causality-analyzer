@@ -1,6 +1,6 @@
 {
   "name": "@agentix-e/causality-analyzer-pipeline",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Causality Analyzer Pipeline — anomaly detection, causal graph discovery, RCA analysis, causal inference",
   "type": "module",
   "main": "./dist/index.js",

@@ -1,6 +1,6 @@
 {
   "name": "@agentix-e/causality-analyzer-core",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Causality Analyzer Core — type definitions, interfaces, plugin registry, and universal data primitives",
   "type": "module",
   "main": "./dist/index.js",

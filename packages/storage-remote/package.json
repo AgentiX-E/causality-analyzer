@@ -1,6 +1,6 @@
 {
   "name": "@agentix-e/causality-analyzer-storage-remote",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Remote storage: PG-wire relational + Bolt graph",
   "type": "module",
   "main": "./dist/index.js",

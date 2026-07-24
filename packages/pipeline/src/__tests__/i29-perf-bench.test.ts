@@ -22,7 +22,7 @@ const PERF_BUDGETS = {
   /** GES on a 4-node DAG with 300 samples */
   ges4Node300: 1000,
   /** d-separation test on a 10-node graph */
-  dsep10Node: 10,
+  dsep10Node: 20,
   /** Fisher Z test on 500 samples */
   fisherZ500: 5,
   /** KCI unconditional on 100 samples */

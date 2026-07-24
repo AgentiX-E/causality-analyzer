@@ -2,6 +2,123 @@
 
 All notable changes to Causality Analyzer.
 
+## [2.0.0] — 2026-07-24
+
+### Major Features
+
+#### Causal Discovery (7 algorithms)
+- **PC** (constraint-based): Fisher Z + stable variant + Meek R1-R3
+- **FCI** (latent confounders): Possible-D-SEP + Meek R1-R4
+- **GES** (score-based, Chickering 2002): BIC-optimized forward/backward
+- **LiNGAM** (non-Gaussian, Shimizu 2011): DirectLiNGAM causal ordering
+- **NOTEARS** (continuous, Zheng 2018): Augmented Lagrangian + L1 proximal
+- **GOLEM** (gradient, Ng 2020): Adam optimizer + log-det likelihood
+- **KCI test**: kernel-based nonlinear CI testing (RBF + permutation p-value)
+
+#### Root Cause Analysis (5 methods)
+- **BayesianRCA**: 6-engine exact/approximate inference (VE/JT/LBP/LW/Gibbs/BF)
+- **HeuristicPathRCA**: path-based heuristic scoring (deprecated in favor of BayesianRCA)
+- **HTRCA**: hypothesis testing via OLS residuals
+- **RandomWalkRCA**: weighted graph random walk
+- **FPGrowthRCA**: frequent pattern mining trace RCA
+- **CIRCA Pipeline**: RHT z-score + descending adjustment
+
+#### Causal Effect Estimation (8 methods)
+- Backdoor adjustment, Frontdoor, IV/2SLS, Propensity Score (IRLS), PSM, Doubly Robust
+- **S-Learner**: single model with treatment-as-feature
+- **T-Learner**: separate outcome models per arm
+- **X-Learner**: cross-predict counterfactuals → meta-model
+- **R-Learner**: orthogonalized residual-on-residual (Nie & Wager 2021)
+- **UpliftTree**: decision tree maximizing |Δμ_L - Δμ_R|
+- **UpliftForest**: bootstrap ensemble + OOB prediction + feature importance
+
+#### SCM & Counterfactuals
+- **PostNonlinearMechanism**: sigmoid-based nonlinear causal mechanism
+- **Auto-assign**: R² heuristic for mechanism selection
+- **Counterfactual reasoning**: Abduction-Action-Prediction (Pearl 2009)
+- **Interventional samples**: Monte Carlo from P(Y|do(X))
+- **Counterfactual samples**: noise-resampling distribution
+
+#### do-Calculus (Shpitser & Pearl 2006)
+- Pearl's 3 rules + ID algorithm
+- Complete c-component decomposition
+- Hedge criterion detection
+
+#### Sensitivity Analysis
+- E-value, partial R², robustness value with plain-English interpretation
+
+#### Infrastructure
+- **Licensed**: MIT
+- **Security**: SECURITY.md with vulnerability reporting SLA
+- **CODEOWNERS**: automated PR review routing
+- **Prometheus metrics**: `MetricsRegistry.toPrometheus()` text format
+- **Token Bucket**: rate limiting with burst/refill/waitTime
+- **Health SLI**: p50/p90/p99 latency + error rate tracker
+- **Key Rotation**: `EncryptedStore.rotateKey()` + `generateKey()`
+- **.env support**: `BaseConfig.fromEnv()` with `CA_` prefix
+- **Migration**: `migrate()` + `getSchemaVersion()` on embed store
+- **mTLS**: full mTLS on Neo4j Bolt + PostgreSQL
+- **Audit trail**: SHA-256 hash-chained (RFC 6962 pattern)
+- **AES-256-GCM**: encrypted storage wrapper
+- **Rate limiter**: drop_oldest/drop_newest/block strategies
+- **Structured logging**: Logger interface + ConsoleLogger/NoopLogger
+- **Error hierarchy**: 6 typed error classes with 20 error codes
+- **Plugin registry**: decorator-based detector/graph/analyzer registration
+
+#### CLI
+- `discover`: 5 algorithm options with config file + env vars
+- `analyze`: 3 RCA methods with external graph file support
+- `benchmark`: 5 standardized performance tests
+- `serve`: REST API with /health + /metrics (Prometheus)
+
+#### Parallel Computing
+- `parallelMap`: Worker Threads distributed task execution
+- `parallelPermutationTest`: parallelized KCI permutation testing
+- `chunkedPC`: chunked causal discovery with voting aggregation
+
+#### Storage
+- **Embed**: SQLite + OverGraph LSM-tree
+- **Remote**: PostgreSQL + Neo4j with connection pooling
+- **Migration**: idempotent schema versioning
+
+#### Visualization
+- `<ca-causal-graph>`: Canvas2D force-directed DAG (Lit 3)
+- `<ca-time-series>`: uPlot-based time series with anomaly bands
+- `<ca-root-cause-ranking>`: ranked list with keyboard navigation
+
+#### Quality Infrastructure
+- **1008 tests**: unit + integration + browser E2E + Neo4j mTLS + fuzz + perf
+- **Zero @ts-nocheck**: strict type safety across all packages
+- **CI/CD**: lint → typecheck → test → browser → Neo4j → audit (zero skip)
+- **npm Provenance**: sigstore signatures on all releases
+- **CodeQL**: continuous security scanning
+- **Cross-platform**: ubuntu/macos/windows CI matrix
+
+#### Conformance
+- ASIA benchmark (Lauritzen & Spiegelhalter 1988): 8-node DAG validation
+- Shpitser & Pearl (2006) Figures 1-5: do-calculus identification
+- BayesianRCA engine verification: all 5+1 engines produce consistent rankings
+- MetaLearner agreement: S/T/X/R learners agree on effect direction
+
+### Breaking Changes (v1.0 → v2.0)
+
+- **`BayesianRCA` becomes the default RCA engine** — `HeuristicPathRCA` remains available but deprecated
+- **`StructuralCausalModel.train()` signature changed**: accepts optional `mechanismTypes` parameter
+- **`MetricsRegistry`** enhanced with `toPrometheus()`, `setGauge()`, `setLabels()`
+- **`RateLimiter`** now co-exists with new `TokenBucket` class
+- **`EncryptedStore`** added `rotateKey()` and `generateKey()` static method
+- **New packages**: `parallel.ts`, `metalearners.ts`, `notears.ts`, `bayesian-rca.ts`
+- **`CausalModel`** unified API added (DoWhy-compatible pattern)
+- **CLI** expanded from 4 commands to 4 commands with richer options
+
+### Migration from v1.0
+
+1. Replace `new HeuristicPathRCA()` → `new BayesianRCA({ engine: 'variable_elimination' })`
+2. Update `scm.train(data)` → `scm.train(data)` — backward compatible, add `mechanismTypes` for PostNonlinear
+3. Use `MetricsRegistry.toPrometheus()` for Prometheus scraping
+4. Use `TokenBucket` for rate-based limiting, `RateLimiter` for queue-based
+5. See `COMPAT.md` for detailed migration guide
+
 ## [1.0.0] — 2026-07-23
 
 ### Breaking Changes

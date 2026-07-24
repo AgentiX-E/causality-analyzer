@@ -1,6 +1,6 @@
 {
   "name": "@agentix-e/causality-analyzer-storage-embed",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Embedded storage: better-sqlite3 relational + overgraph graph",
   "type": "module",
   "main": "./dist/index.js",
