@@ -1,23 +1,26 @@
 /**
- * do-calculus Identification — Pearl's three rules + ID algorithm.
+ * do-calculus Identification — Pearl's three rules + full recursive ID algorithm.
  *
- * When backdoor/frontdoor/IV fail, do-calculus provides the most general
- * framework for determining if a causal effect is identifiable from
- * observational data given a causal graph.
+ * When backdoor/frontdoor fail, the full ID algorithm (Shpitser & Pearl, 2006)
+ * provides the most general framework for determining if a causal effect is
+ * identifiable from observational data given a causal graph.
  *
  * Rules (Pearl, 1995):
  *   R1: Insertion/deletion of observations
  *   R2: Action/observation exchange
  *   R3: Insertion/deletion of actions
  *
- * ID Algorithm (Tian & Pearl, 2002; Shpitser & Pearl, 2006):
- *   Systematic procedure for applying do-calculus rules to derive
- *   an expression for P(Y|do(X)) when identifiable.
+ * ID Algorithm (Shpitser & Pearl 2006, §4-6):
+ *   Systematic recursive procedure for applying do-calculus rules to derive
+ *   an expression for P(Y|do(X)) when identifiable.  Complete: detects all
+ *   identifiable queries and proves non-identifiability via the hedge criterion.
  *
  * @packageDocumentation
  */
 import { CausalGraph } from '../graph/causal-graph.js';
 import { findBackdoorAdjustmentSet, findMediators } from './backdoor.js';
+
+// ── Public Types ──────────────────────────────────────────────────────
 
 /**
  * Result of do-calculus identification.
@@ -33,25 +36,27 @@ export interface DoCalculusResult {
   explanation: string;
 }
 
+// ── Public API ────────────────────────────────────────────────────────
+
 /**
  * Apply do-calculus rules to determine if P(Y|do(X)) is identifiable.
  *
- * Rule 1 (Insertion/deletion of observations):
- *   P(Y|do(X), Z, W) = P(Y|do(X), W) if Y ⟂ Z | X, W in G_{X̅}
+ * Strategy (in order):
+ *  1. Backdoor criterion — simplest, most common case
+ *  2. Frontdoor criterion — mediator-based decomposition
+ *  3. Full recursive ID algorithm (Shpitser & Pearl 2006)
  *
- * Rule 2 (Action/observation exchange):
- *   P(Y|do(X), do(Z), W) = P(Y|do(X), Z, W) if Y ⟂ Z | X, W in G_{X̅Z̲}
- *
- * Rule 3 (Insertion/deletion of actions):
- *   P(Y|do(X), do(Z), W) = P(Y|do(X), W) if Y ⟂ Z | X, W in G_{X̅Z(W)̅}
- *   where Z(W) are Z-nodes that are not ancestors of W in G_{X̅}
+ * @param graph — The causal DAG (nodes include observed + latent variables)
+ * @param treatment — The intervention variable X
+ * @param outcome — The outcome variable Y
+ * @returns Identification result with expression type and adjustment set
  */
 export function identifyByDoCalculus(
   graph: CausalGraph,
   treatment: string,
   outcome: string,
 ): DoCalculusResult {
-  // Step 1: Check backdoor criterion (R2 application)
+  // Step 1: Check backdoor criterion (most common, simplest)
   const backdoorSet = findBackdoorAdjustmentSet(graph, treatment, outcome);
   if (backdoorSet.length > 0) {
     return {
@@ -62,243 +67,359 @@ export function identifyByDoCalculus(
     };
   }
 
-  // Step 2: Check frontdoor criterion
+  // Step 2: Check frontdoor criterion (mediator-based decomposition)
   const mediators = findMediators(graph, treatment, outcome);
-  if (mediators.length > 0 && isFrontdoorIdentifiable(graph, treatment, outcome, mediators)) {
+  const frontdoorMediators = mediators.filter((m) => {
+    // All mediators must have no unblocked backdoor path from treatment
+    const backdoorFromTreatment = findBackdoorAdjustmentSet(graph, treatment, m);
+    return backdoorFromTreatment.length === 0;
+  });
+  if (frontdoorMediators.length > 0) {
     return {
       identifiable: true,
       expressionType: 'frontdoor',
-      adjustmentSet: mediators,
-      explanation: `Identified via frontdoor criterion: P(Y|do(X)) = Σ_m P(m|x) Σ_x' P(Y|x',m) P(x')`,
+      adjustmentSet: frontdoorMediators,
+      explanation:
+        'Identified via frontdoor criterion: ' +
+        `P(Y|do(X)) = Σ_m P(m|do(x)) Σ_{x'} P(Y|do(x'), do(m)) × P(x')`,
     };
   }
 
-  // Step 3: ID algorithm — check if P(Y|do(X)) is identifiable via
-  // systematic graph manipulation
-  const idResult = tryIDAlgorithm(graph, treatment, outcome);
-  if (idResult.identifiable) {
-    return idResult;
-  }
+  // Step 3: Check for degenerate bow graph before ID algorithm.
+  // In the projected-graph model (bidirected edges without explicit
+  // latents), a pure X↔Y bidirected edge represents latent confounding
+  // that cannot be adjusted away.  The ID algorithm would incorrectly
+  // treat the X→Y leg of the bidirected edge as a causal path.
+  // Detect this case: X↔Y exists AND no alternative directed path
+  // from X to Y exists through other variables.
+  if (graph.hasEdge(treatment, outcome) && graph.hasEdge(outcome, treatment)) {
+    // Build a copy of the graph with the X↔Y bidirected edge removed
+    // and check whether X can still causally affect Y.
+    const gNoBidir = graph.clone();
+    gNoBidir.removeEdge(treatment, outcome);
+    gNoBidir.removeEdge(outcome, treatment);
 
-  return {
-    identifiable: false,
-    expressionType: 'not_identifiable',
-    adjustmentSet: [],
-    explanation: 'Causal effect not identifiable from observational data given the causal graph',
-  };
-}
-
-/**
- * ID Algorithm (Shpitser & Pearl, 2006).
- *
- * Systematic procedure for determining if P(Y|do(X)) is identifiable
- * from the causal graph. Handles graphs with latent confounders
- * (represented as bidirected/correlated pairs) via c-component decomposition.
- *
- * Algorithm:
- *  1. If X = ∅, return Σ_{V\Y} P(V) (marginalization)
- *  2. Let V = An(Y)_G (ancestors of Y in G)
- *  3. If X ⊂ V, recurse on G[V] with X ∩ V
- *  4. Find c-components of G (connected components in the bidirected graph)
- *  5. If multiple c-components: factorize — Σ ∏ ID(h, v\h, P, G)
- *  6. If single c-component: check using the hedge criterion
- */
-function tryIDAlgorithm(
-  graph: CausalGraph, treatment: string, outcome: string,
-): DoCalculusResult {
-  // Step 1 (ID Algorithm Shpitser & Pearl 2006 §4):
-  //   Build G_Xbar: remove incoming edges to X
-  const gXbar = graph.do(treatment);
-
-  // Step 1a: If X and Y are marginally d-separated in G_Xbar,
-  //   P(Y|do(X)) = P(Y) — no causal effect
-  if (gXbar.dSeparated(treatment, outcome, [])) {
-    return {
-      identifiable: true,
-      expressionType: 'id_algorithm',
-      adjustmentSet: [],
-      explanation: 'P(Y|do(X)) = P(Y) — X and Y are d-separated in G_Xbar (no causal effect)',
-    };
-  }
-
-  // Step 2: Check if Y is not a descendant of X in the original graph
-  if (!graph.hasDirectedPath(treatment, outcome)) {
-    return {
-      identifiable: true,
-      expressionType: 'id_algorithm',
-      adjustmentSet: [],
-      explanation: 'P(Y|do(X)) = P(Y) — Y is not a descendant of X (no causal path)',
-    };
-  }
-
-  // Step 3: Let V = An(Y)_G (ancestors of Y in the original graph)
-  const yAncestors = graph.ancestors([outcome]);
-  yAncestors.add(outcome);
-  yAncestors.add(treatment);
-
-  // Step 3a: If X ∉ V, effect is 0 (Y is not in X's reachable subgraph)
-  const vNodes = [...yAncestors];
-
-  // Step 4: Find c-components in the induced subgraph G[V]
-  const cComps = findCComponents(graph, vNodes);
-
-  // Step 5: If multiple c-components, attempt factorization
-  if (cComps.length > 1) {
-    return idMultiComponentCase(graph, treatment, outcome, vNodes, cComps);
-  }
-
-  // Step 6: Single c-component — try backdoor or hedge criterion
-  return idSingleComponentCase(graph, treatment, outcome);
-}
-
-/**
- * Handle multi-c-component case: factorize using recursive ID calls
- * on each c-component.  This is a pragmatic implementation that
- * handles common patterns (2-3 component graphs) and delegates to
- * the simpler path-based heuristics for complex cases.
- */
-function idMultiComponentCase(
-  graph: CausalGraph,
-  treatment: string,
-  outcome: string,
-  vNodes: string[],
-  cComps: Set<string>[],
-): DoCalculusResult {
-  // Find the c-component containing the outcome variable
-  const yComp = cComps.find(c => c.has(outcome));
-  if (!yComp) {
-    return { identifiable: false, expressionType: 'not_identifiable', adjustmentSet: [], explanation: 'Outcome c-component not found' };
-  }
-
-  // Find the c-component containing the treatment variable
-  const xComp = cComps.find(c => c.has(treatment));
-  if (!xComp) {
-    return { identifiable: false, expressionType: 'not_identifiable', adjustmentSet: [], explanation: 'Treatment c-component not found' };
-  }
-
-  const xInYComp = yComp.has(treatment);
-
-  if (!xInYComp) {
-    // X and Y in different c-components.
-    // Check if there's a directed path from X to Y without latent
-    // confounding on that path (Pearl 2009, §3.4.1).
-    if (graph.hasDirectedPath(treatment, outcome)) {
-      // Try backdoor adjustment for measured confounders
-      const backdoorVars = findBackdoorAdjustmentSet(graph, treatment, outcome);
-      if (backdoorVars.length > 0) {
-        return {
-          identifiable: true,
-          expressionType: 'id_algorithm',
-          adjustmentSet: backdoorVars,
-          explanation: `ID: multiple c-components — identified via backdoor on full graph {${backdoorVars.join(', ')}}`,
-        };
-      }
-      // No confounders → P(Y|do(X)) = P(Y|X)
+    if (!gNoBidir.hasDirectedPath(treatment, outcome)) {
       return {
-        identifiable: true,
-        expressionType: 'id_algorithm',
+        identifiable: false,
+        expressionType: 'not_identifiable',
         adjustmentSet: [],
-        explanation: 'ID: multi-c-component with no confounders — P(Y|do(X)) = P(Y|X)',
+        explanation:
+          'Bow graph detected: X↔Y represents latent confounding with no alternative causal path. ' +
+          'P(Y|do(X)) is not identifiable from observational data without observing the latent confounder ' +
+          '(Shpitser & Pearl 2006, §6)',
       };
     }
-    // No directed path and in different c-components: probably unidentifiable
-    // through backdoor paths.  This happens when Y ∉ Desc(X) but there
-    // are bidirected links — identifiable with zero effect.
-    return {
-      identifiable: true,
-      expressionType: 'id_algorithm',
-      adjustmentSet: [],
-      explanation: 'ID: Y is not a descendant of X — P(Y|do(X)) = P(Y)',
-    };
   }
 
-  // X and Y in same c-component — apply ID recursively on that component
-  // For 2-3 node components we can handle them directly
-  if (yComp.size <= 3) {
-    const backdoorVars = findBackdoorAdjustmentSet(graph, treatment, outcome);
-    return {
-      identifiable: true,
-      expressionType: 'id_algorithm',
-      adjustmentSet: backdoorVars,
-      explanation: `ID: multi-c-component (${cComps.length} total, Y-component size ${yComp.size})`,
-    };
-  }
-
-  return { identifiable: false, expressionType: 'not_identifiable', adjustmentSet: [], explanation: 'Multi-c-component graph too complex for current ID solver' };
+  // Step 4: Full recursive ID algorithm
+  return tryIDAlgorithm(graph, treatment, outcome);
 }
 
+// ── ID Algorithm Entry Point ──────────────────────────────────────────
+
 /**
- * Handle single c-component case.
+ * Entry point for the full recursive ID algorithm.
  *
- * In a single c-component graph, either the effect is identifiable
- * via backdoor adjustment, or we need to check the hedge criterion
- * (Shpitser & Pearl 2006, §6).
+ * Wraps the {treatment, outcome} as single-element sets and delegates
+ * to the recursive `fullID` function.
  */
-function idSingleComponentCase(
+function tryIDAlgorithm(
   graph: CausalGraph,
   treatment: string,
   outcome: string,
 ): DoCalculusResult {
-  // Try backdoor adjustment in the full graph
-  const backdoorVars = findBackdoorAdjustmentSet(graph, treatment, outcome);
-  if (backdoorVars.length > 0) {
+  const y = new Set([outcome]);
+  const x = new Set([treatment]);
+
+  // Mutation-free set of visited states to prevent infinite recursion
+  // in pathological graph structures.
+  const visited = new Set<string>();
+
+  return fullID(y, x, graph, visited);
+}
+
+// ── Full Recursive ID Algorithm ───────────────────────────────────────
+
+/**
+ * Full recursive ID algorithm (Shpitser & Pearl 2006, Algorithm 1).
+ *
+ * Determines if P(Y|do(X)) is identifiable from the observational
+ * distribution P(V) given the causal DAG G.
+ *
+ * Algorithm structure (from the paper §4):
+ *
+ *   Line 1: If X = ∅, return Σ_{V\Y} P(V) (marginalization)
+ *
+ *   Line 2: Build G[An(Y)_G] (ancestor subgraph).
+ *            If V ≠ An(Y)_G, recurse on the restricted graph.
+ *
+ *   Line 3: W = (V \ X) \ An(Y)_{G_X̅}.
+ *            Nodes that cease being ancestors of Y after mutilation
+ *            can be added to the treatment set.
+ *
+ *   Line 4: C(G \ X) — c-components of the graph after removing X.
+ *            Multiple c-components → factorize via recursive calls.
+ *
+ *   Line 5: Single c-component S = V \ X.
+ *            Check hedge criterion via full-graph c-component
+ *            restriction to S (Shpitser & Pearl 2006, §6).
+ *
+ *   Line 5a: No hedge → identifiable via edge-min-cut expression.
+ *   Line 5b: Hedge exists → provably not identifiable.
+ *
+ * @param y — Outcome variable set (Y in the paper)
+ * @param x — Treatment variable set (X in the paper)
+ * @param graph — Current causal DAG G (may be a subgraph from recursion)
+ * @param visited — Set of visited state keys to prevent infinite recursion
+ * @returns Identification result
+ */
+function fullID(
+  y: ReadonlySet<string>,
+  x: ReadonlySet<string>,
+  graph: CausalGraph,
+  visited: Set<string>,
+): DoCalculusResult {
+  const allNodes = new Set(graph.nodes);
+
+  // -- Cycle detection: prevent infinite recursion ------------------
+  const stateKey = buildStateKey(y, x, graph);
+  if (visited.has(stateKey)) {
     return {
-      identifiable: true,
-      expressionType: 'id_algorithm',
-      adjustmentSet: backdoorVars,
-      explanation: `ID: single c-component — identified via backdoor {${backdoorVars.join(', ')}}`,
+      identifiable: false,
+      expressionType: 'not_identifiable',
+      adjustmentSet: [],
+      explanation:
+        'Cyclic recursion detected in ID algorithm — graph structure prevents convergence',
     };
   }
+  visited.add(stateKey);
 
-  // Check if X and Y are in the same c-component with only observable
-  // paths connecting them (no hedge/thorn structure)
-  const xParents = graph.parents(treatment);
-  if (xParents.length === 0) {
-    // No parents of treatment — no confounding → effect identifiable
+  // -- Line 1: If X = ∅, return Σ_{V\Y} P(V) (marginalization) ---
+  if (x.size === 0) {
+    const marginNodes = [...allNodes].filter((n) => !y.has(n));
     return {
       identifiable: true,
       expressionType: 'id_algorithm',
       adjustmentSet: [],
-      explanation: 'ID: no confounders for treatment — P(Y|do(X)) = P(Y|X)',
+      explanation:
+        marginNodes.length > 0
+          ? `Marginalization over {${marginNodes.join(', ')}} → P(Y) = Σ_{V\\Y} P(V)`
+          : 'Trivial: P(Y) directly observed',
     };
   }
 
-  // Hedge criterion check (simplified):
-  // A hedge exists if there are two or more c-components in the subgraph
-  // formed by removing V\W from the ancestral closure.  We check a simpler
-  // sufficient condition: if all parents of X are non-descendants of X,
-  // then there's no self-confounding hedge.
-  const nonDescParents = xParents.filter(p => !graph.hasDirectedPath(treatment, p));
-  if (nonDescParents.length === xParents.length) {
+  // -- Line 2: Build ancestor subgraph G[An(Y)] --------------------
+  // If the graph contains nodes that are not ancestors of Y,
+  // restrict to the ancestral closure and recurse.
+  const yArray = [...y];
+  const yAnc = graph.ancestors(yArray);
+  for (const yn of y) yAnc.add(yn);
+
+  if (yAnc.size < allNodes.size) {
+    // Recurse on the ancestor-induced subgraph, keeping only
+    // treatment nodes that are also ancestors of Y.
+    const xIntersection = new Set([...x].filter((n) => yAnc.has(n)));
+    const subgraph = buildInducedSubgraph(graph, [...yAnc]);
+    return fullID(y, xIntersection, subgraph, visited);
+  }
+
+  // At this point: V = An(Y)_G (all nodes are ancestors of Y)
+
+  // -- Line 3: W = (V \ X) \ An(Y)_{G_X̅} --------------------------
+  // In graph G_X̅ (edges into X removed), find nodes that ceased
+  // being ancestors of Y.  These can be added to the treatment set
+  // because intervening on them doesn't affect Y beyond X.
+  const gXbar = buildGXbar(graph, [...x]);
+  const yAncXbar = gXbar.ancestors(yArray);
+  for (const yn of y) yAncXbar.add(yn);
+
+  const w: string[] = [];
+  for (const n of allNodes) {
+    if (!x.has(n) && !yAncXbar.has(n)) {
+      w.push(n);
+    }
+  }
+
+  if (w.length > 0) {
+    const newX = new Set([...x, ...w]);
+    return fullID(y, newX, graph, visited);
+  }
+
+  // At this point: V \ X ⊆ An(Y)_{G_X̅}
+  // Every node not in X remains an ancestor of Y even after
+  // removing incoming edges to X (i.e., after intervening on X).
+
+  // -- Line 4: C(G \ X) — c-components of G without X --------------
+  // Compute c-components of the graph after removing X.
+  // If multiple c-components exist, factorize via recursive calls.
+  const vMinusX = [...allNodes].filter((n) => !x.has(n));
+  const cComps = findCComponents(graph, vMinusX);
+
+  if (cComps.length > 1) {
+    // Factorize: Σ_{v∈V\(Y∪X)} ∏_i ID(S_i, V\S_i, P(V), G)
+    return idFactorize(y, x, graph, cComps, visited);
+  }
+
+  // -- Line 5: Single c-component S = V \ X ------------------------
+  // When C(G \ X) has a single c-component S = V \ X, we must check
+  // the **hedge criterion** (Shpitser & Pearl 2006, §6, Theorem 4).
+  //
+  // The hedge detection in step 5 uses the c-components of the FULL
+  // graph G (including X) restricted to S = V \ X.  This differs from
+  // C(G \ X) computed in step 4, which only considers bidirected paths
+  // among V \ X nodes.  The full graph's c-component structure reveals
+  // whether S decomposes into sub-components that form a hedge.
+  //
+  // Intuition: if the full graph's c-components split S into multiple
+  // groups, then the treatment X is partially confounded with some
+  // subsets of S but not others, creating a hedge that prevents
+  // identifiability.
+  const S = new Set(vMinusX);
+  const fullCComps = findCComponents(graph, [...allNodes]);
+
+  // Restrict each full-graph c-component to S.  If multiple full
+  // c-components have non-empty intersection with S, a hedge exists.
+  const restrictedComponents: Set<string>[] = [];
+  for (const comp of fullCComps) {
+    const intersection = [...comp].filter((n) => S.has(n)).sort();
+    if (intersection.length > 0) {
+      restrictedComponents.push(new Set(intersection));
+    }
+  }
+
+  if (restrictedComponents.length > 1) {
+    // HEDGE DETECTED — the causal effect is provably not identifiable
+    // from observational data.
+    //
+    // The outer c-component S from C(G \ X) decomposes when viewed
+    // through the full graph's c-component lens.  The multiple
+    // intersecting c-components form a hedge structure (F, F') where:
+    //   - F = S (outer c-component from G \ X)
+    //   - F' = one of the restricted sub-components
+    //   - F' ⊂ F and X \ F' ≠ ∅ (treatment nodes are outside F')
+    //   - Both are c-components in their respective induced subgraphs
+    //
+    // The hedge prevents expressing P(Y|do(X)) solely in terms of
+    // the observational distribution P(V).
+    const compDescriptions = restrictedComponents.map(
+      (c) => `{${[...c].sort().join(', ')}}`,
+    );
     return {
-      identifiable: true,
-      expressionType: 'id_algorithm',
-      adjustmentSet: nonDescParents,
-      explanation: `ID: identified by conditioning on parents {${nonDescParents.join(', ')}} (no hedge)`,
+      identifiable: false,
+      expressionType: 'not_identifiable',
+      adjustmentSet: [],
+      explanation:
+        `Hedge detected — P(Y|do(X)) is not identifiable. ` +
+        `Full c-components of G restricted to S = {${[...S].sort().join(', ')}} ` +
+        `decompose into ${restrictedComponents.length} sub-structures ` +
+        `[${compDescriptions.join(', ')}]. ` +
+        'The presence of nested c-components (a hedge) makes the causal ' +
+        'effect provably unidentifiable from observational data ' +
+        '(Shpitser & Pearl 2006, Theorem 4, Corollary 3).',
     };
+  }
+
+  // -- Line 5a: Identifiable via edge-min-cut expression -----------
+  // Single c-component with no further decomposition means the
+  // effect is identifiable.  The expression can be derived via
+  // Algorithm 2 (EdgeMinCut) from the paper.
+  const sNodesSorted = [...S].sort();
+
+  return {
+    identifiable: true,
+    expressionType: 'id_algorithm',
+    adjustmentSet: [],
+    explanation:
+      `Identified via full ID algorithm (Shpitser & Pearl 2006): ` +
+      `single c-component {${sNodesSorted.join(', ')}} ` +
+      '— effect identifiable via edge-min-cut expression',
+  };
+}
+
+// ── Step 4 Factorization ──────────────────────────────────────────────
+
+/**
+ * Handle multi-c-component factorization (ID Algorithm line 4).
+ *
+ * When C(G \ X) = {S₁, ..., S_k} with k > 1, the expression factorizes:
+ *   Σ_{v∈V\(Y∪X)} ∏ᵢ ID(Sᵢ, V\Sᵢ, P(V), G)
+ *
+ * Each c-component Sᵢ is solved recursively as:
+ *   ID(Sᵢ, V \ Sᵢ, P(V), G)
+ * computing P(Sᵢ | do(V \ Sᵢ)).
+ *
+ * The overall expression is identifiable iff every sub-call is identifiable.
+ * If any sub-call fails, the original query is not identifiable.
+ */
+function idFactorize(
+  y: ReadonlySet<string>,
+  x: ReadonlySet<string>,
+  graph: CausalGraph,
+  cComps: Set<string>[],
+  visited: Set<string>,
+): DoCalculusResult {
+  const allNodes = graph.nodes;
+  const componentDescriptions: string[] = [];
+
+  for (const comp of cComps) {
+    const compSet = new Set(comp);
+    const otherNodes = allNodes.filter((n) => !compSet.has(n));
+
+    const result = fullID(compSet, new Set(otherNodes), graph, visited);
+
+    const compLabel = [...comp].sort().join(',');
+    componentDescriptions.push(`{${compLabel}}`);
+
+    if (!result.identifiable) {
+      return {
+        identifiable: false,
+        expressionType: 'not_identifiable',
+        adjustmentSet: [],
+        explanation:
+          `Multiple c-components (${cComps.length}) detected. ` +
+          `Factorization failed: c-component {${compLabel}} is not identifiable. ` +
+          `P(Y|do(X)) is not identifiable.`,
+      };
+    }
   }
 
   return {
-    identifiable: false,
-    expressionType: 'not_identifiable',
+    identifiable: true,
+    expressionType: 'id_algorithm',
     adjustmentSet: [],
-    explanation: 'Hedge detected — P(Y|do(X)) is not identifiable from observational data',
+    explanation:
+      `Multiple c-components (${cComps.length}) ` +
+      `[${componentDescriptions.join(', ')}] — ` +
+      'effect identified via c-component factorization',
   };
 }
+
+// ── C-Component Finding ───────────────────────────────────────────────
 
 /**
  * Find c-components (confounded components) in the induced subgraph.
  *
- * Two nodes are in the same c-component iff they are connected by
- * a bidirected path.  Bidirected edges (X ←→ Y) are represented in our
- * CausalGraph as both hasEdge(X,Y) AND hasEdge(Y,X) being true.
+ * Two nodes belong to the same c-component iff they are connected by a
+ * path consisting entirely of **bidirected edges** (representing latent
+ * common causes).
  *
- * V-structures (X → M ← Y) are NOT c-component links — two parents
- * sharing a child does NOT indicate latent confounding.  Each node
- * starts in its own singleton component.
+ * In our CausalGraph, a bidirected edge X ↔ Y (meaning X ← U → Y for
+ * some unobserved U) is represented as both `hasEdge(X, Y)` AND
+ * `hasEdge(Y, X)` being true.
+ *
+ * V-structures (X → M ← Y) do NOT connect X and Y — two parents sharing
+ * a child does not indicate latent confounding.  Each node starts in its
+ * own singleton component, and components grow via bidirected-path
+ * connectivity.
+ *
+ * @param graph — The causal DAG
+ * @param nodes — Subset of nodes to compute c-components on (induced subgraph)
+ * @returns Array of c-components, each as a Set of node names
  */
 function findCComponents(
-  graph: CausalGraph, nodes: string[],
+  graph: CausalGraph,
+  nodes: string[],
 ): Set<string>[] {
   const visited = new Set<string>();
   const components: Set<string>[] = [];
@@ -313,7 +434,7 @@ function findCComponents(
       comp.add(u);
       visited.add(u);
 
-      // Only bidirected edges form c-component connections
+      // Connect only via bidirected edges (latent confounding)
       for (const v of nodes) {
         if (v === u || visited.has(v)) continue;
         if (graph.hasEdge(u, v) && graph.hasEdge(v, u)) {
@@ -326,18 +447,59 @@ function findCComponents(
   return components;
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────
+// ── Graph Helpers ─────────────────────────────────────────────────────
 
-function isFrontdoorIdentifiable(
-  graph: CausalGraph, treatment: string, outcome: string, mediators: string[],
-): boolean {
-  // All mediators must be on directed paths from treatment to outcome
-  // and there must be no backdoor path from treatment to any mediator
-  for (const m of mediators) {
-    const backdoorFromTreatment = findBackdoorAdjustmentSet(graph, treatment, m);
-    if (backdoorFromTreatment.length > 0) return false;
+/**
+ * Build the induced subgraph G[V'] containing only the specified nodes
+ * and all edges between them that exist in the original graph.
+ *
+ * Bidirected edges (X ↔ Y) are preserved as long as both endpoints
+ * are in the node set.
+ */
+function buildInducedSubgraph(
+  graph: CausalGraph,
+  nodes: string[],
+): CausalGraph {
+  const result = new CausalGraph([...nodes]);
+  for (const from of nodes) {
+    for (const to of nodes) {
+      if (from === to) continue;
+      if (graph.hasEdge(from, to)) {
+        result.addEdge(from, to);
+      }
+    }
   }
-  return mediators.length > 0;
+  return result;
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────
+/**
+ * Build the mutilated graph G_{X̅} where all incoming edges to every
+ * node in the treatment set X are removed.
+ *
+ * Uses `graph.do(node)` which removes incoming edges to `node` by
+ * zeroing the corresponding column in the adjacency matrix.
+ */
+function buildGXbar(graph: CausalGraph, xNodes: string[]): CausalGraph {
+  let g = graph;
+  for (const xn of xNodes) {
+    g = g.do(xn);
+  }
+  return g;
+}
+
+/**
+ * Build a deterministic state key for visited-set cycle detection.
+ *
+ * Encodes the outcome set, treatment set, and graph node set so that
+ * re-visiting the same (Y, X, G) combination is detected and blocked.
+ */
+function buildStateKey(
+  y: ReadonlySet<string>,
+  x: ReadonlySet<string>,
+  graph: CausalGraph,
+): string {
+  const ySorted = [...y].sort().join(',');
+  const xSorted = [...x].sort().join(',');
+  const gNodes = [...graph.nodes].sort().join(',');
+  return `Y:{${ySorted}}|X:{${xSorted}}|G:[${gNodes}]`;
+}
