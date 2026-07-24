@@ -16,11 +16,13 @@ export {
   kciTest, gesAlgorithm, directLiNGAM,
   ginAlgorithm, cdnodAlgorithm, graspAlgorithm,
   camuvAlgorithm, exactSearchAlgorithm,
+  notearsAlgorithm,
 } from './graph/index.js';
 export type {
   PCConfig, KCIConfig, GESConfig,
   GINConfig, CDNODConfig, GRaSPConfig,
   CAMUVConfig, ExactSearchConfig,
+  NOTEARSConfig,
 } from './graph/index.js';
 
 // Analyze (RCA)

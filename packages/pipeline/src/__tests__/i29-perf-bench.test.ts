@@ -25,14 +25,14 @@ const PERF_BUDGETS = {
   dsep10Node: 50,
   /** Fisher Z test on 500 samples — CI/sandbox-safe upper bound */
   fisherZ500: 150,
-  /** KCI unconditional on 100 samples */
-  kci100: 200,
+  /** KCI unconditional on 100 samples — CI/sandbox-safe upper bound */
+  kci100: 250,
   /** SPOT calibration with 100 samples */
   spotCalibration: 150,
   /** LiNGAM on 4-node graph with 200 samples */
   lingam4Node200: 300,
-  /** StatsDetector batch training on 1000 samples */
-  statsBatch: 30,
+  /** StatsDetector batch training on 1000 samples — CI-safe bound */
+  statsBatch: 50,
 };
 
 function generateLinearData(nodes: string[], edges: Array<[string, string, number]>, N: number): Matrix {

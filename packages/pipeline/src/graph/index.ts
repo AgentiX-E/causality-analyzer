@@ -17,3 +17,5 @@ export { camuvAlgorithm } from './camuv.js';
 export type { CAMUVConfig } from './camuv.js';
 export { exactSearchAlgorithm } from './exact-search.js';
 export type { ExactSearchConfig } from './exact-search.js';
+export { notearsAlgorithm } from './notears.js';
+export type { NOTEARSConfig } from './notears.js';
