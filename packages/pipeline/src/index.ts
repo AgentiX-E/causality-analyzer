@@ -10,13 +10,13 @@ export { VotingDetector } from './detect/voting-detector.js';
 export type { VotingStrategy, VotingDetectorConfig } from './detect/voting-detector.js';
 
 // Graph
-export { CausalGraph, pcAlgorithm, fisherZTest } from './graph/index.js';
-export type { PCConfig } from './graph/index.js';
+export { CausalGraph, pcAlgorithm, fisherZTest, notearsAlgorithm, golemAlgorithm } from './graph/index.js';
+export type { PCConfig, NOTEARSConfig, GOLEMConfig } from './graph/index.js';
 
 // Analyze (RCA)
 export { HeuristicPathRCA, RandomWalkRCA, HTRCA, FPGrowthRCA } from './analyze/index.js';
-export { RHTScorer, DAScorer, CIRCAPipeline } from './analyze/index.js';
-export type { RHTConfig, DAConfig } from './analyze/index.js';
+export { RHTScorer, DAScorer, CIRCAPipeline, BayesianRCA } from './analyze/index.js';
+export type { RHTConfig, DAConfig, BayesianRCAEngine, BayesianRCAOptions } from './analyze/index.js';
 
 // Causal Inference
 export {
