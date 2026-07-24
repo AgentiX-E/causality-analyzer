@@ -15,3 +15,5 @@ export { rcdAlgorithm } from './rcd.js';
 export type { RCDConfig } from './rcd.js';
 export { cdnodAlgorithm } from './cdnod.js';
 export type { CDNODConfig } from './cdnod.js';
+export { mvpcAlgorithm } from './mvpc.js';
+export type { MVPCConfig } from './mvpc.js';

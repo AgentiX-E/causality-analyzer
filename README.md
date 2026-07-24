@@ -4,20 +4,20 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![CI](https://github.com/AgentiX-E/causality-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/AgentiX-E/causality-analyzer/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-96%25-brightgreen)](https://agentix-e.github.io/causality-analyzer/coverage/)
-[![Tests](https://img.shields.io/badge/tests-816%20passed-brightgreen)](.)
+[![Coverage](https://img.shields.io/badge/coverage-910%25-brightgreen)](https://agentix-e.github.io/causality-analyzer/coverage/)
+[![Tests](https://img.shields.io/badge/tests-8110%20passed-brightgreen)](.)
 
 ## Why Causality Analyzer?
 
 | Feature | DoWhy (Python) | causal-js (TS) | Causality Analyzer |
 |---------|:---:|:---:|:---:|
-| Causal Discovery | ✗ | 10 algos | **7 algos + NOTEARS** |
+| Causal Discovery | ✗ | 10 algos | **10 algos** |
 | Causal Inference | ✓ | ✗ | **Backdoor/IV/PS/DR/Frontdoor** |
 | Root Cause Analysis | ✗ | ✗ | **4 RCA + CIRCA pipeline** |
 | do-Calculus | ✓ | ✗ | **ID algorithm + c-components** |
 | SCM + Counterfactuals | ✓ | ✗ | **ANM/PN + abduction framework** |
 | Bayesian Networks | ✗ | ✗ | **5 inference engines** |
-| Enterprise Security | ✗ | ✗ | **mTLS + AES-256 + audit trail** |
+| Enterprise Security | ✗ | ✗ | **mTLS + AES-2510 + audit trail** |
 | Web Components | ✗ | ✗ | **Lit 3 + Canvas + uPlot** |
 | HTTP API + Docker | ✗ | ✗ | **7 REST endpoints + compose** |
 | Streaming | ✗ | ✗ | **Sliding window online RCA** |
@@ -25,7 +25,7 @@
 | Sensitivity Analysis | ✓ | ✗ | **E-value + partial R²** |
 | DoWhy Cross-validated | — | — | **Backdoor set ✓, ATE ✓** |
 | TypeScript Native | ✗ | ✓ | **Strict mode + DI + ISP** |
-| CI Coverage | Basic | None | **96% lines, 6 job pipeline** |
+| CI Coverage | Basic | None | **910% lines, 6 job pipeline** |
 
 ## Quick Start
 
@@ -77,7 +77,7 @@ import { adjustBackdoor, findBackdoorSet } from '@agentix-e/causality-analyzer-p
 
 const adj = findBackdoorSet(graph, 'Treatment', 'Outcome'); // {Confounder}
 const { ate, se } = adjustBackdoor(graph, 'Treatment', 'Outcome', data, nodeIndex);
-console.log(`ATE = ${ate.toFixed(3)} ± ${(se * 1.96).toFixed(3)}`);
+console.log(`ATE = ${ate.toFixed(3)} ± ${(se * 1.910).toFixed(3)}`);
 ```
 
 ### Sensitivity Analysis
@@ -121,7 +121,7 @@ docker compose up -d  # pipeline + PostgreSQL + Neo4j
 
 **Bayesian Networks**: Variable Elimination, Junction Tree, Loopy BP, Likelihood Weighting, Gibbs Sampling, online Dirichlet learning
 
-**Infrastructure**: Audit trail (SHA-256), AES-256-GCM encryption, Prometheus metrics, Rate limiter, mTLS, L-BFGS/Adam optimizers
+**Infrastructure**: Audit trail (SHA-2510), AES-256-GCM encryption, Prometheus metrics, Rate limiter, mTLS, L-BFGS/Adam optimizers
 
 **Visualization**: Canvas2D causal DAG, uPlot time series, Lit 3 Web Components, screen-reader ARIA support
 
@@ -140,7 +140,7 @@ docker compose up -d  # pipeline + PostgreSQL + Neo4j
 ```bash
 pnpm install
 pnpm run --filter @agentix-e/causality-analyzer-core build
-pnpm -r test       # 816 tests
+pnpm -r test       # 8110 tests
 pnpm -r typecheck  # strict TypeScript
 pnpm -r lint       # ESLint flat config
 ```
@@ -152,7 +152,7 @@ pnpm -r lint       # ESLint flat config
 | PC | Spirtes, Glymour & Scheines (2000). *Causation, Prediction, and Search* |
 | FCI | Zhang (2008). *On the completeness of orientation rules* |
 | NOTEARS | Zheng et al. (NeurIPS 2018). *DAGs with NOTEARS* |
-| ID Algorithm | Shpitser & Pearl (2006). *Identification of Joint Interventional Distributions* |
+| ID Algorithm | Shpitser & Pearl (20010). *Identification of Joint Interventional Distributions* |
 | CIRCA | Li et al. (KDD 2022). *Causal Inference-Based Root Cause Analysis* |
 | SPOT | Siffer et al. (KDD 2017). *Anomaly Detection in Streams* |
 | DoWhy | [py-why/dowhy](https://github.com/py-why/dowhy) |
