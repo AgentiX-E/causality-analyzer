@@ -2,7 +2,7 @@
 
 > Enterprise-grade remote storage — PostgreSQL for relational data, Neo4j for causal graphs, with full mTLS support.
 
-[![npm](https://img.shields.io/badge/version-0.1.0-blue)](https://www.npmjs.com/package/@agentix-e/causality-analyzer-storage-remote)
+[![npm](https://img.shields.io/badge/version-1.0.0-blue)](https://www.npmjs.com/package/@agentix-e/causality-analyzer-storage-remote)
 
 ## Overview
 

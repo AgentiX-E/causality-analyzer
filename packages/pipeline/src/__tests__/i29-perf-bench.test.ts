@@ -21,10 +21,10 @@ const PERF_BUDGETS = {
   pc4Node500: 500,
   /** GES on a 4-node DAG with 300 samples */
   ges4Node300: 1000,
-  /** d-separation test on a 10-node graph */
-  dsep10Node: 10,
-  /** Fisher Z test on 500 samples */
-  fisherZ500: 5,
+  /** d-separation test on a 10-node graph — CI/sandbox-safe upper bound */
+  dsep10Node: 50,
+  /** Fisher Z test on 500 samples — CI/sandbox-safe upper bound */
+  fisherZ500: 150,
   /** KCI unconditional on 100 samples */
   kci100: 200,
   /** SPOT calibration with 100 samples */

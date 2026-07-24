@@ -99,11 +99,11 @@ Data Flow:
 
 | Package | Version | Description |
 |---------|---------|-------------|
-| [`@agentix-e/causality-analyzer-core`](./packages/core) | [![npm](https://img.shields.io/badge/version-0.1.0-blue)](https://www.npmjs.com/package/@agentix-e/causality-analyzer-core) | Types, interfaces, ColumnarTable, math, plugin registry |
-| [`@agentix-e/causality-analyzer-pipeline`](./packages/pipeline) | [![npm](https://img.shields.io/badge/version-0.1.0-blue)](https://www.npmjs.com/package/@agentix-e/causality-analyzer-pipeline) | Detection, causal discovery, RCA, inference, GCM, visualization data |
-| [`@agentix-e/causality-analyzer-storage-embed`](./packages/storage-embed) | [![npm](https://img.shields.io/badge/version-0.1.0-blue)](https://www.npmjs.com/package/@agentix-e/causality-analyzer-storage-embed) | SQLite (better-sqlite3) + OverGraph embedded stores |
-| [`@agentix-e/causality-analyzer-storage-remote`](./packages/storage-remote) | [![npm](https://img.shields.io/badge/version-0.1.0-blue)](https://www.npmjs.com/package/@agentix-e/causality-analyzer-storage-remote) | PostgreSQL (pg) + Neo4j (neo4j-driver-lite) with mTLS |
-| [`@agentix-e/causality-analyzer-visual`](./packages/visual) | [![npm](https://img.shields.io/badge/version-0.1.0-blue)](https://www.npmjs.com/package/@agentix-e/causality-analyzer-visual) | Lit 3 Web Components for causal graphs + time series |
+| [`@agentix-e/causality-analyzer-core`](./packages/core) | [![npm](https://img.shields.io/badge/version-1.0.0-blue)](https://www.npmjs.com/package/@agentix-e/causality-analyzer-core) | Types, interfaces, ColumnarTable, math, plugin registry |
+| [`@agentix-e/causality-analyzer-pipeline`](./packages/pipeline) | [![npm](https://img.shields.io/badge/version-1.0.0-blue)](https://www.npmjs.com/package/@agentix-e/causality-analyzer-pipeline) | Detection, causal discovery, RCA, inference, GCM, visualization data |
+| [`@agentix-e/causality-analyzer-storage-embed`](./packages/storage-embed) | [![npm](https://img.shields.io/badge/version-1.0.0-blue)](https://www.npmjs.com/package/@agentix-e/causality-analyzer-storage-embed) | SQLite (better-sqlite3) + OverGraph embedded stores |
+| [`@agentix-e/causality-analyzer-storage-remote`](./packages/storage-remote) | [![npm](https://img.shields.io/badge/version-1.0.0-blue)](https://www.npmjs.com/package/@agentix-e/causality-analyzer-storage-remote) | PostgreSQL (pg) + Neo4j (neo4j-driver-lite) with mTLS |
+| [`@agentix-e/causality-analyzer-visual`](./packages/visual) | [![npm](https://img.shields.io/badge/version-1.0.0-blue)](https://www.npmjs.com/package/@agentix-e/causality-analyzer-visual) | Lit 3 Web Components for causal graphs + time series |
 
 ## Quick Start
 

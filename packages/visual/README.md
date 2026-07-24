@@ -2,7 +2,7 @@
 
 > Lit 3 Web Components for causal graph and time series visualization — framework-agnostic, self-describing.
 
-[![npm](https://img.shields.io/badge/version-0.1.0-blue)](https://www.npmjs.com/package/@agentix-e/causality-analyzer-visual)
+[![npm](https://img.shields.io/badge/version-1.0.0-blue)](https://www.npmjs.com/package/@agentix-e/causality-analyzer-visual)
 
 ## Overview
 

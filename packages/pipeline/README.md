@@ -2,7 +2,7 @@
 
 > Complete causal AI pipeline — anomaly detection, causal discovery, root cause analysis, effect estimation, counterfactual reasoning, and model evaluation.
 
-[![npm](https://img.shields.io/badge/version-0.1.0-blue)](https://www.npmjs.com/package/@agentix-e/causality-analyzer-pipeline)
+[![npm](https://img.shields.io/badge/version-1.0.0-blue)](https://www.npmjs.com/package/@agentix-e/causality-analyzer-pipeline)
 
 ## Overview
 
