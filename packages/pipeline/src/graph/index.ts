@@ -17,3 +17,5 @@ export { cdnodAlgorithm } from './cdnod.js';
 export type { CDNODConfig } from './cdnod.js';
 export { mvpcAlgorithm } from './mvpc.js';
 export type { MVPCConfig } from './mvpc.js';
+export { tsIcdAlgorithm } from './tsicd.js';
+export type { TSConfig, TimeSeriesEdge, TSResult } from './tsicd.js';
