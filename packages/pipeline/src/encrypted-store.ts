@@ -68,4 +68,36 @@ export class EncryptedStore {
 
   /** Check if encryption is available in the current runtime */
   isAvailable(): boolean { return typeof crypto !== 'undefined' && !!crypto.subtle && !!this.key; }
+
+  /**
+   * Rotate encryption key: re-encrypt data from old key to new key.
+   *
+   * @param plaintext — unencrypted data (re-encrypted with new key)
+   * @param oldEncrypted — data encrypted with OLD key (decrypted first, then re-encrypted)
+   * @param newConfig — new key configuration
+   * @returns data encrypted with new key
+   */
+  async rotateKey(
+    oldEncrypted: string,
+    newConfig: EncryptedStoreConfig,
+  ): Promise<string> {
+    const plaintext = await this.decrypt(oldEncrypted);
+    const newStore = new EncryptedStore(newConfig);
+    await newStore.init();
+    return newStore.encrypt(plaintext);
+  }
+
+  /**
+   * Generate a random AES-256 key (32 bytes).
+   * Uses crypto.getRandomValues for cryptographically secure randomness.
+   */
+  static generateKey(): Uint8Array {
+    if (typeof crypto === 'undefined' || !crypto.getRandomValues) {
+      // Fallback for environments without Web Crypto
+      const key = new Uint8Array(32);
+      for (let i = 0; i < 32; i++) key[i] = Math.floor(Math.random() * 256);
+      return key;
+    }
+    return crypto.getRandomValues(new Uint8Array(32));
+  }
 }

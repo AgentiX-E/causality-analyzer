@@ -73,8 +73,8 @@ export type {
 } from './explainer.js';
 
 // ── Observability ──────────────────────────────────────────────
-export { AuditLogger, MetricsRegistry } from './observability.js';
-export type { AuditEntry, MetricCounter, MetricHistogram } from './observability.js';
+export { AuditLogger, MetricsRegistry, HealthTracker } from './observability.js';
+export type { AuditEntry, MetricCounter, MetricHistogram, HealthSLI } from './observability.js';
 
 // ── CATE / MetaLearners / Uplift ──────────────────────────────
 export {
@@ -87,7 +87,7 @@ export type {
 } from './infer/index.js';
 
 // ── Infrastructure ───────────────────────────────────────────
-export { RateLimiter } from './rate-limiter.js';
-export type { RateLimiterConfig, RateLimitResult, OverflowStrategy } from './rate-limiter.js';
+export { RateLimiter, TokenBucket } from './rate-limiter.js';
+export type { RateLimiterConfig, TokenBucketConfig, RateLimitResult, OverflowStrategy } from './rate-limiter.js';
 export { EncryptedStore } from './encrypted-store.js';
 export type { EncryptedStoreConfig } from './encrypted-store.js';

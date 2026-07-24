@@ -22,13 +22,99 @@ export interface RateLimiterConfig {
   strategy?: OverflowStrategy;
 }
 
+export interface TokenBucketConfig {
+  /** Tokens per second refill rate */
+  rate: number;
+  /** Maximum burst capacity (tokens) */
+  capacity: number;
+  /** Initial tokens (default = capacity) */
+  initialTokens?: number;
+}
+
 export interface RateLimitResult {
-  /** Whether the point was accepted */
   accepted: boolean;
-  /** Number of points dropped (cumulative since creation) */
   dropped: number;
-  /** Current buffer utilization (0-1) */
   utilization: number;
+}
+
+/**
+ * Token Bucket rate limiter — governs throughput by consuming tokens.
+ *
+ * Unlike the queue-based RateLimiter (which limits buffer depth),
+ * TokenBucket limits processing RATE. Tokens refill at `rate` per second,
+ * up to `capacity` max. Each `tryConsume(n)` attempt consumes `n` tokens.
+ * If insufficient, the request is rejected.
+ *
+ * Reference: Google SRE Book, Chapter 22 — "Addressing Cascading Failures"
+ */
+export class TokenBucket {
+  private tokens: number;
+  private readonly rate: number;
+  private readonly capacity: number;
+  private lastRefill: number;
+  private rejected: number = 0;
+  private accepted: number = 0;
+
+  constructor(config: TokenBucketConfig) {
+    this.rate = config.rate;
+    this.capacity = config.capacity;
+    this.tokens = config.initialTokens ?? config.capacity;
+    this.lastRefill = Date.now();
+  }
+
+  /** Refill tokens based on elapsed time */
+  private refill(): void {
+    const now = Date.now();
+    const elapsed = (now - this.lastRefill) / 1000;
+    this.tokens = Math.min(this.capacity, this.tokens + elapsed * this.rate);
+    this.lastRefill = now;
+  }
+
+  /**
+   * Try to consume `n` tokens. Returns true if successful.
+   * When n=0, returns true unconditionally.
+   */
+  tryConsume(n: number = 1): RateLimitResult {
+    this.refill();
+    const utilization = 1 - this.tokens / this.capacity;
+
+    if (this.tokens >= n) {
+      this.tokens -= n;
+      this.accepted++;
+      return { accepted: true, dropped: this.rejected, utilization: 1 - this.tokens / this.capacity };
+    }
+
+    this.rejected++;
+    return { accepted: false, dropped: this.rejected, utilization };
+  }
+
+  /** Wait for n tokens to become available (approximate, non-blocking). Returns estimated wait ms. */
+  waitTime(n: number = 1): number {
+    this.refill();
+    if (this.tokens >= n) return 0;
+    const deficit = n - this.tokens;
+    return Math.ceil((deficit / this.rate) * 1000);
+  }
+
+  /** Current token count */
+  get availableTokens(): number {
+    this.refill();
+    return this.tokens;
+  }
+
+  /** Total requests accepted */
+  get totalAccepted(): number { return this.accepted; }
+
+  /** Total requests rejected */
+  get totalRejected(): number { return this.rejected; }
+
+  /** Reset limiter state */
+  reset(): void {
+    this.tokens = this.capacity;
+    this.rejected = 0;
+    this.accepted = 0;
+    this.lastRefill = Date.now();
+  }
 }
 
 /**
