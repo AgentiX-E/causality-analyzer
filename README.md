@@ -4,8 +4,8 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![CI](https://github.com/AgentiX-E/causality-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/AgentiX-E/causality-analyzer/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-910%25-brightgreen)](https://agentix-e.github.io/causality-analyzer/coverage/)
-[![Tests](https://img.shields.io/badge/tests-8110%20passed-brightgreen)](.)
+[![Coverage](https://img.shields.io/badge/coverage-96%25-brightgreen)](https://agentix-e.github.io/causality-analyzer/coverage/)
+[![Tests](https://img.shields.io/badge/tests-833%20passed-brightgreen)](.)
 
 ## Why Causality Analyzer?
 
@@ -25,7 +25,7 @@
 | Sensitivity Analysis | ✓ | ✗ | **E-value + partial R²** |
 | DoWhy Cross-validated | — | — | **Backdoor set ✓, ATE ✓** |
 | TypeScript Native | ✗ | ✓ | **Strict mode + DI + ISP** |
-| CI Coverage | Basic | None | **910% lines, 6 job pipeline** |
+| CI Coverage | Basic | None | **96% lines, 6 job pipeline** |
 
 ## Quick Start
 
@@ -77,7 +77,7 @@ import { adjustBackdoor, findBackdoorSet } from '@agentix-e/causality-analyzer-p
 
 const adj = findBackdoorSet(graph, 'Treatment', 'Outcome'); // {Confounder}
 const { ate, se } = adjustBackdoor(graph, 'Treatment', 'Outcome', data, nodeIndex);
-console.log(`ATE = ${ate.toFixed(3)} ± ${(se * 1.910).toFixed(3)}`);
+console.log(`ATE = ${ate.toFixed(3)} ± ${(se * 1.96).toFixed(3)}`);
 ```
 
 ### Sensitivity Analysis
@@ -140,7 +140,7 @@ docker compose up -d  # pipeline + PostgreSQL + Neo4j
 ```bash
 pnpm install
 pnpm run --filter @agentix-e/causality-analyzer-core build
-pnpm -r test       # 8110 tests
+pnpm -r test       # 833 tests
 pnpm -r typecheck  # strict TypeScript
 pnpm -r lint       # ESLint flat config
 ```
