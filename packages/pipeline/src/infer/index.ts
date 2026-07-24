@@ -38,6 +38,19 @@ export { CausalForest } from './causal-forest.js';
 export type { CausalForestConfig } from './causal-forest.js';
 export { doubleMLATE, doubleMLCATE } from './double-ml.js';
 
+// ── DML + Meta-Learners ─────────────────────────────────────────
+export { estimateDML, sLearnerATE, tLearnerATE, xLearnerATE } from './dml.js';
+export { RidgeRegressor, LogisticClassifier } from './dml.js';
+export type { DMLConfig, DMLEstimate, MLRegressor, MLClassifier } from './dml.js';
+
+// ── Extended Refutation ─────────────────────────────────────────
+export {
+  refuteRandomCommonCause,
+  refuteDummyOutcome,
+  refuteUnobservedConfounder,
+  comprehensiveRefutation,
+} from './refutation-extended.js';
+
 // ── Bayesian Network Inference ─────────────────────────────────
 export {
   cptToFactor,

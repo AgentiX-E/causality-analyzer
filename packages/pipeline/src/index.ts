@@ -33,8 +33,17 @@ export {
   CausalAnalysis, identifyBackdoor, identifyFrontdoor,
   estimateLinearRegression, refutePlaceboTreatment,
   refuteDataSubset, refuteBootstrap,
+  // Extended refutation
+  refuteRandomCommonCause, refuteDummyOutcome,
+  refuteUnobservedConfounder, comprehensiveRefutation,
+  // DML + Meta-Learners
+  estimateDML, sLearnerATE, tLearnerATE, xLearnerATE,
+  RidgeRegressor, LogisticClassifier,
 } from './infer/index.js';
-export type { RefutationResult, LinearRegressionEstimate } from './infer/index.js';
+export type {
+  RefutationResult, LinearRegressionEstimate,
+  DMLConfig, DMLEstimate, MLRegressor, MLClassifier,
+} from './infer/index.js';
 
 // Effect estimation (I7)
 export {
