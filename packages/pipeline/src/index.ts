@@ -76,6 +76,16 @@ export type {
 export { AuditLogger, MetricsRegistry } from './observability.js';
 export type { AuditEntry, MetricCounter, MetricHistogram } from './observability.js';
 
+// ── CATE / MetaLearners / Uplift ──────────────────────────────
+export {
+  sLearner, tLearner, xLearner, rLearner,
+  upliftTree, upliftForest,
+} from './infer/index.js';
+export type {
+  CATEConfig, CATEOutput,
+  UpliftTreeConfig, UpliftForestConfig,
+} from './infer/index.js';
+
 // ── Infrastructure ───────────────────────────────────────────
 export { RateLimiter } from './rate-limiter.js';
 export type { RateLimiterConfig, RateLimitResult, OverflowStrategy } from './rate-limiter.js';

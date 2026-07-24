@@ -38,6 +38,16 @@ export { CausalForest } from './causal-forest.js';
 export type { CausalForestConfig } from './causal-forest.js';
 export { doubleMLATE, doubleMLCATE } from './double-ml.js';
 
+// ── MetaLearners + Uplift ──────────────────────────────────────
+export {
+  sLearner, tLearner, xLearner, rLearner,
+  upliftTree, upliftForest,
+} from './metalearners.js';
+export type {
+  CATEConfig, CATEOutput,
+  UpliftTreeConfig, UpliftForestConfig,
+} from './metalearners.js';
+
 // ── Bayesian Network Inference ─────────────────────────────────
 export {
   cptToFactor,
