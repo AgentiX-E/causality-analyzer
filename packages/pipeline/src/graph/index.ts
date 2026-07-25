@@ -27,3 +27,5 @@ export { rfciAlgorithm } from './rfci.js';
 export type { RFCIConfig } from './rfci.js';
 export { stabilitySelection, starsSelection } from './stability-selection.js';
 export type { StabilityResult, StARSResult } from './stability-selection.js';
+export { faskAlgorithm } from './fask.js';
+export type { FASKConfig } from './fask.js';
