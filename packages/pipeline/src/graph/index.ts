@@ -44,3 +44,5 @@ export { pcmciAlgorithm } from './pcmci.js';
 export type { PCMCIEdge, PCMCIResult, PCMCIconfig } from './pcmci.js';
 export { varLingam } from './var-lingam.js';
 export type { VARLiNGAMConfig, VARLiNGAMResult } from './var-lingam.js';
+export { tsFciAlgorithm } from './tsfci.js';
+export type { TsFCIResult, TsFCIConfig } from './tsfci.js';
