@@ -122,7 +122,7 @@ function kernelDependence(x: Float64Array, y: Float64Array, n: number): number {
   let concordant = 0, discordant = 0;
 
   // Stratified sampling for efficiency on large datasets
-  const step = Math.max(1, Math.floor(n / 500));
+  const step = Math.max(1, Math.floor(n / 200));
 
   for (let i = 0; i < n; i += step) {
     for (let j = i + 1; j < n; j += step) {

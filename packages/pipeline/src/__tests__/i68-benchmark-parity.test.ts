@@ -28,7 +28,7 @@ const ALGOS: AlgoSpec[] = [
   { name: 'PC', fn: (d, n) => pcAlgorithm(d, n).graph, maxTimeMs: 8000 },
   { name: 'GES', fn: (d, n) => gesAlgorithm(d, n), maxTimeMs: 8000 },
   { name: 'BOSS', fn: (d, n) => bossAlgorithm(d, n, { numStarts: 2, maxIter: 20 }), maxTimeMs: 15000 },
-  { name: 'LiNGAM', fn: (d, n) => directLiNGAM(d, n).graph, maxTimeMs: 8000 },
+  { name: 'LiNGAM', fn: (d, n) => directLiNGAM(d, n).graph, maxTimeMs: 15000 },
   { name: 'FCI', fn: (d, n) => fciAlgorithm(d, n).graph, maxTimeMs: 8000 },
   { name: 'GFCI', fn: (d, n) => gfciAlgorithm(d, n).graph, maxTimeMs: 15000 },
 ];

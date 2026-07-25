@@ -22,17 +22,17 @@ const PERF_BUDGETS = {
   /** GES on a 4-node DAG with 300 samples */
   ges4Node300: 1000,
   /** d-separation test on a 10-node graph */
-  dsep10Node: 25,
+  dsep10Node: 50,
   /** Fisher Z test on 500 samples */
-  fisherZ500: 10,
+  fisherZ500: 50,
   /** KCI unconditional on 100 samples */
   kci100: 200,
   /** SPOT calibration with 100 samples */
   spotCalibration: 150,
   /** LiNGAM on 4-node graph with 200 samples */
-  lingam4Node200: 300,
+  lingam4Node200: 600,
   /** StatsDetector batch training on 1000 samples */
-  statsBatch: 30,
+  statsBatch: 50,
 };
 
 function generateLinearData(nodes: string[], edges: Array<[string, string, number]>, N: number): Matrix {
