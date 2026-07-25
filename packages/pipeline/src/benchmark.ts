@@ -168,22 +168,28 @@ export function childGraph(): CausalGraph {
 
 // ── Data Generation ──────────────────────────────────────────────────
 
-export function generateLinearData(graph: CausalGraph, n: number, seed: number, noise: number = 0.1): { data: number[][]; nodeNames: string[] } {
+export function generateLinearData(graph: CausalGraph, n: number, seed: number, noise: number = 0.1, coeff: number = 0.9): { data: number[][]; nodeNames: string[] } {
   const rng = createRNG(seed);
   const nodes = [...graph.nodes];
   const order = graph.topologicalSort();
   const data: number[][] = Array.from({ length: n }, () => new Array(nodes.length).fill(0));
+  const rootNoise = 1.0; // standard deviation for root nodes (unit variance)
 
   for (let i = 0; i < n; i++) {
     for (const node of order) {
       const parents = graph.parents(node);
+      const nodeIdx = nodes.indexOf(node);
       let val = 0;
       for (const p of parents) {
         const pIdx = nodes.indexOf(p);
-        val += 0.7 * data[i]![pIdx]!;
+        val += coeff * data[i]![pIdx]!;
       }
-      val += (rng() - 0.5) * noise * 2;
-      data[i]![nodes.indexOf(node)] = val;
+      // Box-Muller for Gaussian noise: root nodes get unit variance, children get specified noise
+      const sigma = parents.length === 0 ? rootNoise : noise;
+      const u1 = Math.max(1e-10, rng());
+      const u2 = rng();
+      val += sigma * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+      data[i]![nodeIdx] = val;
     }
   }
   return { data, nodeNames: nodes };
