@@ -83,3 +83,26 @@ jobs:
           else
             echo "::warning ::Page deployment skipped — configure Settings → Pages → Source: GitHub Actions"
           fi
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # Benchmark Validation — verify core metrics haven't regressed on PR
+  # ═══════════════════════════════════════════════════════════════════════
+  benchmark:
+    needs: [quality]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm config set approve-builds true
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run --filter @agentix-e/causality-analyzer-core build
+      - run: pnpm run --filter @agentix-e/causality-analyzer-pipeline build
+      - name: Run benchmark parity tests
+        run: pnpm run --filter @agentix-e/causality-analyzer-pipeline test -- src/__tests__/i68-benchmark-parity.test.ts

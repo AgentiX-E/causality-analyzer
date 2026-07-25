@@ -51,7 +51,7 @@ const result = rca.findRootCauses(['CPU', 'Latency']);
 console.log(result.rootCauses[0].name);  // "Memory"
 ```
 
-### Causal Discovery (7 algorithms)
+### 5-Minute RCA
 
 ```typescript
 import { pcAlgorithm, gesAlgorithm, notearsAlgorithm, directLiNGAM, fciAlgorithm, kciTest } from '@agentix-e/causality-analyzer-pipeline';
@@ -105,7 +105,7 @@ docker compose up -d  # pipeline + PostgreSQL + Neo4j
 
 ## Feature Map
 
-**Causal Discovery**: PC (stable), FCI (R1-R10), GES (BIC), LiNGAM (non-Gaussian), NOTEARS (neural+L-BFGS), Grow-Shrink, KCI (kernel), RCD (hybrid BIC), CD-NOD (domain shifts), MVPC (missing values), GRaSP (L1-regularized), TS-ICD (time-series), targeted discovery, OnlinePC (streaming)
+**Causal Discovery**: PC (stable), FCI (R1-R10), **BOSS** (permutation+GST, NeurIPS 2023), **GFCI** (hybrid PAG), **RFCI** (fast PAG), GES (BIC), LiNGAM (non-Gaussian), NOTEARS (neural+L-BFGS), Grow-Shrink, KCI (kernel), RCD (hybrid BIC), CD-NOD (domain shifts), MVPC (missing values), GRaSP (L1-regularized), TS-ICD (time-series), targeted discovery, OnlinePC (streaming)
 
 **Root Cause Analysis**: HeuristicPathRCA, RandomWalkRCA, HTRCA, FPGrowthRCA, CIRCA pipeline, Shapley attribution, FusionAnalyzer (weighted/nested/voting)
 
@@ -116,6 +116,20 @@ docker compose up -d  # pipeline + PostgreSQL + Neo4j
 **do-Calculus**: Full recursive ID Algorithm (Shpitser & Pearl 2006), c-component decomposition, hedge criterion, Pearl's 3 rules
 
 **SCM + GCM**: Additive noise, PostNonlinear, auto-assign mechanisms, counterfactuals, Shapley RCA, mechanism change detection, graph falsification
+
+**Bayesian Networks**: Variable Elimination, Junction Tree, Loopy BP, Likelihood Weighting, Gibbs Sampling, online Dirichlet learning, brute-force oracle
+
+**Uplift Modeling**: Qini curve, AUUC (normalized), uplift@k, model comparison
+
+**Stability + Robustness**: Stability Selection (bootstrap+edge threshold), StARS (auto regularization selection)
+
+**Infrastructure**: Audit trail (SHA-256), AES-256-GCM encryption, Prometheus metrics, Rate limiter, mTLS, L-BFGS/Adam optimizers, structured error hierarchy
+
+**CI Tests**: Fisher Z, Chi-Square, G-Square + Kernel CI (KCI)
+
+**Streaming + Drift**: OnlinePC sliding-window discovery, Welford incremental covariance, stability scoring, graph drift detection (SHD-based)
+
+**Visualization**: Canvas2D causal DAG (directed edges + arrowheads), uPlot time series, Lit 3 Web Components, screen-reader ARIA support, keyboard navigation
 
 **Bayesian Networks**: Variable Elimination, Junction Tree, Loopy BP, Likelihood Weighting, Gibbs Sampling, online Dirichlet learning, brute-force oracle
 
@@ -142,7 +156,7 @@ docker compose up -d  # pipeline + PostgreSQL + Neo4j
 ```bash
 pnpm install
 pnpm run --filter @agentix-e/causality-analyzer-core build
-pnpm -r test       # 1122 tests (194 core + 928 pipeline)
+pnpm -r test       # 1183 tests (194 core + 989 pipeline)
 pnpm -r typecheck  # strict TypeScript (noUncheckedIndexedAccess)
 pnpm -r lint       # ESLint recommendedTypeChecked
 ```
