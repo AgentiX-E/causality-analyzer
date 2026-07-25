@@ -37,8 +37,8 @@ export function timinoAlgorithm(
         const xi_now: number[] = [];
         const xj_lag: number[] = [];
         for (let t = tauMax; t < T; t++) {
-          xi_now.push(data[t]![i]!);
-          xj_lag.push(data[t - tau]![j]!);
+          xi_now.push(data[t][i]);
+          xj_lag.push(data[t - tau][j]);
         }
 
         // Nonlinear test: fit polynomial, test residual independence
@@ -53,23 +53,23 @@ export function timinoAlgorithm(
         const Xty = new Float64Array(k);
         for (let r = 0; r < n; r++) {
           for (let a = 0; a < k; a++) {
-            Xty[a] += (Xpoly[r]![a] ?? 0) * y[r]!;
+            Xty[a] += (Xpoly[r][a] ?? 0) * y[r];
             for (let b = 0; b < k; b++)
-              XtX[a]![b] += (Xpoly[r]![a] ?? 0) * (Xpoly[r]![b] ?? 0);
+              XtX[a][b] += (Xpoly[r][a] ?? 0) * (Xpoly[r][b] ?? 0);
           }
         }
         const beta = solveOLS2(XtX, Xty, k);
         const residuals: number[] = [];
         for (let r = 0; r < n; r++) {
           let pred = 0;
-          for (let b = 0; b < k; b++) pred += (beta[b] ?? 0) * (Xpoly[r]![b] ?? 0);
-          residuals.push(y[r]! - pred);
+          for (let b = 0; b < k; b++) pred += (beta[b] ?? 0) * (Xpoly[r][b] ?? 0);
+          residuals.push(y[r] - pred);
         }
 
-        const dataMatrix = xj_lag.map((x, r) => [x, residuals[r]!]);
+        const dataMatrix = xj_lag.map((x, r) => [x, residuals[r]]);
         const p = fisherZTest(dataMatrix, 0, 1, []);
         if (p > alpha) {
-          edges.push({ from: nodeNames[j]!, to: nodeNames[i]!, lag: tau, pValue: p });
+          edges.push({ from: nodeNames[j], to: nodeNames[i], lag: tau, pValue: p });
         }
       }
     }
@@ -82,15 +82,15 @@ function solveOLS2(XtX: Float64Array[], Xty: Float64Array, n: number): Float64Ar
   for (let col = 0; col < n; col++) {
     let pivot = col;
     for (let row = col + 1; row < n; row++)
-      if (Math.abs(aug[row]![col]!) > Math.abs(aug[pivot]![col]!)) pivot = row;
-    if (Math.abs(aug[pivot]![col]!) < 1e-14) continue;
-    [aug[col], aug[pivot]] = [aug[pivot]!, aug[col]!];
-    for (let j = col; j <= n; j++) aug[col]![j]! /= aug[col]![col]!;
+      if (Math.abs(aug[row][col]) > Math.abs(aug[pivot][col])) pivot = row;
+    if (Math.abs(aug[pivot][col]) < 1e-14) continue;
+    [aug[col], aug[pivot]] = [aug[pivot], aug[col]];
+    for (let j = col; j <= n; j++) aug[col][j] /= aug[col][col];
     for (let row = 0; row < n; row++) {
       if (row === col) continue;
-      const f = aug[row]![col]!;
-      for (let j = col; j <= n; j++) aug[row]![j]! -= f * aug[col]![j]!;
+      const f = aug[row][col];
+      for (let j = col; j <= n; j++) aug[row][j] -= f * aug[col][j];
     }
   }
-  return new Float64Array(aug.map(r => r[n]!));
+  return new Float64Array(aug.map(r => r[n]));
 }

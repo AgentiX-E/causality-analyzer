@@ -45,7 +45,7 @@ export function ginDetect(
       // Test independence of (i, j) given all other variables
       const others = [];
       for (let k = 0; k < d; k++)
-        if (k !== i && k !== j) others.push(nodeNames[k]!);
+        if (k !== i && k !== j) others.push(nodeNames[k]);
 
       // Build data: [i, j] stacked with all others
       const dataArr: number[][] = [];
@@ -62,7 +62,7 @@ export function ginDetect(
         // If p-value is high → variables are conditionally independent
         // → they may share a latent parent (GIN condition satisfied)
         if (p > alpha) {
-          adj[i]![j] = adj[j]![i] = true;
+          adj[i][j] = adj[j][i] = true;
         }
       }
     }
@@ -80,10 +80,10 @@ export function ginDetect(
       visited.add(v);
       comp.push(v);
       for (let w = 0; w < d; w++)
-        if (adj[v]![w] && !visited.has(w)) stack.push(w);
+        if (adj[v][w] && !visited.has(w)) stack.push(w);
     }
     if (comp.length >= 2) {
-      clusters.set(clusterId++, comp.map(v => nodeNames.indexOf(nodeNames[v]!)));
+      clusters.set(clusterId++, comp.map(v => nodeNames.indexOf(nodeNames[v])));
     }
   }
 

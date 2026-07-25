@@ -23,15 +23,15 @@ export function pcMaxAlgorithm(
   const g = new CausalGraph(nodeNames);
   for (let i = 0; i < n; i++)
     for (let j = i + 1; j < n; j++)
-      g.undirectedEdge(nodeNames[i]!, nodeNames[j]!);
+      g.undirectedEdge(nodeNames[i], nodeNames[j]);
 
   let depth = 0;
   while (depth < n) {
     let removed = false;
     for (let i = 0; i < n; i++) {
       for (let j = i + 1; j < n; j++) {
-        if (!g.hasEdge(nodeNames[i]!, nodeNames[j]!)) continue;
-        const neighbors = g.neighbors(nodeNames[i]!).filter(c => c !== nodeNames[j]);
+        if (!g.hasEdge(nodeNames[i], nodeNames[j])) continue;
+        const neighbors = g.neighbors(nodeNames[i]).filter(c => c !== nodeNames[j]);
         if (neighbors.length < depth) continue;
 
         const subsets = combinations(neighbors, depth);
@@ -41,8 +41,8 @@ export function pcMaxAlgorithm(
           maxP = Math.max(maxP, p);
         }
         if (maxP > alpha) {
-          g.removeEdge(nodeNames[i]!, nodeNames[j]!);
-          g.removeEdge(nodeNames[j]!, nodeNames[i]!);
+          g.removeEdge(nodeNames[i], nodeNames[j]);
+          g.removeEdge(nodeNames[j], nodeNames[i]);
           removed = true;
         }
       }

@@ -56,12 +56,12 @@ export function icaLiNGAM(
   const means = new Float64Array(d);
   for (let j = 0; j < d; j++) {
     let sum = 0;
-    for (let i = 0; i < n; i++) sum += XArr[i]![j]!;
+    for (let i = 0; i < n; i++) sum += XArr[i][j];
     means[j] = sum / n;
   }
   for (let i = 0; i < n; i++)
     for (let j = 0; j < d; j++)
-      X[i * d + j] = XArr[i]![j]! - means[j]!;
+      X[i * d + j] = XArr[i][j] - means[j];
 
   // 2. Whiten: X_white = V · X where V = D^{-1/2} · E^T
   // Covariance = X^T X / n, eigenvalue decomposition
@@ -69,16 +69,16 @@ export function icaLiNGAM(
   for (let j = 0; j < d; j++)
     for (let k = j; k < d; k++) {
       let s = 0;
-      for (let i = 0; i < n; i++) s += X[i * d + j]! * X[i * d + k]!;
+      for (let i = 0; i < n; i++) s += X[i * d + j] * X[i * d + k];
       cov[j * d + k] = cov[k * d + j] = s / n;
     }
 
   const { values: eigenvals, vectors: eigenvecs } = eigh(cov, d);
   const V = new Float64Array(d * d); // whitening matrix
   for (let j = 0; j < d; j++) {
-    const invSqrt = eigenvals[j]! > 1e-10 ? 1 / Math.sqrt(eigenvals[j]!) : 0;
+    const invSqrt = eigenvals[j] > 1e-10 ? 1 / Math.sqrt(eigenvals[j]) : 0;
     for (let i = 0; i < d; i++)
-      V[i * d + j] = eigenvecs[i * d + j]! * invSqrt;
+      V[i * d + j] = eigenvecs[i * d + j] * invSqrt;
   }
 
   // Apply whitening
@@ -86,7 +86,7 @@ export function icaLiNGAM(
   for (let i = 0; i < n; i++)
     for (let j = 0; j < d; j++) {
       let s = 0;
-      for (let k = 0; k < d; k++) s += X[i * d + k]! * V[k * d + j]!;
+      for (let k = 0; k < d; k++) s += X[i * d + k] * V[k * d + j];
       Xwhite[i * d + j] = s;
     }
 
@@ -102,11 +102,11 @@ export function icaLiNGAM(
 
       for (let i = 0; i < n; i++) {
         let wx = 0;
-        for (let j = 0; j < d; j++) wx += w[j]! * Xwhite[i * d + j]!;
+        for (let j = 0; j < d; j++) wx += w[j] * Xwhite[i * d + j];
         const g = Math.tanh(wx);
         const gDeriv = 1 - g * g;
         gDerivSum += gDeriv;
-        for (let j = 0; j < d; j++) wPlus[j] = (wPlus[j] ?? 0) + Xwhite[i * d + j]! * g;
+        for (let j = 0; j < d; j++) wPlus[j] = (wPlus[j] ?? 0) + Xwhite[i * d + j] * g;
       }
       for (let j = 0; j < d; j++) wPlus[j] = (wPlus[j] ?? 0) / n;
       const gDerivMean = gDerivSum / n;
@@ -115,8 +115,8 @@ export function icaLiNGAM(
       // Deflation: orthogonalize against previous components
       for (let c = 0; c < comp; c++) {
         let dot = 0;
-        for (let j = 0; j < d; j++) dot += wPlus[j]! * W[c * d + j]!;
-        for (let j = 0; j < d; j++) wPlus[j] = (wPlus[j] ?? 0) - dot * W[c * d + j]!;
+        for (let j = 0; j < d; j++) dot += wPlus[j] * W[c * d + j];
+        for (let j = 0; j < d; j++) wPlus[j] = (wPlus[j] ?? 0) - dot * W[c * d + j];
       }
 
       // Normalize
@@ -127,7 +127,7 @@ export function icaLiNGAM(
       // Check convergence
       let dist = 0;
       for (let j = 0; j < d; j++) {
-        const diff = Math.abs(Math.abs(wPlus[j]!) - Math.abs(w[j] ?? 0));
+        const diff = Math.abs(Math.abs(wPlus[j]) - Math.abs(w[j] ?? 0));
         dist = Math.max(dist, diff);
       }
 
@@ -145,8 +145,8 @@ export function icaLiNGAM(
     for (let j = 0; j < d; j++) {
       let s = 0;
       for (let k = 0; k < d; k++) {
-        const vInv = eigenvecs[i * d + k]! * Math.sqrt(Math.max(1e-10, eigenvals[k]!));
-        s += vInv * W[j * d + k]!;
+        const vInv = eigenvecs[i * d + k] * Math.sqrt(Math.max(1e-10, eigenvals[k]));
+        s += vInv * W[j * d + k];
       }
       A[i * d + j] = s;
     }
@@ -158,10 +158,10 @@ export function icaLiNGAM(
     return { graph: new CausalGraph([...nodeNames]), B: new Float64Array(d * d), order: [...nodeNames] };
   }
 
-  let B = new Float64Array(d * d);
+  const B = new Float64Array(d * d);
   for (let i = 0; i < d; i++)
     for (let j = 0; j < d; j++)
-      B[i * d + j] = (i === j ? 1 : 0) - Ainv[i * d + j]!;
+      B[i * d + j] = (i === j ? 1 : 0) - Ainv[i * d + j];
 
   // 6. Find permutation minimizing upper-triangular sum → causal order
   const perm = findCausalOrder(B, d);
@@ -170,23 +170,23 @@ export function icaLiNGAM(
   const BPermuted = new Float64Array(d * d);
   for (let i = 0; i < d; i++)
     for (let j = 0; j < d; j++)
-      BPermuted[i * d + j] = B[perm[i]! * d + perm[j]!]!;
+      BPermuted[i * d + j] = B[perm[i] * d + perm[j]]!;
 
   // Zero elements below diagonal (ensure acyclicity) and threshold
   for (let i = 0; i < d; i++) {
     for (let j = 0; j < d; j++) {
-      if (i >= j || Math.abs(BPermuted[i * d + j]!) < threshold)
+      if (i >= j || Math.abs(BPermuted[i * d + j]) < threshold)
         BPermuted[i * d + j] = 0;
     }
   }
 
   // 8. Build graph
   const g = new CausalGraph([...nodeNames]);
-  const order = perm.map(i => nodeNames[i]!);
+  const order = perm.map(i => nodeNames[i]);
   for (let i = 0; i < d; i++)
     for (let j = i + 1; j < d; j++)
       if (BPermuted[i * d + j] !== 0)
-        g.addEdge(order[i]!, order[j]!);
+        g.addEdge(order[i], order[j]);
 
   if (domainKnowledge) g.applyDomainKnowledge(domainKnowledge);
   return { graph: g, B: B, order };
@@ -206,14 +206,14 @@ function eigh(cov: Float64Array, d: number): { values: Float64Array; vectors: Fl
     let maxOff = 0;
     for (let p = 0; p < d; p++)
       for (let q = p + 1; q < d; q++)
-        maxOff = Math.max(maxOff, Math.abs(A[p * d + q]!));
+        maxOff = Math.max(maxOff, Math.abs(A[p * d + q]));
     if (maxOff < 1e-12) break;
 
     for (let p = 0; p < d; p++) {
       for (let q = p + 1; q < d; q++) {
-        const app = A[p * d + p]!;
-        const aqq = A[q * d + q]!;
-        const apq = A[p * d + q]!;
+        const app = A[p * d + p];
+        const aqq = A[q * d + q];
+        const apq = A[p * d + q];
         if (Math.abs(apq) < 1e-12) continue;
 
         const theta = 0.5 * Math.atan2(2 * apq, app - aqq);
@@ -226,16 +226,16 @@ function eigh(cov: Float64Array, d: number): { values: Float64Array; vectors: Fl
 
         for (let r = 0; r < d; r++) {
           if (r === p || r === q) continue;
-          const arp = A[r * d + p]!;
-          const arq = A[r * d + q]!;
+          const arp = A[r * d + p];
+          const arq = A[r * d + q];
           A[r * d + p] = A[p * d + r] = c * arp + s * arq;
           A[r * d + q] = A[q * d + r] = -s * arp + c * arq;
         }
 
         // Rotate eigenvectors
         for (let r = 0; r < d; r++) {
-          const vrp = vectors[r * d + p]!;
-          const vrq = vectors[r * d + q]!;
+          const vrp = vectors[r * d + p];
+          const vrq = vectors[r * d + q];
           vectors[r * d + p] = c * vrp + s * vrq;
           vectors[r * d + q] = -s * vrp + c * vrq;
         }
@@ -260,18 +260,18 @@ function invertMatrix(A: Float64Array, n: number): Float64Array | null {
   for (let k = 0; k < n; k++) {
     let pivot = k;
     for (let i = k + 1; i < n; i++)
-      if (Math.abs(aug[i * cols + k]!) > Math.abs(aug[pivot * cols + k]!)) pivot = i;
-    if (Math.abs(aug[pivot * cols + k]!) < 1e-14) return null;
+      if (Math.abs(aug[i * cols + k]) > Math.abs(aug[pivot * cols + k])) pivot = i;
+    if (Math.abs(aug[pivot * cols + k]) < 1e-14) return null;
     if (pivot !== k)
       for (let j = 0; j < cols; j++) {
-        const tmp = aug[k * cols + j]!; aug[k * cols + j] = aug[pivot * cols + j]!; aug[pivot * cols + j] = tmp;
+        const tmp = aug[k * cols + j]; aug[k * cols + j] = aug[pivot * cols + j]!; aug[pivot * cols + j] = tmp;
       }
-    const pv = aug[k * cols + k]!;
+    const pv = aug[k * cols + k];
     for (let j = 0; j < cols; j++) aug[k * cols + j] /= pv;
     for (let i = 0; i < n; i++) {
       if (i === k) continue;
-      const f = aug[i * cols + k]!;
-      for (let j = 0; j < cols; j++) aug[i * cols + j] -= f * aug[k * cols + j]!;
+      const f = aug[i * cols + k];
+      for (let j = 0; j < cols; j++) aug[i * cols + j] -= f * aug[k * cols + j];
     }
   }
 
@@ -298,8 +298,8 @@ function findCausalOrder(B: Float64Array, d: number): number[] {
         if (i !== j) sum += Math.abs(B[i * d + j] ?? 0);
       if (sum < bestSum) { bestSum = sum; bestIdx = i; }
     }
-    perm.push(bestIdx!);
-    remaining.delete(bestIdx!);
+    perm.push(bestIdx);
+    remaining.delete(bestIdx);
   }
   return perm;
 }

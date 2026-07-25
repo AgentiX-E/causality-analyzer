@@ -62,7 +62,7 @@ export function tsFciAlgorithm(
   const instData = new Matrix(effT, d);
   for (let t = 0; t < effT; t++)
     for (let j = 0; j < d; j++)
-      instData.set(t, j, data[t + maxLag]![j]!);
+      instData.set(t, j, data[t + maxLag][j]);
 
   const instResult = fciAlgorithm(instData, nodeNames, { alpha });
   const instantaneousGraph = instResult.graph;
@@ -79,8 +79,8 @@ export function tsFciAlgorithm(
 
     for (let t = 0; t < effT; t++) {
       for (let j = 0; j < d; j++) {
-        lagData.set(t, j, data[t + maxLag]![j]!); // current
-        lagData.set(t, d + j, data[t + maxLag - tau - 1]![j]!); // lagged
+        lagData.set(t, j, data[t + maxLag][j]); // current
+        lagData.set(t, d + j, data[t + maxLag - tau - 1][j]); // lagged
       }
     }
 

@@ -82,7 +82,7 @@ export function varLingam(
     X.set(t, 0, 1); // intercept
     for (let j = 0; j < d; j++) {
       for (let tau = 0; tau < maxLag; tau++) {
-        X.set(t, 1 + j * maxLag + tau, data[t + maxLag - 1 - tau]![j]!);
+        X.set(t, 1 + j * maxLag + tau, data[t + maxLag - 1 - tau][j]);
       }
     }
   }
@@ -91,7 +91,7 @@ export function varLingam(
   const residuals: number[][] = [];
   for (let j = 0; j < d; j++) {
     const y: number[] = [];
-    for (let t = 0; t < effT; t++) y.push(data[t + maxLag]![j]!);
+    for (let t = 0; t < effT; t++) y.push(data[t + maxLag][j]);
 
     // OLS via normal equations: beta = (X^T X)^{-1} X^T y
     const k = X.columns;
@@ -99,7 +99,7 @@ export function varLingam(
     const Xty = new Float64Array(k);
     for (let t = 0; t < effT; t++) {
       for (let i = 0; i < k; i++) {
-        Xty[i] += X.get(t, i) * y[t]!;
+        Xty[i] += X.get(t, i) * y[t];
         for (let l = 0; l < k; l++) {
           XtX[i * k + l] += X.get(t, i) * X.get(t, l);
         }
@@ -112,7 +112,7 @@ export function varLingam(
       for (let tau = 0; tau < maxLag; tau++) {
         const coeff = beta[1 + i * maxLag + tau] ?? 0;
         if (Math.abs(coeff) > threshold) {
-          laggedMatrices[tau]![j * d + i] = coeff;
+          laggedMatrices[tau][j * d + i] = coeff;
         }
       }
     }
@@ -122,7 +122,7 @@ export function varLingam(
     for (let t = 0; t < effT; t++) {
       let pred = beta[0] ?? 0;
       for (let c = 1; c < k; c++) pred += (beta[c] ?? 0) * X.get(t, c);
-      res.push(y[t]! - pred);
+      res.push(y[t] - pred);
     }
     residuals.push(res);
   }
@@ -131,7 +131,7 @@ export function varLingam(
   const resData = new Matrix(effT, d);
   for (let t = 0; t < effT; t++)
     for (let j = 0; j < d; j++)
-      resData.set(t, j, residuals[j]![t]!);
+      resData.set(t, j, residuals[j][t]);
 
   const lingamResult = directLiNGAM(resData, nodeNames);
   const B0 = new Float64Array(d * d);
@@ -166,18 +166,18 @@ function solveLinear(XtX: Float64Array, Xty: Float64Array, n: number): Float64Ar
   for (let k = 0; k < n; k++) {
     let pivot = k;
     for (let i = k + 1; i < n; i++)
-      if (Math.abs(aug[i * cols + k]!) > Math.abs(aug[pivot * cols + k]!)) pivot = i;
-    if (Math.abs(aug[pivot * cols + k]!) < 1e-14) continue;
+      if (Math.abs(aug[i * cols + k]) > Math.abs(aug[pivot * cols + k])) pivot = i;
+    if (Math.abs(aug[pivot * cols + k]) < 1e-14) continue;
     if (pivot !== k)
       for (let j = 0; j < cols; j++) {
-        const tmp = aug[k * cols + j]!; aug[k * cols + j] = aug[pivot * cols + j]!; aug[pivot * cols + j] = tmp;
+        const tmp = aug[k * cols + j]; aug[k * cols + j] = aug[pivot * cols + j]!; aug[pivot * cols + j] = tmp;
       }
-    const pv = aug[k * cols + k]!;
+    const pv = aug[k * cols + k];
     for (let j = k; j < cols; j++) aug[k * cols + j] /= pv;
     for (let i = 0; i < n; i++) {
       if (i === k) continue;
-      const f = aug[i * cols + k]!;
-      for (let j = k; j < cols; j++) aug[i * cols + j] -= f * aug[k * cols + j]!;
+      const f = aug[i * cols + k];
+      for (let j = k; j < cols; j++) aug[i * cols + j] -= f * aug[k * cols + j];
     }
   }
   const x = new Float64Array(n);

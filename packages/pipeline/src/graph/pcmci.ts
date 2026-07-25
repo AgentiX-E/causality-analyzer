@@ -82,7 +82,7 @@ export function pcmciAlgorithm(
 
   const candidateParents = new Map<string, PCMCIEdge[]>();
   for (let j = 0; j < d; j++) {
-    candidateParents.set(nodeNames[j]!, []);
+    candidateParents.set(nodeNames[j], []);
   }
 
   // Build lagged data matrix: each column is a (variable, lag) pair
@@ -103,10 +103,10 @@ export function pcmciAlgorithm(
   for (let t = tauMax; t < T; t++) {
     const row: number[] = [];
     // Current values (for target variables)
-    for (let j = 0; j < d; j++) row.push(data[t]![j]!);
+    for (let j = 0; j < d; j++) row.push(data[t][j]);
     // Lagged values
     for (const { var: i, lag } of laggedCols) {
-      row.push(data[t - lag]![i]!);
+      row.push(data[t - lag][i]);
     }
     fullData.push(row);
   }
@@ -123,8 +123,8 @@ export function pcmciAlgorithm(
       const p = fisherZTest(fullData, targetCol, sourceCol, []);
       if (p < alpha) {
         unconditionalResults.push({
-          fromVar: laggedCols[li]!.var,
-          lag: laggedCols[li]!.lag,
+          fromVar: laggedCols[li].var,
+          lag: laggedCols[li].lag,
           pValue: p,
           sourceCol,
         });
@@ -145,8 +145,8 @@ export function pcmciAlgorithm(
       if (p < alpha) {
         acceptedParents.push(candidate);
         const edge: PCMCIEdge = {
-          from: nodeNames[candidate.fromVar]!,
-          to: nodeNames[j]!,
+          from: nodeNames[candidate.fromVar],
+          to: nodeNames[j],
           lag: candidate.lag,
           pValue: p,
           strength: 0, // placeholder; set in MCI
@@ -155,7 +155,7 @@ export function pcmciAlgorithm(
       }
     }
 
-    candidateParents.set(nodeNames[j]!, parents);
+    candidateParents.set(nodeNames[j], parents);
   }
 
   // ── Phase 2: MCI ──
@@ -166,14 +166,14 @@ export function pcmciAlgorithm(
 
   const mciEdges: PCMCIEdge[] = [];
   for (let j = 0; j < d; j++) {
-    const targetParents = candidateParents.get(nodeNames[j]!)!;
+    const targetParents = candidateParents.get(nodeNames[j])!;
     const targetParentCols = targetParents.map(e => d + laggedCols.findIndex(
       lc => lc.var === nodeNames.indexOf(e.from) && lc.lag === e.lag
     )).filter(idx => idx >= 0);
 
     for (const edge of targetParents) {
       const fromVar = nodeNames.indexOf(edge.from);
-      const sourceParents = candidateParents.get(nodeNames[fromVar]!)!;
+      const sourceParents = candidateParents.get(nodeNames[fromVar])!;
       const sourceParentCols = sourceParents.map(e => d + laggedCols.findIndex(
         lc => lc.var === nodeNames.indexOf(e.from) && lc.lag === e.lag
       )).filter(idx => idx >= 0);

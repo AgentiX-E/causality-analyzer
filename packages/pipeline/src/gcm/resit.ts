@@ -85,7 +85,7 @@ function testDirection(X: number[], Y: number[], degree: number, n: number): num
     const row: number[] = [1]; // intercept
     let pow = 1;
     for (let d = 0; d < degree; d++) {
-      pow *= X[i]!;
+      pow *= X[i];
       row.push(pow);
     }
     Xpoly.push(row);
@@ -98,9 +98,9 @@ function testDirection(X: number[], Y: number[], degree: number, n: number): num
 
   for (let i = 0; i < n; i++) {
     for (let a = 0; a < k; a++) {
-      Xty[a] += (Xpoly[i]![a] ?? 0) * Y[i]!;
+      Xty[a] += (Xpoly[i][a] ?? 0) * Y[i];
       for (let b = 0; b < k; b++) {
-        XtX[a]![b] += (Xpoly[i]![a] ?? 0) * (Xpoly[i]![b] ?? 0);
+        XtX[a][b] += (Xpoly[i][a] ?? 0) * (Xpoly[i][b] ?? 0);
       }
     }
   }
@@ -111,12 +111,12 @@ function testDirection(X: number[], Y: number[], degree: number, n: number): num
   const residuals: number[] = [];
   for (let i = 0; i < n; i++) {
     let pred = 0;
-    for (let b = 0; b < k; b++) pred += (beta[b] ?? 0) * (Xpoly[i]![b] ?? 0);
-    residuals.push(Y[i]! - pred);
+    for (let b = 0; b < k; b++) pred += (beta[b] ?? 0) * (Xpoly[i][b] ?? 0);
+    residuals.push(Y[i] - pred);
   }
 
   // Independence test: residuals ⟂ X via Fisher Z on (X, residuals)
-  const dataMatrix = X.map((x, i) => [x, residuals[i]!]);
+  const dataMatrix = X.map((x, i) => [x, residuals[i]]);
   return fisherZTest(dataMatrix, 0, 1, []);
 }
 
@@ -130,16 +130,16 @@ function solveOLS(XtX: Float64Array[], Xty: Float64Array, n: number): Float64Arr
   for (let col = 0; col < n; col++) {
     let pivot = col;
     for (let row = col + 1; row < n; row++)
-      if (Math.abs(aug[row]![col]!) > Math.abs(aug[pivot]![col]!)) pivot = row;
-    if (Math.abs(aug[pivot]![col]!) < 1e-14) continue;
-    [aug[col], aug[pivot]] = [aug[pivot]!, aug[col]!];
-    const pv = aug[col]![col]!;
-    for (let j = col; j <= n; j++) aug[col]![j]! /= pv;
+      if (Math.abs(aug[row][col]) > Math.abs(aug[pivot][col])) pivot = row;
+    if (Math.abs(aug[pivot][col]) < 1e-14) continue;
+    [aug[col], aug[pivot]] = [aug[pivot], aug[col]];
+    const pv = aug[col][col];
+    for (let j = col; j <= n; j++) aug[col][j] /= pv;
     for (let row = 0; row < n; row++) {
       if (row === col) continue;
-      const f = aug[row]![col]!;
-      for (let j = col; j <= n; j++) aug[row]![j]! -= f * aug[col]![j]!;
+      const f = aug[row][col];
+      for (let j = col; j <= n; j++) aug[row][j] -= f * aug[col][j];
     }
   }
-  return new Float64Array(aug.map(r => r[n]!));
+  return new Float64Array(aug.map(r => r[n]));
 }
