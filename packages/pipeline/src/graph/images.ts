@@ -29,7 +29,7 @@ export function imagesAlgorithm(
   domainKnowledge?: DomainKnowledge,
 ): CausalGraph {
   const maxDegree = config.maxDegree ?? -1;
-  const d = nodeNames.length;
+  const _d = nodeNames.length;
 
   if (datasets.length === 0) return new CausalGraph([...nodeNames]);
 
@@ -70,17 +70,17 @@ export function imagesAlgorithm(
       const Xty = new Float64Array(k);
       for (let r = 0; r < N; r++) {
         for (let i = 0; i < k; i++) {
-          Xty[i] += (X[r]![i] ?? 0) * y[r]!;
+          Xty[i] += (X[r][i] ?? 0) * y[r];
           for (let j = 0; j < k; j++)
-            XtX[i]![j] += (X[r]![i] ?? 0) * (X[r]![j] ?? 0);
+            XtX[i][j] += (X[r][i] ?? 0) * (X[r][j] ?? 0);
         }
       }
       const beta = solveLinear(XtX.map(r => Array.from(r)), Array.from(Xty));
       let rss = 0;
       for (let r = 0; r < N; r++) {
         let pred = 0;
-        for (let i = 0; i < k; i++) pred += (beta[i] ?? 0) * (X[r]![i] ?? 0);
-        rss += (y[r]! - pred) ** 2;
+        for (let i = 0; i < k; i++) pred += (beta[i] ?? 0) * (X[r][i] ?? 0);
+        rss += (y[r] - pred) ** 2;
       }
       totalBIC += N * Math.log(Math.max(1e-10, rss / N)) + k * Math.log(N);
     }

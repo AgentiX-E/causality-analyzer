@@ -91,7 +91,7 @@ export function evaluateUplift(
     };
   }
 
-  const ratio = nControl / nTreated;
+  const _ratio = nControl / nTreated;
 
   // Cumulative sums
   let cumTreatedOutcome = 0;
@@ -110,7 +110,7 @@ export function evaluateUplift(
   })();
 
   for (let k = 1; k <= n; k++) {
-    const obs = sorted[k - 1]!;
+    const obs = sorted[k - 1];
     if (obs.treatment > 0.5) {
       cumTreatedOutcome += obs.outcome;
       cumTreated++;
@@ -136,7 +136,7 @@ export function evaluateUplift(
 
     // Trapezoidal integration for area
     if (k > 1) {
-      const prev = curve[k - 2]!;
+      const prev = curve[k - 2];
       const width = proportion - prev.proportion;
       totalArea += (prev.cumulativeUplift + cumulativeUplift) * width / 2;
       randomArea += overallATE * proportion * width;
@@ -160,7 +160,7 @@ export function evaluateUplift(
   const upliftAt = (pct: number): number => {
     const idx = Math.min(n - 1, Math.floor(n * pct));
     if (idx < 0) return 0;
-    return curve[idx]!.cumulativeUplift;
+    return curve[idx].cumulativeUplift;
   };
 
   return {

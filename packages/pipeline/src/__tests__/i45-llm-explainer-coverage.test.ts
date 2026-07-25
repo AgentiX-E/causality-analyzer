@@ -56,7 +56,7 @@ function mockFetchResponse(content: string, status = 200): Response {
 
 /** Create a mock fetch that throws (simulating network error) */
 function mockFetchError(): Response {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   return new Promise((_resolve, reject) => {
     reject(new Error('Network error'));
   }) as unknown as Response;

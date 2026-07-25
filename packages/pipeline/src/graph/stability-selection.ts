@@ -84,7 +84,7 @@ export function stabilitySelection(
     const subData = new Matrix(subsampleSize, data.columns);
     for (let i = 0; i < subsampleSize; i++) {
       for (let c = 0; c < data.columns; c++) {
-        subData.set(i, c, data.get(indices[i]!, c));
+        subData.set(i, c, data.get(indices[i], c));
       }
     }
 
@@ -179,7 +179,7 @@ export function starsSelection(
   }
 
   // Select best param: highest stability with nEdges > 0 and instability ≤ target
-  let bestParam = paramRange[paramRange.length - 1]!;
+  let bestParam = paramRange[paramRange.length - 1];
   let bestScore = -Infinity;
 
   for (const v of stabilityValues) {

@@ -76,8 +76,8 @@ export function graspAlgorithm(
     let rss = 0;
     for (let i = 0; i < N; i++) {
       let pred = 0;
-      for (let j = 0; j < k; j++) pred += (coef[j] ?? 0) * (X[i]![j] ?? 0);
-      rss += (y[i]! - pred) ** 2;
+      for (let j = 0; j < k; j++) pred += (coef[j] ?? 0) * (X[i][j] ?? 0);
+      rss += (y[i] - pred) ** 2;
     }
     const bic = N * Math.log(Math.max(1e-10, rss / N)) + k * Math.log(N);
     scoreCache.set(key, bic);
@@ -133,9 +133,9 @@ export function graspAlgorithm(
     const g = new CausalGraph([...nodeNames]);
     let totalBIC = 0;
     for (let pos = 0; pos < perm.length; pos++) {
-      const v = perm[pos]!;
-      const node = nodeNames[v]!;
-      const predecessors = perm.slice(0, pos).map(i => nodeNames[i]!);
+      const v = perm[pos];
+      const node = nodeNames[v];
+      const predecessors = perm.slice(0, pos).map(i => nodeNames[i]);
       const parents = selectBestParents(node, predecessors);
       for (const p of parents) g.addEdge(p, node);
       totalBIC += computeBIC(node, parents);
@@ -209,7 +209,7 @@ function fisherYates<T>(arr: T[], rng: () => number): T[] {
   const result = [...arr];
   for (let i = result.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
-    [result[i], result[j]] = [result[j]!, result[i]!];
+    [result[i], result[j]] = [result[j], result[i]];
   }
   return result;
 }

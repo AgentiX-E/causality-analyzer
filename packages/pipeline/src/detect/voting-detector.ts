@@ -41,7 +41,7 @@ export class VotingDetector {
 
   private combine(results: DetectionResult[]): DetectionResult {
     if (results.length === 0) return { isAnomalous: false, labels: new Float64Array(0), scores: new Float64Array(0), timestamp: Date.now(), metadata: { method: 'voting_empty' } };
-    const nLabels = results[0]!.labels.length;
+    const nLabels = results[0].labels.length;
     if (results.some(r => r.labels.length !== nLabels)) {
       throw new Error(`VotingDetector: all detectors must have the same label length (got ${[...new Set(results.map(r => r.labels.length))].join(', ')})`);
     }

@@ -41,7 +41,7 @@ export function gfciAlgorithm(
 ): { graph: CausalGraph; pagEdges: Map<string, string> } {
   const cfg: GFCIConfig = { alpha: config.alpha ?? 0.05, maxDegree: config.maxDegree ?? -1, usePDS: config.usePDS ?? true };
   const n = nodeNames.length;
-  const N = data.rows;
+  const _N = data.rows;
   const pagEdges = new Map<string, string>();
 
   if (data.rows === 0) return { graph: new CausalGraph(nodeNames), pagEdges };
@@ -73,12 +73,12 @@ export function gfciAlgorithm(
   while (changed && depth <= maxDepth) {
     changed = false;
     for (let i = 0; i < n; i++) {
-      const neighbors = g.neighbors(nodeNames[i]!);
+      const neighbors = g.neighbors(nodeNames[i]);
       if (neighbors.length - 1 < depth) continue;
       for (const jName of neighbors) {
-        if (jName <= nodeNames[i]!) continue;
+        if (jName <= nodeNames[i]) continue;
         const j = nodeNames.indexOf(jName);
-        if (j < 0 || !g.hasEdge(nodeNames[i]!, jName)) continue;
+        if (j < 0 || !g.hasEdge(nodeNames[i], jName)) continue;
         const otherNeighbors = neighbors.filter(n => n !== jName);
         if (otherNeighbors.length < depth) continue;
 
@@ -87,8 +87,8 @@ export function gfciAlgorithm(
           const sIndices = S.map(s => nodeNames.indexOf(s));
           const p = fisherZTest(dataArr, i, j, sIndices);
           if (p > cfg.alpha) {
-            g.removeEdge(nodeNames[i]!, jName);
-            g.removeEdge(jName, nodeNames[i]!);
+            g.removeEdge(nodeNames[i], jName);
+            g.removeEdge(jName, nodeNames[i]);
             sepSet.set(`${Math.min(i, j)}-${Math.max(i, j)}`, new Set(S));
             changed = true;
             break;
@@ -103,7 +103,7 @@ export function gfciAlgorithm(
   if (cfg.usePDS) {
     const pdsDepthMax = 3;
     for (let i = 0; i < n; i++) {
-      const iName = nodeNames[i]!;
+      const iName = nodeNames[i];
       const pds = new Set<number>();
       const visited = new Set<number>();
       const queue: number[] = [i];
@@ -117,7 +117,7 @@ export function gfciAlgorithm(
           if (v !== i) pds.add(v);
           for (let w = 0; w < n; w++) {
             if (visited.has(w)) continue;
-            if (g.hasEdge(nodeNames[v]!, nodeNames[w]!) || g.hasEdge(nodeNames[w]!, nodeNames[v]!)) {
+            if (g.hasEdge(nodeNames[v], nodeNames[w]) || g.hasEdge(nodeNames[w], nodeNames[v])) {
               visited.add(w);
               queue.push(w);
             }
@@ -127,7 +127,7 @@ export function gfciAlgorithm(
       }
 
       for (let j = i + 1; j < n; j++) {
-        if (!g.hasEdge(iName, nodeNames[j]!)) continue;
+        if (!g.hasEdge(iName, nodeNames[j])) continue;
         const candidates = [...pds].filter(k => k !== j);
         for (let cSize = 1; cSize <= Math.min(3, candidates.length); cSize++) {
           const subsets = combinations(candidates.map(String).map(Number), cSize);
@@ -135,10 +135,10 @@ export function gfciAlgorithm(
           for (const S of subsets) {
             const p = fisherZTest(dataArr, i, j, S);
             if (p > cfg.alpha) {
-              g.removeEdge(iName, nodeNames[j]!);
-              g.removeEdge(nodeNames[j]!, iName);
+              g.removeEdge(iName, nodeNames[j]);
+              g.removeEdge(nodeNames[j], iName);
               const key = `${Math.min(i, j)}-${Math.max(i, j)}`;
-              sepSet.set(key, new Set(S.map(s => nodeNames[s]!)));
+              sepSet.set(key, new Set(S.map(s => nodeNames[s])));
               removed = true;
               break;
             }
@@ -155,8 +155,8 @@ export function gfciAlgorithm(
   // Build PAG edge notation
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
-      const hasIJ = g.hasEdge(nodeNames[i]!, nodeNames[j]!);
-      const hasJI = g.hasEdge(nodeNames[j]!, nodeNames[i]!);
+      const hasIJ = g.hasEdge(nodeNames[i], nodeNames[j]);
+      const hasJI = g.hasEdge(nodeNames[j], nodeNames[i]);
       if (!hasIJ && !hasJI) pagEdges.set(`${nodeNames[i]}-${nodeNames[j]}`, 'none');
       else if (hasIJ && hasJI) pagEdges.set(`${nodeNames[i]}-${nodeNames[j]}`, 'undirected');
       else if (hasIJ && !hasJI) pagEdges.set(`${nodeNames[i]}-${nodeNames[j]}`, `${nodeNames[i]}→${nodeNames[j]}`);
@@ -178,14 +178,14 @@ function orientRules(
   // Phase A: V-structure (R0)
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
-      if (g.hasEdge(nodeNames[i]!, nodeNames[j]!)) continue;
+      if (g.hasEdge(nodeNames[i], nodeNames[j])) continue;
       for (let k = 0; k < n; k++) {
         if (k === i || k === j) continue;
-        if (!g.hasEdge(nodeNames[i]!, nodeNames[k]!) || !g.hasEdge(nodeNames[j]!, nodeNames[k]!)) continue;
+        if (!g.hasEdge(nodeNames[i], nodeNames[k]) || !g.hasEdge(nodeNames[j], nodeNames[k])) continue;
         const key = `${Math.min(i, j)}-${Math.max(i, j)}`;
-        if (!sepSet.get(key)?.has(nodeNames[k]!)) {
-          g.orientEdge(nodeNames[i]!, nodeNames[k]!);
-          g.orientEdge(nodeNames[j]!, nodeNames[k]!);
+        if (!sepSet.get(key)?.has(nodeNames[k])) {
+          g.orientEdge(nodeNames[i], nodeNames[k]);
+          g.orientEdge(nodeNames[j], nodeNames[k]);
         }
       }
     }
@@ -201,11 +201,11 @@ function orientRules(
     // R1: i→j∘—k, i∗∗k non-adjacent → j→k
     for (let i = 0; i < n; i++) {
       for (let j = 0; j < n; j++) {
-        if (!g.hasEdge(nodeNames[i]!, nodeNames[j]!) || g.hasEdge(nodeNames[j]!, nodeNames[i]!)) continue;
+        if (!g.hasEdge(nodeNames[i], nodeNames[j]) || g.hasEdge(nodeNames[j], nodeNames[i])) continue;
         for (let k = 0; k < n; k++) {
-          if (!g.hasEdge(nodeNames[j]!, nodeNames[k]!) || !g.hasEdge(nodeNames[k]!, nodeNames[j]!)) continue;
-          if (g.hasEdge(nodeNames[i]!, nodeNames[k]!) || g.hasEdge(nodeNames[k]!, nodeNames[i]!)) continue;
-          g.orientEdge(nodeNames[j]!, nodeNames[k]!);
+          if (!g.hasEdge(nodeNames[j], nodeNames[k]) || !g.hasEdge(nodeNames[k], nodeNames[j])) continue;
+          if (g.hasEdge(nodeNames[i], nodeNames[k]) || g.hasEdge(nodeNames[k], nodeNames[i])) continue;
+          g.orientEdge(nodeNames[j], nodeNames[k]);
           changed = true;
         }
       }
@@ -214,11 +214,11 @@ function orientRules(
     // R2: i→j→k and i∘—∘k → i→k
     for (let i = 0; i < n; i++) {
       for (let k = 0; k < n; k++) {
-        if (!g.hasEdge(nodeNames[i]!, nodeNames[k]!) || !g.hasEdge(nodeNames[k]!, nodeNames[i]!)) continue;
+        if (!g.hasEdge(nodeNames[i], nodeNames[k]) || !g.hasEdge(nodeNames[k], nodeNames[i])) continue;
         for (let j = 0; j < n; j++) {
-          if (!g.hasEdge(nodeNames[i]!, nodeNames[j]!) || g.hasEdge(nodeNames[j]!, nodeNames[i]!)) continue;
-          if (!g.hasEdge(nodeNames[j]!, nodeNames[k]!) || g.hasEdge(nodeNames[k]!, nodeNames[j]!)) continue;
-          g.orientEdge(nodeNames[i]!, nodeNames[k]!);
+          if (!g.hasEdge(nodeNames[i], nodeNames[j]) || g.hasEdge(nodeNames[j], nodeNames[i])) continue;
+          if (!g.hasEdge(nodeNames[j], nodeNames[k]) || g.hasEdge(nodeNames[k], nodeNames[j])) continue;
+          g.orientEdge(nodeNames[i], nodeNames[k]);
           changed = true;
         }
       }
@@ -227,16 +227,16 @@ function orientRules(
     // R3: i∘—k→j, i∘—l→j, k,l non-adjacent → i→j
     for (let i = 0; i < n; i++) {
       for (let j = 0; j < n; j++) {
-        if (!g.hasEdge(nodeNames[i]!, nodeNames[j]!) || !g.hasEdge(nodeNames[j]!, nodeNames[i]!)) continue;
+        if (!g.hasEdge(nodeNames[i], nodeNames[j]) || !g.hasEdge(nodeNames[j], nodeNames[i])) continue;
         for (let k = 0; k < n; k++) {
-          if (!g.hasEdge(nodeNames[i]!, nodeNames[k]!) || !g.hasEdge(nodeNames[k]!, nodeNames[i]!)) continue;
-          if (!g.hasEdge(nodeNames[k]!, nodeNames[j]!) || g.hasEdge(nodeNames[j]!, nodeNames[k]!)) continue;
+          if (!g.hasEdge(nodeNames[i], nodeNames[k]) || !g.hasEdge(nodeNames[k], nodeNames[i])) continue;
+          if (!g.hasEdge(nodeNames[k], nodeNames[j]) || g.hasEdge(nodeNames[j], nodeNames[k])) continue;
           for (let l = 0; l < n; l++) {
             if (l === k) continue;
-            if (!g.hasEdge(nodeNames[i]!, nodeNames[l]!) || !g.hasEdge(nodeNames[l]!, nodeNames[i]!)) continue;
-            if (!g.hasEdge(nodeNames[l]!, nodeNames[j]!) || g.hasEdge(nodeNames[j]!, nodeNames[l]!)) continue;
-            if (g.hasEdge(nodeNames[k]!, nodeNames[l]!) || g.hasEdge(nodeNames[l]!, nodeNames[k]!)) continue;
-            g.orientEdge(nodeNames[i]!, nodeNames[j]!);
+            if (!g.hasEdge(nodeNames[i], nodeNames[l]) || !g.hasEdge(nodeNames[l], nodeNames[i])) continue;
+            if (!g.hasEdge(nodeNames[l], nodeNames[j]) || g.hasEdge(nodeNames[j], nodeNames[l])) continue;
+            if (g.hasEdge(nodeNames[k], nodeNames[l]) || g.hasEdge(nodeNames[l], nodeNames[k])) continue;
+            g.orientEdge(nodeNames[i], nodeNames[j]);
             changed = true;
             break;
           }

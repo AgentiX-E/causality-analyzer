@@ -184,7 +184,7 @@ export function findAllMinimal(
   for (let mask = 1; mask < (1 << admissible.length); mask++) {
     const subset: string[] = [];
     for (let i = 0; i < admissible.length; i++) {
-      if (mask & (1 << i)) subset.push(admissible[i]!);
+      if (mask & (1 << i)) subset.push(admissible[i]);
     }
     if (verifyBackdoorBlock(graph, treatment, outcome, subset)) {
       allValid.push(subset);
@@ -212,7 +212,7 @@ export function findAllMinimal(
 
   // Prefer the smallest minimal set
   minimal.sort((a, b) => a.length - b.length);
-  return minimal[0]!;
+  return minimal[0];
 }
 
 // ── Variant 5: MinCost-Efficient (Data-Adaptive) ────────────────────
@@ -276,8 +276,8 @@ export function findMinCost(
     let subsetCost = 0;
     for (let i = 0; i < admissible.length; i++) {
       if (mask & (1 << i)) {
-        subset.push(admissible[i]!);
-        subsetCost += costs.get(admissible[i]!) ?? 0;
+        subset.push(admissible[i]);
+        subsetCost += costs.get(admissible[i]) ?? 0;
       }
     }
     if (subsetCost >= bestCost) continue;
@@ -312,21 +312,21 @@ export function verifyBackdoorBlock(
   for (let i = 0; i < n; i++) {
     for (let j = 0; j < n; j++) {
       if (i === j) continue;
-      if (!graph.hasEdge(nodes[i]!, nodes[j]!)) continue;
+      if (!graph.hasEdge(nodes[i], nodes[j])) continue;
 
       if (i === tIdx) {
         // Outgoing edges from X are REMOVED
         continue;
       }
 
-      adj[i]![j] = 1;
+      adj[i][j] = 1;
     }
   }
 
   const gTest = new CausalGraph(nodes);
   for (let i = 0; i < n; i++) {
     for (let j = 0; j < n; j++) {
-      if (adj[i]![j] === 1) gTest.addEdge(nodes[i]!, nodes[j]!);
+      if (adj[i][j] === 1) gTest.addEdge(nodes[i], nodes[j]);
     }
   }
 

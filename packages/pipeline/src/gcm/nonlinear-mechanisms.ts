@@ -51,14 +51,14 @@ export class PostNonlinearMechanism implements CausalMechanism {
 
   forward(parentValues: number[]): number {
     let lin = this.intercept;
-    for (let i = 0; i < this.coef.length; i++) lin += this.coef[i]! * (parentValues[i] ?? 0);
+    for (let i = 0; i < this.coef.length; i++) lin += this.coef[i] * (parentValues[i] ?? 0);
     return this.g(lin);
   }
 
   invert(x: number, parentValues: number[]): number {
     const lin = this.gInv(x);
     let pred = this.intercept;
-    for (let i = 0; i < this.coef.length; i++) pred += this.coef[i]! * (parentValues[i] ?? 0);
+    for (let i = 0; i < this.coef.length; i++) pred += this.coef[i] * (parentValues[i] ?? 0);
     return lin - pred;
   }
 }
@@ -76,13 +76,13 @@ export function fitLogisticPNL(
   let ySum = 0;
 
   for (let r = 0; r < n; r++) {
-    const rawY = data[r]![nodeIdx] ?? 0;
+    const rawY = data[r][nodeIdx] ?? 0;
     const y = Math.log(Math.max(0.01, Math.min(0.99, rawY)) / (1 - Math.max(0.01, Math.min(0.99, rawY))));
     ySum += y;
     for (let i = 0; i < k; i++) {
-      const xi = data[r]![parentIndices[i]!] ?? 0;
+      const xi = data[r][parentIndices[i]] ?? 0;
       Xty[i] += xi * y;
-      for (let j = 0; j < k; j++) XtX[i]![j] += xi * (data[r]![parentIndices[j]!] ?? 0);
+      for (let j = 0; j < k; j++) XtX[i][j] += xi * (data[r][parentIndices[j]] ?? 0);
     }
   }
 
@@ -90,14 +90,14 @@ export function fitLogisticPNL(
     XtX.map(row => Array.from(row)),
     Array.from(Xty),
   );
-  const intercept = ySum / n - coef.reduce((s, c, i) => s + c * colMean(data, parentIndices[i]!), 0);
+  const intercept = ySum / n - coef.reduce((s, c, i) => s + c * colMean(data, parentIndices[i]), 0);
 
   // Residual std
   let ss = 0;
   for (let r = 0; r < n; r++) {
     let pred = intercept;
-    for (let i = 0; i < k; i++) pred += coef[i]! * (data[r]![parentIndices[i]!] ?? 0);
-    const rawY = Math.max(0.01, Math.min(0.99, data[r]![nodeIdx] ?? 0));
+    for (let i = 0; i < k; i++) pred += coef[i] * (data[r][parentIndices[i]] ?? 0);
+    const rawY = Math.max(0.01, Math.min(0.99, data[r][nodeIdx] ?? 0));
     const actual = Math.log(rawY / (1 - rawY));
     ss += (actual - pred) ** 2;
   }
@@ -130,7 +130,7 @@ export function autoAssignMechanisms(
   const result = new Map<string, { type: 'linear' | 'postnonlinear' | 'empirical'; r2: number; explanation: string }>();
 
   for (let i = 0; i < nodeNames.length; i++) {
-    const node = nodeNames[i]!;
+    const node = nodeNames[i];
     const parents = graph.parents(node);
     const parentIdx = parents.map(p => nodeNames.indexOf(p));
 
@@ -147,12 +147,12 @@ export function autoAssignMechanisms(
     let ySum = 0;
 
     for (let r = 0; r < n; r++) {
-      const y = data[r]![i] ?? 0;
+      const y = data[r][i] ?? 0;
       ySum += y;
       for (let pi = 0; pi < k; pi++) {
-        const xi = data[r]![parentIdx[pi]!] ?? 0;
+        const xi = data[r][parentIdx[pi]] ?? 0;
         Xty[pi] += xi * y;
-        for (let pj = 0; pj < k; pj++) XtX[pi]![pj] += xi * (data[r]![parentIdx[pj]!] ?? 0);
+        for (let pj = 0; pj < k; pj++) XtX[pi][pj] += xi * (data[r][parentIdx[pj]] ?? 0);
       }
     }
     const coef = solveLinear(
@@ -163,10 +163,10 @@ export function autoAssignMechanisms(
     const yMean = ySum / n;
     let ssRes = 0, ssTot = 0;
     for (let r = 0; r < n; r++) {
-      let pred = yMean - coef.reduce((s, c, pi) => s + c * colMean(data, parentIdx[pi]!), 0);
-      for (let pi = 0; pi < k; pi++) pred += coef[pi]! * (data[r]![parentIdx[pi]!] ?? 0);
-      ssRes += ((data[r]![i] ?? 0) - pred) ** 2;
-      ssTot += ((data[r]![i] ?? 0) - yMean) ** 2;
+      let pred = yMean - coef.reduce((s, c, pi) => s + c * colMean(data, parentIdx[pi]), 0);
+      for (let pi = 0; pi < k; pi++) pred += coef[pi] * (data[r][parentIdx[pi]] ?? 0);
+      ssRes += ((data[r][i] ?? 0) - pred) ** 2;
+      ssTot += ((data[r][i] ?? 0) - yMean) ** 2;
     }
     const r2 = ssTot > 1e-10 ? 1 - ssRes / ssTot : 0;
 
@@ -218,25 +218,25 @@ export function parentRelevance(
 
     for (let k = 0; k < shuffled.length; k++) {
       const subset = new Set(shuffled.slice(0, k));
-      const withParent = new Set([...subset, shuffled[k]!]);
+      const withParent = new Set([...subset, shuffled[k]]);
 
       // Prediction with subset
       let predWith = 0, predWithout = 0;
       let wCount = 0, woCount = 0;
       for (let pi = 0; pi < parentIdx.length; pi++) {
-        if (withParent.has(parents[pi]!)) { predWith += data[row]![parentIdx[pi]!]!; wCount++; }
-        if (subset.has(parents[pi]!)) { predWithout += data[row]![parentIdx[pi]!]!; woCount++; }
+        if (withParent.has(parents[pi])) { predWith += data[row][parentIdx[pi]]; wCount++; }
+        if (subset.has(parents[pi])) { predWithout += data[row][parentIdx[pi]]; woCount++; }
       }
       predWith = wCount > 0 ? predWith / wCount : 0;
       predWithout = woCount > 0 ? predWithout / woCount : 0;
 
       const marginal = Math.abs(
-        (data[row]![nodeIdx] ?? 0) - predWith,
+        (data[row][nodeIdx] ?? 0) - predWith,
       ) - Math.abs(
-        (data[row]![nodeIdx] ?? 0) - predWithout,
+        (data[row][nodeIdx] ?? 0) - predWithout,
       );
 
-      relevance.set(shuffled[k]!, (relevance.get(shuffled[k]!) ?? 0) + marginal);
+      relevance.set(shuffled[k], (relevance.get(shuffled[k]) ?? 0) + marginal);
     }
   }
 

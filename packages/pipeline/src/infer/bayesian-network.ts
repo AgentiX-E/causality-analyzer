@@ -101,8 +101,8 @@ export function factorMultiply(a: Factor, b: Factor): Factor {
 
       // Build combined assignment
       const combined = variables.map(v => {
-        if (a.variables.includes(v)) return aAssign[v]!;
-        return bAssign[v]!;
+        if (a.variables.includes(v)) return aAssign[v];
+        return bAssign[v];
       });
       const key = combined.join(',');
       table.set(key, (table.get(key) ?? 0) + aVal * bVal);
@@ -123,7 +123,7 @@ export function factorMarginalize(f: Factor, variable: string): Factor {
   for (const [key, val] of f.table) {
     const assign = parseAssignment(key, f.variables);
     // Build new key without the marginalized variable
-    const newAssign = variables.map(v => assign[v]!);
+    const newAssign = variables.map(v => assign[v]);
     const newKey = newAssign.join(',');
     table.set(newKey, (table.get(newKey) ?? 0) + val);
   }
@@ -142,7 +142,7 @@ export function factorReduce(f: Factor, variable: string, value: number): Factor
   for (const [key, val] of f.table) {
     const assign = parseAssignment(key, f.variables);
     if (assign[variable] === value) {
-      const newAssign = variables.map(v => assign[v]!);
+      const newAssign = variables.map(v => assign[v]);
       const newKey = newAssign.join(',');
       table.set(newKey, val);
     }
@@ -211,9 +211,9 @@ export function variableElimination(
     if (related.length === 0) continue;
 
     // Multiply related factors
-    let product = related[0]!;
+    let product = related[0];
     for (let i = 1; i < related.length; i++) {
-      product = factorMultiply(product, related[i]!);
+      product = factorMultiply(product, related[i]);
     }
 
     // Marginalize out v
@@ -224,9 +224,9 @@ export function variableElimination(
   // Step 4: Multiply remaining factors and normalize
   if (activeFactors.length === 0) return new Map([[0, 0.5], [1, 0.5]]);
 
-  let result = activeFactors[0]!;
+  let result = activeFactors[0];
   for (let i = 1; i < activeFactors.length; i++) {
-    result = factorMultiply(result, activeFactors[i]!);
+    result = factorMultiply(result, activeFactors[i]);
   }
   const normalized = factorNormalize(result);
 
@@ -325,14 +325,14 @@ export function estimateCPTs(
     // Compute threshold for discretization
     let colSum = 0, colSq = 0;
     const n = data.length;
-    for (const row of data) { const v = row[nodeIdx]!; colSum += v; colSq += v * v; }
+    for (const row of data) { const v = row[nodeIdx]; colSum += v; colSq += v * v; }
     const colMean = colSum / n;
     const colStd = Math.sqrt(Math.max(1e-10, colSq / n - colMean * colMean));
     const threshold = options.threshold ?? (colMean + 2.5 * colStd);
 
     // Discretize: 0 = normal, 1 = anomalous
     const discretize = (row: number[], idx: number): number =>
-      row[idx]! > threshold ? 1 : 0;
+      row[idx] > threshold ? 1 : 0;
 
     const entries: Record<string, number> = {};
     const domainSize = 2; // binary: {0, 1}
@@ -350,8 +350,8 @@ export function estimateCPTs(
       for (const row of data) {
         const parentKey = parentIdxs.map(i => discretize(row, i)).join(',');
         if (!counts[parentKey]) counts[parentKey] = { total: 0, anom: 0 };
-        counts[parentKey]!.total++;
-        if (discretize(row, nodeIdx) === 1) counts[parentKey]!.anom++;
+        counts[parentKey].total++;
+        if (discretize(row, nodeIdx) === 1) counts[parentKey].anom++;
       }
 
       // Laplace smoothing: P(anomalous | parents) = (count + α) / (total + 2α)
@@ -375,7 +375,7 @@ function parseAssignment(key: string, variables: string[]): Record<string, numbe
   const values = key.split(',').map(Number);
   const assign: Record<string, number> = {};
   for (let i = 0; i < variables.length; i++) {
-    assign[variables[i]!] = values[i] ?? 0;
+    assign[variables[i]] = values[i] ?? 0;
   }
   return assign;
 }
@@ -385,7 +385,7 @@ function* enumerateAssignments(
   domainSizes: number[],
 ): Generator<number[]> {
   if (variables.length === 0) { yield []; return; }
-  const firstSize = domainSizes[0]!;
+  const firstSize = domainSizes[0];
   const restVars = variables.slice(1);
   const restSizes = domainSizes.slice(1);
   for (let val = 0; val < firstSize; val++) {
@@ -419,7 +419,7 @@ function buildFactorAdjacency(factors: Factor[]): Map<number, Set<number>> {
   for (let i = 0; i < factors.length; i++) {
     adj.set(i, new Set());
     for (let j = 0; j < i; j++) {
-      if (shareVariable(factors[i]!, factors[j]!)) {
+      if (shareVariable(factors[i], factors[j])) {
         adj.get(i)!.add(j);
         adj.get(j)!.add(i);
       }
@@ -459,19 +459,19 @@ function triangulate(
     // Find factors containing this variable
     const group: number[] = [];
     for (const idx of remaining) {
-      if (factors[idx]!.variables.includes(v)) group.push(idx);
+      if (factors[idx].variables.includes(v)) group.push(idx);
     }
 
     if (group.length === 0) continue;
 
     // Create clique by multiplying factors
-    let clique = factors[group[0]!]!;
+    let clique = factors[group[0]];
     for (let i = 1; i < group.length; i++) {
-      clique = factorMultiply(clique, factors[group[i]!]!);
+      clique = factorMultiply(clique, factors[group[i]]);
     }
 
     // Marginalize out the eliminated variable
-    const message = factorMarginalize(clique, v);
+    const _message = factorMarginalize(clique, v);
     cliques.push(clique);
 
     for (const idx of group) remaining.delete(idx);
@@ -483,9 +483,9 @@ function triangulate(
 function passMessages(cliques: Factor[], _messages: Map<string, Factor>): Factor[] {
   // For small networks, use direct multiplication of all cliques
   if (cliques.length === 0) return [];
-  let result = cliques[0]!;
+  let result = cliques[0];
   for (let i = 1; i < cliques.length; i++) {
-    result = factorMultiply(result, cliques[i]!);
+    result = factorMultiply(result, cliques[i]);
   }
   return [factorNormalize(result)];
 }
@@ -497,7 +497,7 @@ function extractPosteriors(
   const posteriors = new Map<string, Map<number, number>>();
   if (calibrated.length === 0) return posteriors;
 
-  const joint = calibrated[0]!;
+  const joint = calibrated[0];
   for (const v of allVars) {
     if (joint.variables.includes(v)) {
       const marginal = factorNormalize(factorMarginalizeAllExcept(joint, v));
@@ -548,7 +548,7 @@ export function bruteForceOracle(
     // Decode assignment
     const assign: Record<string, number> = {};
     for (let j = 0; j < n; j++) {
-      assign[nodeNames[j]!] = (i >> (n - 1 - j)) & 1;
+      assign[nodeNames[j]] = (i >> (n - 1 - j)) & 1;
     }
 
     // Check evidence consistency
@@ -564,14 +564,14 @@ export function bruteForceOracle(
       const cpt = cpts.get(node);
       if (!cpt) continue;
       const pList = parents.get(node) ?? [];
-      const pKey = pList.map(p => assign[p]!).join(',');
-      const nodeVal = assign[node]!;
+      const pKey = pList.map(p => assign[p]).join(',');
+      const nodeVal = assign[node];
       const pAnom = cpt.entries[pKey] ?? 0.5;
       prob *= nodeVal === 1 ? pAnom : (1 - pAnom);
     }
 
     totalWeight += prob;
-    counts.set(assign[query]!, (counts.get(assign[query]!) ?? 0) + prob);
+    counts.set(assign[query], (counts.get(assign[query]) ?? 0) + prob);
   }
 
   // Normalize
@@ -625,7 +625,7 @@ export function loopyBeliefPropagation(
     for (const v of f.variables) {
       if (!varDomains.has(v)) {
         // Infer domain size from factor tables
-        const maxVal = 1; // default binary
+        const _maxVal = 1; // default binary
         for (const key of f.table.keys()) {
           const assign = parseAssignment(key, f.variables);
           if (assign[v] !== undefined) varDomains.set(v, Math.max(varDomains.get(v) ?? 0, (assign[v] ?? 0) + 1));
@@ -641,7 +641,7 @@ export function loopyBeliefPropagation(
 
   // Initialize var→factor messages to uniform
   for (let fi = 0; fi < factors.length; fi++) {
-    const f = factors[fi]!;
+    const f = factors[fi];
     for (const v of f.variables) {
       const domain = varDomains.get(v) ?? 2;
       const msgTable = new Map<string, number>();
@@ -661,7 +661,7 @@ export function loopyBeliefPropagation(
 
     // Factor → Variable messages
     for (let fi = 0; fi < factors.length; fi++) {
-      let f = factors[fi]!;
+      let f = factors[fi];
       for (const [ev, val] of Object.entries(evidence)) {
         f = factorReduce(f, ev, val);
       }
@@ -711,14 +711,14 @@ export function loopyBeliefPropagation(
       if (evidenceVars.has(v)) continue;
 
       for (let fi = 0; fi < factors.length; fi++) {
-        const f = factors[fi]!;
+        const f = factors[fi];
         if (!f.variables.includes(v)) continue;
 
         // Collect all factor→var messages for this variable except from fi
         const incoming: Factor[] = [];
         for (let fj = 0; fj < factors.length; fj++) {
           if (fj === fi) continue;
-          const fOther = factors[fj]!;
+          const fOther = factors[fj];
           if (!fOther.variables.includes(v)) continue;
           const msg = fToV.get(`f${fj}→${v}`);
           if (msg) incoming.push(msg);
@@ -726,9 +726,9 @@ export function loopyBeliefPropagation(
 
         if (incoming.length === 0) continue;
 
-        let product = incoming[0]!;
+        let product = incoming[0];
         for (let i = 1; i < incoming.length; i++) {
-          product = factorMultiply(product, incoming[i]!);
+          product = factorMultiply(product, incoming[i]);
         }
         vToF.set(`${v}→${fi}`, factorNormalize(product));
       }
@@ -751,7 +751,7 @@ export function loopyBeliefPropagation(
 
     const incoming: Factor[] = [];
     for (let fi = 0; fi < factors.length; fi++) {
-      const f = factors[fi]!;
+      const f = factors[fi];
       if (!f.variables.includes(v)) continue;
       const msg = fToV.get(`f${fi}→${v}`);
       if (msg) incoming.push(msg);
@@ -762,9 +762,9 @@ export function loopyBeliefPropagation(
       continue;
     }
 
-    let product = incoming[0]!;
+    let product = incoming[0];
     for (let i = 1; i < incoming.length; i++) {
-      product = factorMultiply(product, incoming[i]!);
+      product = factorMultiply(product, incoming[i]);
     }
     const norm = factorNormalize(product);
     const dist = new Map<number, number>();
@@ -821,17 +821,17 @@ export function likelihoodWeighting(
 
       if (node in evidence) {
         sample[node] = evidence[node]!;
-        const parentKey = (parents.get(node) ?? []).map(p => sample[p]!).join(',');
+        const parentKey = (parents.get(node) ?? []).map(p => sample[p]).join(',');
         const probAnom = cpt.entries[parentKey] ?? 0.5;
         weight *= evidence[node] === 1 ? Math.max(probAnom, 1e-10) : Math.max(1 - probAnom, 1e-10);
       } else {
-        const parentKey = (parents.get(node) ?? []).map(p => sample[p]!).join(',');
+        const parentKey = (parents.get(node) ?? []).map(p => sample[p]).join(',');
         const probAnom = cpt.entries[parentKey] ?? 0.5;
         sample[node] = rng() < probAnom ? 1 : 0;
       }
     }
 
-    const qv = sample[query]!;
+    const qv = sample[query];
     queryCounts.set(qv, (queryCounts.get(qv) ?? 0) + weight);
     totalWeight += weight;
     sumSqWeight += weight * weight;
@@ -884,7 +884,7 @@ export function gibbsSampling(
   const state: Record<string, number> = {};
   const nonEvidence = nodeNames.filter(n => !(n in evidence));
   for (const node of nodeNames) {
-    state[node] = node in evidence ? evidence[node]! : (rng() < 0.5 ? 1 : 0);
+    state[node] = node in evidence ? evidence[node] : (rng() < 0.5 ? 1 : 0);
   }
 
   // Build children map
@@ -907,7 +907,7 @@ export function gibbsSampling(
     }
 
     if (iter >= burnIn && (iter - burnIn) % thin === 0) {
-      queryCounts.set(state[query]!, (queryCounts.get(state[query]!) ?? 0) + 1);
+      queryCounts.set(state[query], (queryCounts.get(state[query]) ?? 0) + 1);
     }
   }
 
@@ -938,7 +938,7 @@ function gibbsSampleNode(
   if (!nodeCpt) return state[node] ?? 0;
 
   // P(node=1 | parents)
-  const pKey1 = pList.map(p => state[p]!).join(',');
+  const pKey1 = pList.map(p => state[p]).join(',');
   const probNode1 = nodeCpt.entries[pKey1] ?? 0.5;
   const probNode0 = 1 - probNode1;
 
@@ -948,7 +948,7 @@ function gibbsSampleNode(
     const childParents = parentsMap.get(child) ?? [];
     const childCPT = cpts.get(child);
     if (!childCPT) continue;
-    const childVal = state[child]!;
+    const childVal = state[child];
     const vals1 = childParents.map(p => p === node ? 1 : (state[p] ?? 0));
     const vals0 = childParents.map(p => p === node ? 0 : (state[p] ?? 0));
     const pAnom1 = childCPT.entries[vals1.join(',')] ?? 0.5;

@@ -53,12 +53,12 @@ export function dagmaAlgorithm(
   for (let j = 0; j < d; j++) {
     let sum = 0, sq = 0;
     for (let i = 0; i < n; i++) {
-      const v = XArr[i]![j]!;
+      const v = XArr[i][j];
       sum += v; sq += v * v;
     }
     const mean = sum / n;
     const std = Math.sqrt(Math.max(1e-10, sq / n - mean * mean));
-    for (let i = 0; i < n; i++) X[i * d + j] = (XArr[i]![j]! - mean) / std;
+    for (let i = 0; i < n; i++) X[i * d + j] = (XArr[i][j] - mean) / std;
   }
 
   // Precompute covariance X^T X / n
@@ -66,7 +66,7 @@ export function dagmaAlgorithm(
   for (let j = 0; j < d; j++)
     for (let k = j; k < d; k++) {
       let s = 0;
-      for (let i = 0; i < n; i++) s += X[i * d + j]! * X[i * d + k]!;
+      for (let i = 0; i < n; i++) s += X[i * d + j] * X[i * d + k];
       cov[j * d + k] = cov[k * d + j] = s / n;
     }
 
@@ -92,8 +92,8 @@ export function dagmaAlgorithm(
   const g = new CausalGraph([...nodeNames]);
   for (let i = 0; i < d; i++)
     for (let j = 0; j < d; j++)
-      if (i !== j && Math.abs(W[i * d + j]!) > cfg.wThreshold)
-        g.addEdge(nodeNames[i]!, nodeNames[j]!);
+      if (i !== j && Math.abs(W[i * d + j]) > cfg.wThreshold)
+        g.addEdge(nodeNames[i], nodeNames[j]);
 
   if (domainKnowledge) g.applyDomainKnowledge(domainKnowledge);
   return { graph: g, W, h: logDetH(W, d) };
@@ -112,13 +112,13 @@ function dagmaLoss(
   for (let i = 0; i < d; i++) {
     for (let j = 0; j < d; j++) {
       let wCov = 0;
-      for (let l = 0; l < d; l++) wCov += w[i * d + l]! * cov[l * d + j]!;
-      gf[i * d + j] = -cov[i * d + j]! + wCov;
-      f -= w[i * d + j]! * cov[i * d + j]!;
-      f += 0.5 * w[i * d + j]! * wCov;
+      for (let l = 0; l < d; l++) wCov += w[i * d + l] * cov[l * d + j];
+      gf[i * d + j] = -cov[i * d + j] + wCov;
+      f -= w[i * d + j] * cov[i * d + j];
+      f += 0.5 * w[i * d + j] * wCov;
     }
   }
-  for (let i = 0; i < d; i++) f += 0.5 * cov[i * d + i]!;
+  for (let i = 0; i < d; i++) f += 0.5 * cov[i * d + i];
 
   // h(W) = -log det(I - W⊙W) and gradient ∂h = 2·(I - W⊙W)^{-1}ᵀ ⊙ W
   const [h, dh] = logDetHAndGrad(w, d);
@@ -129,7 +129,7 @@ function dagmaLoss(
   const coeff = alpha + rho * h;
 
   for (let i = 0; i < d * d; i++) {
-    grad[i] = gf[i]! + lambda1 * (w[i]! > 0 ? 1 : w[i]! < 0 ? -1 : 0) + coeff * dh[i]!;
+    grad[i] = gf[i] + lambda1 * (w[i] > 0 ? 1 : w[i] < 0 ? -1 : 0) + coeff * dh[i];
   }
 
   return [loss, grad];
@@ -150,7 +150,7 @@ function logDetHAndGrad(W: Float64Array, d: number): [number, Float64Array] {
   for (let i = 0; i < d; i++) {
     M[i * d + i] = 1;
     for (let j = 0; j < d; j++) {
-      const w2 = W[i * d + j]! * W[i * d + j]!;
+      const w2 = W[i * d + j] * W[i * d + j];
       M[i * d + j] -= w2;
     }
   }
@@ -164,7 +164,7 @@ function logDetHAndGrad(W: Float64Array, d: number): [number, Float64Array] {
 
   let logDet = 0;
   for (let i = 0; i < d; i++) {
-    const lii = L[i * d + i]!;
+    const lii = L[i * d + i];
     if (lii <= 1e-10) return [1e10, new Float64Array(d * d)];
     logDet += Math.log(lii);
   }
@@ -179,7 +179,7 @@ function logDetHAndGrad(W: Float64Array, d: number): [number, Float64Array] {
   const grad = new Float64Array(d * d);
   for (let i = 0; i < d; i++)
     for (let j = 0; j < d; j++)
-      grad[i * d + j] = 2 * invM[j * d + i]! * W[i * d + j]!;
+      grad[i * d + j] = 2 * invM[j * d + i] * W[i * d + j];
 
   return [h, grad];
 }
@@ -194,13 +194,13 @@ function cholesky(A: Float64Array, n: number): Float64Array | null {
   const L = new Float64Array(n * n);
   for (let i = 0; i < n; i++) {
     for (let j = 0; j <= i; j++) {
-      let sum = A[i * n + j]!;
-      for (let k = 0; k < j; k++) sum -= L[i * n + k]! * L[j * n + k]!;
+      let sum = A[i * n + j];
+      for (let k = 0; k < j; k++) sum -= L[i * n + k] * L[j * n + k];
       if (i === j) {
         if (sum <= 0) return null;
         L[i * n + i] = Math.sqrt(sum);
       } else {
-        L[i * n + j] = sum / L[j * n + j]!;
+        L[i * n + j] = sum / L[j * n + j];
       }
     }
   }
@@ -211,11 +211,11 @@ function invertFromCholesky(L: Float64Array, n: number): Float64Array | null {
   // Invert lower triangular L via forward substitution, then L^{-T}·L^{-1}
   const invL = new Float64Array(n * n);
   for (let i = 0; i < n; i++) {
-    invL[i * n + i] = 1 / L[i * n + i]!;
+    invL[i * n + i] = 1 / L[i * n + i];
     for (let j = 0; j < i; j++) {
       let sum = 0;
-      for (let k = j; k < i; k++) sum += L[i * n + k]! * invL[k * n + j]!;
-      invL[i * n + j] = -sum / L[i * n + i]!;
+      for (let k = j; k < i; k++) sum += L[i * n + k] * invL[k * n + j];
+      invL[i * n + j] = -sum / L[i * n + i];
     }
   }
 
@@ -224,7 +224,7 @@ function invertFromCholesky(L: Float64Array, n: number): Float64Array | null {
   for (let i = 0; i < n; i++)
     for (let j = 0; j < n; j++) {
       let sum = 0;
-      for (let k = Math.max(i, j); k < n; k++) sum += invL[k * n + i]! * invL[k * n + j]!;
+      for (let k = Math.max(i, j); k < n; k++) sum += invL[k * n + i] * invL[k * n + j];
       invM[i * n + j] = sum;
     }
 
@@ -235,6 +235,6 @@ function invertFromCholesky(L: Float64Array, n: number): Float64Array | null {
 
 function l1Norm(v: Float64Array, len: number): number {
   let s = 0;
-  for (let i = 0; i < len; i++) s += Math.abs(v[i]!);
+  for (let i = 0; i < len; i++) s += Math.abs(v[i]);
   return s;
 }

@@ -73,10 +73,10 @@ export function gesAlgorithm(
     for (let r = 0; r < N; r++) {
       const y = data.get(r, nodeIdx);
       for (let i = 0; i < k; i++) {
-        const xi = data.get(r, pIdx[i]!);
+        const xi = data.get(r, pIdx[i]);
         Xty[i] += xi * y;
         for (let j = 0; j < k; j++)
-          XtX[i]![j] += xi * data.get(r, pIdx[j]!);
+          XtX[i][j] += xi * data.get(r, pIdx[j]);
       }
     }
 
@@ -88,7 +88,7 @@ export function gesAlgorithm(
     for (let r = 0; r < N; r++) {
       const y = data.get(r, nodeIdx);
       let pred = 0;
-      for (let i = 0; i < k; i++) pred += (beta[i] ?? 0) * data.get(r, pIdx[i]!);
+      for (let i = 0; i < k; i++) pred += (beta[i] ?? 0) * data.get(r, pIdx[i]);
       rss += (y - pred) ** 2;
     }
 
@@ -98,7 +98,7 @@ export function gesAlgorithm(
   };
 
   // Helper: get BIC score for entire graph
-  const totalBIC = (): number => {
+  const _totalBIC = (): number => {
     let total = 0;
     for (const node of nodeNames)
       total += computeBIC(node, [...g.parents(node)]);
@@ -117,10 +117,9 @@ export function gesAlgorithm(
     improved = false;
     let bestDelta = -1e-6;
     let bestEdge: [string, string] | null = null;
-    let bestIsReversed = false;
 
     for (let i = 0; i < n; i++) {
-      const u = nodeNames[i]!;
+      const u = nodeNames[i];
       // Use neighbors (undirected) for degree check in CPDAG space
       const uDegree = g.neighbors(u).length;
 
@@ -128,7 +127,7 @@ export function gesAlgorithm(
 
       for (let j = 0; j < n; j++) {
         if (i === j) continue;
-        const v = nodeNames[j]!;
+        const v = nodeNames[j];
         if (isAdjacent(u, v)) continue;
 
         const vDegree = g.neighbors(v).length;
@@ -145,7 +144,6 @@ export function gesAlgorithm(
           if (delta1 > bestDelta) {
             bestDelta = delta1;
             bestEdge = [v, u];
-            bestIsReversed = false;
           }
         }
 
@@ -157,7 +155,6 @@ export function gesAlgorithm(
           if (delta2 > bestDelta) {
             bestDelta = delta2;
             bestEdge = [u, v];
-            bestIsReversed = false;
           }
         }
       }
@@ -184,7 +181,7 @@ export function gesAlgorithm(
     let bestRemove: [string, string] | null = null;
 
     for (let i = 0; i < n; i++) {
-      const u = nodeNames[i]!;
+      const u = nodeNames[i];
       // Use neighbors (includes both directed parents and undirected adjacencies)
       for (const v of g.neighbors(u)) {
         // Try removing edge as parent: BIC(u without v) vs BIC(u with v)

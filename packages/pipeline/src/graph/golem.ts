@@ -49,10 +49,10 @@ export function golemAlgorithm(
   const X = new Float64Array(n * d);
   for (let j = 0; j < d; j++) {
     let sum = 0, sq = 0;
-    for (let i = 0; i < n; i++) { const v = XArr[i]![j]!; sum += v; sq += v * v; }
+    for (let i = 0; i < n; i++) { const v = XArr[i][j]; sum += v; sq += v * v; }
     const mean = sum / n;
     const std = Math.sqrt(Math.max(1e-10, sq / n - mean * mean));
-    for (let i = 0; i < n; i++) X[i * d + j] = (XArr[i]![j]! - mean) / std;
+    for (let i = 0; i < n; i++) X[i * d + j] = (XArr[i][j] - mean) / std;
   }
 
   // Precompute covariance S = X^T X / n
@@ -60,7 +60,7 @@ export function golemAlgorithm(
   for (let j = 0; j < d; j++)
     for (let k = j; k < d; k++) {
       let s = 0;
-      for (let i = 0; i < n; i++) s += X[i * d + j]! * X[i * d + k]!;
+      for (let i = 0; i < n; i++) s += X[i * d + j] * X[i * d + k];
       S[j * d + k] = S[k * d + j] = s / n;
     }
 
@@ -80,8 +80,8 @@ export function golemAlgorithm(
   const g = new CausalGraph([...nodeNames]);
   for (let i = 0; i < d; i++)
     for (let j = 0; j < d; j++)
-      if (i !== j && Math.abs(W[i * d + j]!) > cfg.wThreshold)
-        g.addEdge(nodeNames[i]!, nodeNames[j]!);
+      if (i !== j && Math.abs(W[i * d + j]) > cfg.wThreshold)
+        g.addEdge(nodeNames[i], nodeNames[j]);
 
   if (domainKnowledge) g.applyDomainKnowledge(domainKnowledge);
   return { graph: g, W };
@@ -96,7 +96,7 @@ function golemLoss(
   const M = new Float64Array(d * d);
   for (let i = 0; i < d; i++) {
     M[i * d + i] = 1;
-    for (let j = 0; j < d; j++) M[i * d + j] -= w[i * d + j]!;
+    for (let j = 0; j < d; j++) M[i * d + j] -= w[i * d + j];
   }
 
   // log|det(M)| via Gaussian elimination with partial pivoting
@@ -109,8 +109,8 @@ function golemLoss(
   for (let i = 0; i < d; i++) {
     for (let j = 0; j < d; j++) {
       let sMj = 0;
-      for (let k = 0; k < d; k++) sMj += S[i * d + k]! * M[k * d + j]!;
-      rss += M[i * d + j]! * sMj;
+      for (let k = 0; k < d; k++) sMj += S[i * d + k] * M[k * d + j];
+      rss += M[i * d + j] * sMj;
     }
   }
 
@@ -125,7 +125,7 @@ function golemLoss(
   for (let i = 0; i < d; i++) {
     for (let j = 0; j < d; j++) {
       let sm = 0;
-      for (let k = 0; k < d; k++) sm += S[j * d + k]! * M[k * d + i]!;
+      for (let k = 0; k < d; k++) sm += S[j * d + k] * M[k * d + i];
       grad[i * d + j] = rssCoeff * (-2 * sm);
     }
   }
@@ -135,12 +135,12 @@ function golemLoss(
   if (invM) {
     for (let i = 0; i < d; i++)
       for (let j = 0; j < d; j++)
-        grad[i * d + j] = (grad[i * d + j] ?? 0) + invM[j * d + i]!; // M^{-T}[i,j] = M^{-1}[j,i]
+        grad[i * d + j] = (grad[i * d + j] ?? 0) + invM[j * d + i]; // M^{-T}[i,j] = M^{-1}[j,i]
   }
 
   // L1 subgradient
   for (let i = 0; i < d * d; i++)
-    grad[i] = (grad[i] ?? 0) + lambda1 * (w[i]! > 0 ? 1 : w[i]! < 0 ? -1 : 0);
+    grad[i] = (grad[i] ?? 0) + lambda1 * (w[i] > 0 ? 1 : w[i] < 0 ? -1 : 0);
 
   return [loss, grad];
 }
@@ -153,19 +153,19 @@ function determinant(A: Float64Array, n: number): number {
   for (let col = 0; col < n; col++) {
     let pivot = col;
     for (let row = col + 1; row < n; row++)
-      if (Math.abs(B[row * n + col]!) > Math.abs(B[pivot * n + col]!)) pivot = row;
+      if (Math.abs(B[row * n + col]) > Math.abs(B[pivot * n + col])) pivot = row;
     if (pivot !== col) {
       for (let j = col; j < n; j++) {
-        const tmp = B[col * n + j]!; B[col * n + j] = B[pivot * n + j]!; B[pivot * n + j] = tmp;
+        const tmp = B[col * n + j]; B[col * n + j] = B[pivot * n + j]!; B[pivot * n + j] = tmp;
       }
       det = -det;
     }
-    const pv = B[col * n + col]!;
+    const pv = B[col * n + col];
     if (Math.abs(pv) < 1e-14) return 0;
     det *= pv;
     for (let row = col + 1; row < n; row++) {
-      const f = B[row * n + col]! / pv;
-      for (let j = col; j < n; j++) B[row * n + j] -= f * B[col * n + j]!;
+      const f = B[row * n + col] / pv;
+      for (let j = col; j < n; j++) B[row * n + j] -= f * B[col * n + j];
     }
   }
   return det;
@@ -184,18 +184,18 @@ function invertWithElimination(A: Float64Array, n: number): Float64Array | null 
   for (let col = 0; col < n; col++) {
     let pivot = col;
     for (let row = col + 1; row < n; row++)
-      if (Math.abs(aug[row * cols + col]!) > Math.abs(aug[pivot * cols + col]!)) pivot = row;
+      if (Math.abs(aug[row * cols + col]) > Math.abs(aug[pivot * cols + col])) pivot = row;
     if (pivot !== col)
       for (let j = 0; j < cols; j++) {
-        const tmp = aug[col * cols + j]!; aug[col * cols + j] = aug[pivot * cols + j]!; aug[pivot * cols + j] = tmp;
+        const tmp = aug[col * cols + j]; aug[col * cols + j] = aug[pivot * cols + j]!; aug[pivot * cols + j] = tmp;
       }
-    const pv = aug[col * cols + col]!;
+    const pv = aug[col * cols + col];
     if (Math.abs(pv) < 1e-14) return null;
     for (let j = 0; j < cols; j++) aug[col * cols + j] /= pv;
     for (let row = 0; row < n; row++) {
       if (row === col) continue;
-      const f = aug[row * cols + col]!;
-      for (let j = 0; j < cols; j++) aug[row * cols + j] -= f * aug[col * cols + j]!;
+      const f = aug[row * cols + col];
+      for (let j = 0; j < cols; j++) aug[row * cols + j] -= f * aug[col * cols + j];
     }
   }
 
@@ -208,6 +208,6 @@ function invertWithElimination(A: Float64Array, n: number): Float64Array | null 
 
 function l1Norm(v: Float64Array, len: number): number {
   let s = 0;
-  for (let i = 0; i < len; i++) s += Math.abs(v[i]!);
+  for (let i = 0; i < len; i++) s += Math.abs(v[i]);
   return s;
 }

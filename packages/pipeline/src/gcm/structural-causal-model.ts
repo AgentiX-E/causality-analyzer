@@ -39,7 +39,7 @@ class AdditiveNoiseMechanism implements CausalMechanism {
 
   forward(parentValues: number[]): number {
     let result = this.intercept;
-    for (let i = 0; i < this.coef.length; i++) result += this.coef[i]! * (parentValues[i] ?? 0);
+    for (let i = 0; i < this.coef.length; i++) result += this.coef[i] * (parentValues[i] ?? 0);
     return result;
   }
 
@@ -78,7 +78,7 @@ export class StructuralCausalModel {
 
       if (k === 0) {
         // Root node: X = μ + ε
-        const vals = data.map(r => r[nodeIdx]!).filter(v => !Number.isNaN(v));
+        const vals = data.map(r => r[nodeIdx]).filter(v => !Number.isNaN(v));
         const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
         const ss = vals.reduce((s, v) => s + (v - mean) ** 2, 0);
         const std = Math.sqrt(ss / Math.max(1, vals.length - 1));
@@ -92,15 +92,15 @@ export class StructuralCausalModel {
         const Xty = new Array(k).fill(0);
         let ySum = 0, validN = 0;
         for (let r = 0; r < n; r++) {
-          const y = data[r]![nodeIdx]!;
+          const y = data[r][nodeIdx];
           if (Number.isNaN(y)) continue;
-          const xRow = pIdx.map(i => data[r]![i]!);
+          const xRow = pIdx.map(i => data[r][i]);
           if (xRow.some(x => Number.isNaN(x))) continue; // skip entire row if any parent is NaN
           ySum += y; validN++;
           for (let i = 0; i < k; i++) {
-            Xty[i] += xRow[i]! * y;
+            Xty[i] += xRow[i] * y;
             for (let j = 0; j < k; j++) {
-              XtX[i]![j] += xRow[i]! * xRow[j]!;
+              XtX[i][j] += xRow[i] * xRow[j];
             }
           }
         }
@@ -110,11 +110,11 @@ export class StructuralCausalModel {
         const xMeans = pIdx.map((_, i) => {
           let sum = 0;
           for (let r = 0; r < n; r++) {
-            const y = data[r]![nodeIdx]!;
+            const y = data[r][nodeIdx];
             if (Number.isNaN(y)) continue;
-            const xRow = pIdx.map(pi => data[r]![pi]!);
+            const xRow = pIdx.map(pi => data[r][pi]);
             if (xRow.some(x => Number.isNaN(x))) continue;
-            sum += xRow[i]!;
+            sum += xRow[i];
           }
           return validN > 0 ? sum / validN : 0;
         });
@@ -122,8 +122,8 @@ export class StructuralCausalModel {
         let ss = 0;
         for (let r = 0; r < n; r++) {
           let pred = intercept;
-          for (let i = 0; i < k; i++) pred += coef[i]! * (data[r]![pIdx[i]!] ?? 0);
-          ss += ((data[r]![nodeIdx]! ?? 0) - pred) ** 2;
+          for (let i = 0; i < k; i++) pred += coef[i] * (data[r][pIdx[i]] ?? 0);
+          ss += ((data[r][nodeIdx] ?? 0) - pred) ** 2;
         }
         const std = Math.sqrt(ss / Math.max(1, n - k - 1)) || 1;
         this.mechanisms.set(node, new AdditiveNoiseMechanism(node, coef, intercept, std));

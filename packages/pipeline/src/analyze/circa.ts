@@ -64,7 +64,7 @@ export class RHTScorer {
 
       if (parents.length === 0) {
         // Root node: no predictors
-        const vals = normalData.map(r => r[nodeIdx]!).filter(v => !Number.isNaN(v));
+        const vals = normalData.map(r => r[nodeIdx]).filter(v => !Number.isNaN(v));
         const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
         const ss = vals.reduce((s, v) => s + (v - mean) ** 2, 0);
         this.models.set(node, {
@@ -84,15 +84,15 @@ export class RHTScorer {
       let ySum = 0, validN = 0;
 
       for (let r = 0; r < n; r++) {
-        const y = normalData[r]![nodeIdx]!;
+        const y = normalData[r][nodeIdx];
         if (Number.isNaN(y)) continue;
-        const xRow = pIdx.map(i => normalData[r]![i]!);
+        const xRow = pIdx.map(i => normalData[r][i]);
         if (xRow.some(x => Number.isNaN(x))) continue; // skip entire row if any parent is NaN
         ySum += y; validN++;
         for (let i = 0; i < k; i++) {
-          Xty[i] += xRow[i]! * y;
+          Xty[i] += xRow[i] * y;
           for (let j = 0; j < k; j++) {
-            XtX[i]![j] += xRow[i]! * xRow[j]!;
+            XtX[i][j] += xRow[i] * xRow[j];
           }
         }
       }
@@ -103,11 +103,11 @@ export class RHTScorer {
       const xMeans = pIdx.map((_, i) => {
         let sum = 0;
         for (let r = 0; r < n; r++) {
-          const y = normalData[r]![nodeIdx]!;
+          const y = normalData[r][nodeIdx];
           if (Number.isNaN(y)) continue;
-          const xRow = pIdx.map(pi => normalData[r]![pi]!);
+          const xRow = pIdx.map(pi => normalData[r][pi]);
           if (xRow.some(x => Number.isNaN(x))) continue;
-          sum += xRow[i]!;
+          sum += xRow[i];
         }
         return validN > 0 ? sum / validN : 0;
       });
@@ -117,8 +117,8 @@ export class RHTScorer {
       let ss = 0, cnt = 0;
       for (let r = 0; r < n; r++) {
         let pred = intercept;
-        for (let i = 0; i < k; i++) pred += coef[i]! * (normalData[r]![pIdx[i]!] ?? 0);
-        const residual = (normalData[r]![nodeIdx]! ?? 0) - pred;
+        for (let i = 0; i < k; i++) pred += coef[i] * (normalData[r][pIdx[i]] ?? 0);
+        const residual = (normalData[r][nodeIdx] ?? 0) - pred;
         if (!Number.isNaN(residual)) { ss += residual ** 2; cnt++; }
       }
       const residualStd = Math.sqrt(ss / Math.max(1, cnt - k - 1)) || 1e-6;
@@ -145,9 +145,9 @@ export class RHTScorer {
       for (let r = 0; r < n; r++) {
         let pred = model.intercept;
         for (let i = 0; i < model.parentIndices.length; i++) {
-          pred += model.coef[i]! * (anomalyData[r]![model.parentIndices[i]!] ?? 0);
+          pred += model.coef[i] * (anomalyData[r][model.parentIndices[i]] ?? 0);
         }
-        const residual = (anomalyData[r]![nodeIdx]! ?? 0) - pred;
+        const residual = (anomalyData[r][nodeIdx] ?? 0) - pred;
         zScores.push(Math.abs(residual) / model.residualStd);
       }
 
@@ -191,7 +191,7 @@ export class DAScorer {
     // Build child score map (bottom-up)
     const childScores = new Map<string, number>();
     for (let l = layers.length - 1; l >= 0; l--) {
-      for (const node of layers[l]!) {
+      for (const node of layers[l]) {
         let childScore = 0;
         for (const child of graph.children(node)) {
           const childRHT = rhtScores.get(child);
@@ -324,14 +324,14 @@ export class CIRCAPipeline {
     while (q.length > 0) {
       const u = q.shift()!;
       if (u === to) break;
-      for (const v of this.graph!.children(u)) {
+      for (const v of this.graph.children(u)) {
         if ((dist.get(v) ?? Infinity) > (dist.get(u) ?? Infinity) + 1) { dist.set(v, dist.get(u)! + 1); prev.set(v, u); q.push(v); }
       }
     }
     if (!prev.get(to) && from !== to) return [];
     const path = [to];
     let cur: string | null = to;
-    while ((cur = prev.get(cur!) ?? null)) path.unshift(cur);
+    while ((cur = prev.get(cur) ?? null)) path.unshift(cur);
     return path;
   }
 }

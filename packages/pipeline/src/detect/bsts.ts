@@ -48,11 +48,11 @@ export function exponentialSmoothingDetect(y: number[], period: number = 0, thre
   const trend = exponentialSmooth(y, 0.15);
 
   // Step 2: Estimate and remove seasonal component (if period > 0)
-  const detrended = y.map((v, i) => v - trend[i]!);
+  const detrended = y.map((v, i) => v - trend[i]);
   const seasonal = period > 0 ? estimateSeasonal(detrended, period) : new Array(n).fill(0);
 
   // Step 3: Compute residuals
-  const residuals = y.map((v, i) => v - trend[i]! - seasonal[i]!);
+  const residuals = y.map((v, i) => v - trend[i] - seasonal[i]!);
 
   // Step 4: Compute rolling statistics for anomaly scoring
   const window = Math.min(30, Math.floor(n / 3));
@@ -68,8 +68,8 @@ export function exponentialSmoothingDetect(y: number[], period: number = 0, thre
     const mean = slice.reduce((a, b) => a + b, 0) / slice.length;
     const std = Math.sqrt(slice.reduce((s, v) => s + (v - mean) ** 2, 0) / Math.max(1, slice.length - 1)) || 1;
 
-    scores.push(Math.abs(residuals[i]! - mean) / std);
-    anomalies.push(scores[i]! > threshold);
+    scores.push(Math.abs(residuals[i] - mean) / std);
+    anomalies.push(scores[i] > threshold);
   }
 
   return { residuals, trend, scores, anomalies };
@@ -86,7 +86,7 @@ function exponentialSmooth(y: number[], alpha: number): number[] {
   result[0] = y[0]!;
 
   for (let i = 1; i < n; i++) {
-    result[i] = alpha * y[i]! + (1 - alpha) * result[i - 1]!;
+    result[i] = alpha * y[i] + (1 - alpha) * result[i - 1]!;
   }
   return result;
 }
@@ -99,7 +99,7 @@ function estimateSeasonal(detrended: number[], period: number): number[] {
   // Average values at each seasonal position
   for (let i = 0; i < n; i++) {
     const pos = i % period;
-    seasonalPattern[pos] += detrended[i]!;
+    seasonalPattern[pos] += detrended[i];
     counts[pos]++;
   }
   for (let i = 0; i < period; i++) {

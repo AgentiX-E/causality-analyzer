@@ -131,15 +131,15 @@ export class AuditTrail {
     }
 
     // Verify genesis entry
-    const genesis = this.entries[0]!;
+    const genesis = this.entries[0];
     if (genesis.index !== 0) {
       tamperedIndices.push(0);
     }
 
     // Verify each entry
     for (let i = 0; i < n; i++) {
-      const entry = this.entries[i]!;
-      const expectedPrevHash = i === 0 ? '0' : this.entries[i - 1]!.hash;
+      const entry = this.entries[i];
+      const expectedPrevHash = i === 0 ? '0' : this.entries[i - 1].hash;
 
       // Check previousHash chain
       if (entry.previousHash !== expectedPrevHash) {

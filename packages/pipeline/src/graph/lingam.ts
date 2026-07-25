@@ -42,7 +42,7 @@ export function directLiNGAM(
   // Center the data
   const means = X.map(col => col.reduce((a, b) => a + b, 0) / N);
   for (let i = 0; i < n; i++) {
-    for (let r = 0; r < N; r++) X[i]![r] -= means[i]!;
+    for (let r = 0; r < N; r++) X[i][r] -= means[i];
   }
 
   // Track which variables remain to be ordered
@@ -66,7 +66,7 @@ export function directLiNGAM(
       // Score = sum of mutual information-like metric with residuals
       let totalDep = 0;
       for (const j of others) {
-        const dep = kernelDependence(residuals[i]!, residuals[j]!, N);
+        const dep = kernelDependence(residuals[i], residuals[j], N);
         totalDep += dep;
       }
       if (totalDep < bestScore) {
@@ -76,27 +76,27 @@ export function directLiNGAM(
     }
 
     if (bestVar === -1) break;
-    order.push(nodeNames[bestVar]!);
+    order.push(nodeNames[bestVar]);
     remaining.delete(bestVar);
 
     // Regress out bestVar from all other remaining variables
     for (const j of remaining) {
-      const b = regressOut(residuals[j]!, residuals[bestVar]!, N);
+      const b = regressOut(residuals[j], residuals[bestVar], N);
       if (Math.abs(b) > 1e-6) {
-        if (!weights.has(nodeNames[j]!)) weights.set(nodeNames[j]!, new Map());
-        weights.get(nodeNames[j]!)!.set(nodeNames[bestVar]!, b);
+        if (!weights.has(nodeNames[j])) weights.set(nodeNames[j], new Map());
+        weights.get(nodeNames[j])!.set(nodeNames[bestVar], b);
       }
     }
   }
 
   // Add the last remaining variable
-  for (const r of remaining) order.push(nodeNames[r]!);
+  for (const r of remaining) order.push(nodeNames[r]);
 
   // Build the causal graph from the order + weights
   const g = new CausalGraph(nodeNames);
 
   for (let i = 0; i < order.length; i++) {
-    const child = order[i]!;
+    const child = order[i];
     const childWeights = weights.get(child);
     if (childWeights) {
       for (const [parent, weight] of childWeights) {
@@ -126,8 +126,8 @@ function kernelDependence(x: Float64Array, y: Float64Array, n: number): number {
 
   for (let i = 0; i < n; i += step) {
     for (let j = i + 1; j < n; j += step) {
-      const dx = x[i]! - x[j]!;
-      const dy = y[i]! - y[j]!;
+      const dx = x[i] - x[j];
+      const dy = y[i] - y[j];
       if (dx > 0 && dy > 0) concordant++;
       else if (dx > 0 && dy < 0) discordant++;
       else if (dx < 0 && dy > 0) discordant++;
@@ -152,15 +152,15 @@ function kernelDependence(x: Float64Array, y: Float64Array, n: number): number {
 function regressOut(y: Float64Array, x: Float64Array, n: number): number {
   let sxy = 0, sxx = 0;
   for (let i = 0; i < n; i++) {
-    sxy += x[i]! * y[i]!;
-    sxx += x[i]! * x[i]!;
+    sxy += x[i] * y[i];
+    sxx += x[i] * x[i];
   }
 
   const b = sxx > 1e-10 ? sxy / sxx : 0;
 
   // Replace y with residuals
   for (let i = 0; i < n; i++) {
-    y[i] -= b * x[i]!;
+    y[i] -= b * x[i];
   }
 
   return b;

@@ -35,7 +35,7 @@ export interface ClusterResult {
  */
 export function discoverClusters(
   data: Matrix,
-  alpha: number = 0.05,
+  _alpha: number = 0.05,
 ): ClusterResult {
   const d = data.columns;
   const n = data.rows;
@@ -63,10 +63,10 @@ export function discoverClusters(
           tetradCount++;
 
           // Tetrad: ρ_ij·ρ_kl - ρ_ik·ρ_jl ≈ 0 if i,j share latent
-          const rho_ij = Math.abs(corr[i]![j]!);
-          const rho_kl = Math.abs(corr[k]![l]!);
-          const rho_ik = Math.abs(corr[i]![k]!);
-          const rho_jl = Math.abs(corr[j]![l]!);
+          const rho_ij = Math.abs(corr[i][j]);
+          const rho_kl = Math.abs(corr[k][l]);
+          const rho_ik = Math.abs(corr[i][k]);
+          const rho_jl = Math.abs(corr[j][l]);
 
           const tetrad = Math.abs(rho_ij * rho_kl - rho_ik * rho_jl);
 
@@ -83,7 +83,7 @@ export function discoverClusters(
 
       // If most tetrads vanish, i and j share a latent parent
       if (tetradCount >= 3 && tetradPass / tetradCount > 0.6) {
-        adj[i]![j] = adj[j]![i] = true;
+        adj[i][j] = adj[j][i] = true;
       }
     }
   }
@@ -103,7 +103,7 @@ export function discoverClusters(
       comp.add(v);
       visited.add(v);
       for (let w = 0; w < d; w++) {
-        if (!visited.has(w) && adj[v]![w]) stack.push(w);
+        if (!visited.has(w) && adj[v][w]) stack.push(w);
       }
     }
     // Only clusters with ≥ 3 variables are meaningful latent indicators
@@ -136,13 +136,13 @@ function correlationMatrix(data: Matrix): number[][] {
 
   const corr: number[][] = Array.from({ length: d }, () => new Array(d).fill(0));
   for (let i = 0; i < d; i++) {
-    corr[i]![i] = 1;
+    corr[i][i] = 1;
     for (let j = i + 1; j < d; j++) {
       let cov = 0;
       for (let r = 0; r < n; r++) cov += (data.get(r, i) - means[i]!) * (data.get(r, j) - means[j]!);
       cov /= n;
       const denom = stds[i]! * stds[j]!;
-      corr[i]![j] = corr[j]![i] = denom > 0 ? cov / denom : 0;
+      corr[i][j] = corr[j][i] = denom > 0 ? cov / denom : 0;
     }
   }
   return corr;

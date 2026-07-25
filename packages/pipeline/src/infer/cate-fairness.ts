@@ -19,7 +19,7 @@ import { solveLinear } from '@agentix-e/causality-analyzer-core';
 // ── Helpers ──────────────────────────────────────────────────────────────
 
 /** Sigmoid clamp: prevents overflow in exp() */
-const sigmoid = (dot: number): number => 1 / (1 + Math.exp(clip(dot, 15)));
+const _sigmoid = (dot: number): number => 1 / (1 + Math.exp(clip(dot, 15)));
 /** Clip value to [-limit, limit] */
 const clip = (v: number, limit: number): number => v < -limit ? -limit : v > limit ? limit : v;
 /** Safe positive floor */
@@ -45,7 +45,7 @@ function fitLogistic(
   if (k === 1) {
     // No covariates: just return the log-odds of the marginal probability
     let tCount = 0;
-    for (let r = 0; r < n; r++) if ((data[r]![treatmentIdx] ?? 0) > 0.5) tCount++;
+    for (let r = 0; r < n; r++) if ((data[r][treatmentIdx] ?? 0) > 0.5) tCount++;
     const prob = Math.max(0.05, Math.min(0.95, tCount / n));
     return Float64Array.from([Math.log(prob / (1 - prob))]);
   }
@@ -54,7 +54,7 @@ function fitLogistic(
   for (let r = 0; r < n; r++) {
     X[r * k] = 1; // intercept
     for (let i = 0; i < p; i++) {
-      X[r * k + i + 1] = data[r]![covariateIndices[i]!] ?? 0;
+      X[r * k + i + 1] = data[r][covariateIndices[i]] ?? 0;
     }
   }
 
@@ -64,7 +64,7 @@ function fitLogistic(
     const prob = new Float64Array(n);
     for (let r = 0; r < n; r++) {
       let dot = 0;
-      for (let j = 0; j < k; j++) dot += X[r * k + j]! * beta[j]!;
+      for (let j = 0; j < k; j++) dot += X[r * k + j] * beta[j];
       prob[r] = 1 / (1 + Math.exp(-clip(dot, 15)));
     }
 
@@ -72,15 +72,15 @@ function fitLogistic(
     const XtWX = new Float64Array(k * k);
     const XtWz = new Float64Array(k);
     for (let r = 0; r < n; r++) {
-      const w = safeFloor(prob[r]! * (1 - prob[r]!));
-      const t = (data[r]![treatmentIdx] ?? 0) > 0.5 ? 1 : 0;
-      const workingResponse = Math.log(safeFloor(prob[r]! / (1 - prob[r]!))) +
-        (t - prob[r]!) / w;
+      const w = safeFloor(prob[r] * (1 - prob[r]));
+      const t = (data[r][treatmentIdx] ?? 0) > 0.5 ? 1 : 0;
+      const workingResponse = Math.log(safeFloor(prob[r] / (1 - prob[r]))) +
+        (t - prob[r]) / w;
 
       for (let i = 0; i < k; i++) {
-        XtWz[i] += X[r * k + i]! * w * workingResponse;
+        XtWz[i] += X[r * k + i] * w * workingResponse;
         for (let j = 0; j < k; j++) {
-          XtWX[i * k + j] += X[r * k + i]! * w * X[r * k + j]!;
+          XtWX[i * k + j] += X[r * k + i] * w * X[r * k + j];
         }
       }
     }
@@ -90,14 +90,14 @@ function fitLogistic(
     const XtWz1d: number[] = new Array(k);
     for (let i = 0; i < k; i++) {
       XtWX2d[i] = new Array(k);
-      for (let j = 0; j < k; j++) XtWX2d[i]![j] = XtWX[i * k + j]!;
+      for (let j = 0; j < k; j++) XtWX2d[i][j] = XtWX[i * k + j]!;
       XtWz1d[i] = XtWz[i]!;
     }
     const newBeta = solveLinear(XtWX2d, XtWz1d);
 
     // Check convergence
     let delta = 0;
-    for (let j = 0; j < k; j++) delta += (newBeta[j]! - beta[j]!) ** 2;
+    for (let j = 0; j < k; j++) delta += (newBeta[j] - beta[j]) ** 2;
     beta = Float64Array.from(newBeta);
     if (Math.sqrt(delta) < tol) break;
   }
@@ -118,9 +118,9 @@ function computePropensityScores(
   const scores = new Float64Array(n);
 
   for (let r = 0; r < n; r++) {
-    let dot = beta[0]!; // intercept
+    let dot = beta[0]; // intercept
     for (let i = 0; i < p; i++) {
-      dot += (beta[i + 1] ?? 0) * (data[r]![covariateIndices[i]!] ?? 0);
+      dot += (beta[i + 1] ?? 0) * (data[r][covariateIndices[i]] ?? 0);
     }
     scores[r] = Math.max(0.05, Math.min(0.95, 1 / (1 + Math.exp(-clip(dot, 15)))));
   }
@@ -160,29 +160,29 @@ export function estimateCATE(
   for (let i = 0; i < p; i++) {
     let sum = 0, cnt = 0;
     for (let r = 0; r < n; r++) {
-      const val = data[r]![featureIndices[i]!];
+      const val = data[r][featureIndices[i]];
       if (val != null && !Number.isNaN(val)) { sum += val; cnt++; }
     }
     xBar[i] = cnt > 0 ? sum / cnt : 0;
   }
 
   for (let r = 0; r < n; r++) {
-    const t = data[r]![treatmentIdx] ?? 0;
+    const t = data[r][treatmentIdx] ?? 0;
     X[r * k] = 1; // intercept
     X[r * k + 1] = t;
     for (let i = 0; i < p; i++) {
-      X[r * k + 2 + i] = data[r]![featureIndices[i]!] ?? 0;
-      X[r * k + 2 + p + i] = t * (data[r]![featureIndices[i]!] ?? 0);
+      X[r * k + 2 + i] = data[r][featureIndices[i]] ?? 0;
+      X[r * k + 2 + p + i] = t * (data[r][featureIndices[i]] ?? 0);
     }
   }
 
   const XtX = Array.from({ length: k }, () => new Float64Array(k));
   const Xty = new Float64Array(k);
   for (let r = 0; r < n; r++) {
-    const y = data[r]![outcomeIdx] ?? 0;
+    const y = data[r][outcomeIdx] ?? 0;
     for (let i = 0; i < k; i++) {
-      Xty[i] += X[r * k + i]! * y;
-      for (let j = 0; j < k; j++) XtX[i]![j] += X[r * k + i]! * X[r * k + j]!;
+      Xty[i] += X[r * k + i] * y;
+      for (let j = 0; j < k; j++) XtX[i][j] += X[r * k + i] * X[r * k + j];
     }
   }
 
@@ -191,7 +191,7 @@ export function estimateCATE(
     Array.from(Xty),
   );
 
-  const baselineATE = coef[1]!; // β_T
+  const baselineATE = coef[1]; // β_T
 
   return {
     baselineATE,
@@ -199,7 +199,7 @@ export function estimateCATE(
       let cate = baselineATE;
       for (let i = 0; i < p; i++) {
         // CATE for feature x_i, centered at mean
-        cate += coef[2 + p + i]! * ((features[i] ?? 0) - xBar[i]!);
+        cate += coef[2 + p + i] * ((features[i] ?? 0) - xBar[i]);
       }
       return cate;
     },
@@ -234,18 +234,18 @@ export function estimateIPW(
   // IPW ATE
   let ipwSum = 0;
   for (let r = 0; r < n; r++) {
-    const t = (data[r]![treatmentIdx] ?? 0) > 0.5 ? 1 : 0;
-    const y = data[r]![outcomeIdx] ?? 0;
-    ipwSum += t * y / pi[r]! - (1 - t) * y / (1 - pi[r]!);
+    const t = (data[r][treatmentIdx] ?? 0) > 0.5 ? 1 : 0;
+    const y = data[r][outcomeIdx] ?? 0;
+    ipwSum += t * y / pi[r] - (1 - t) * y / (1 - pi[r]);
   }
   const ate = ipwSum / n;
 
   // Influence-function based standard error
   let ifVar = 0;
   for (let r = 0; r < n; r++) {
-    const t = (data[r]![treatmentIdx] ?? 0) > 0.5 ? 1 : 0;
-    const y = data[r]![outcomeIdx] ?? 0;
-    const psi = t * y / pi[r]! - (1 - t) * y / (1 - pi[r]!) - ate;
+    const t = (data[r][treatmentIdx] ?? 0) > 0.5 ? 1 : 0;
+    const y = data[r][outcomeIdx] ?? 0;
+    const psi = t * y / pi[r] - (1 - t) * y / (1 - pi[r]) - ate;
     ifVar += psi * psi;
   }
   const se = Math.sqrt(Math.max(1e-10, ifVar / (n * n)));

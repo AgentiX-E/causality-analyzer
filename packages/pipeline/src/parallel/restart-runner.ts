@@ -29,7 +29,7 @@ export async function parallelRestart<T>(
     runner(seedBase + i),
   );
   const results = await Promise.all(tasks);
-  let best = results[0]!;
+  let best = results[0];
   for (const r of results) {
     if (r.score < best.score) best = r;
   }

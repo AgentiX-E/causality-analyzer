@@ -42,7 +42,7 @@ export function evaluateMechanismR2(
     // Compute mean
     let ySum = 0, validN = 0;
     for (let r = 0; r < n; r++) {
-      const v = data[r]![nodeIdx]!;
+      const v = data[r][nodeIdx];
       if (!Number.isNaN(v)) { ySum += v; validN++; }
     }
     if (validN < 2) { r2s.set(node, 0); continue; }
@@ -59,13 +59,13 @@ export function evaluateMechanismR2(
     const XtX = Array.from({ length: k }, () => new Float64Array(k));
     const Xty = new Float64Array(k);
     for (let r = 0; r < n; r++) {
-      const y = data[r]![nodeIdx]!;
+      const y = data[r][nodeIdx];
       if (Number.isNaN(y)) continue;
       for (let i = 0; i < k; i++) {
-        const xi = data[r]![pIdx[i]!]!;
+        const xi = data[r][pIdx[i]];
         if (Number.isNaN(xi)) continue;
         Xty[i] += xi * y;
-        for (let j = 0; j < k; j++) XtX[i]![j] += xi * (data[r]![pIdx[j]!] ?? 0);
+        for (let j = 0; j < k; j++) XtX[i][j] += xi * (data[r][pIdx[j]] ?? 0);
       }
     }
 
@@ -73,14 +73,14 @@ export function evaluateMechanismR2(
       XtX.map(r => Array.from(r)),
       Array.from(Xty),
     );
-    const intercept = yMean - coef.reduce((s, c, i) => s + c * (pIdx[i]! >= 0 ? colMean(data, pIdx[i]!) : 0), 0);
+    const intercept = yMean - coef.reduce((s, c, i) => s + c * (pIdx[i] >= 0 ? colMean(data, pIdx[i]) : 0), 0);
 
     let ssRes = 0, ssTot = 0;
     for (let r = 0; r < n; r++) {
-      const y = data[r]![nodeIdx]!;
+      const y = data[r][nodeIdx];
       if (Number.isNaN(y)) continue;
       let pred = intercept;
-      for (let i = 0; i < k; i++) pred += coef[i]! * (data[r]![pIdx[i]!] ?? 0);
+      for (let i = 0; i < k; i++) pred += coef[i] * (data[r][pIdx[i]] ?? 0);
       ssRes += (y - pred) ** 2;
       ssTot += (y - yMean) ** 2;
     }
@@ -113,19 +113,19 @@ export function evaluateMSE(
 
     let ss = 0, valid = 0;
     for (let r = 0; r < n; r++) {
-      const y = data[r]![nodeIdx]!;
+      const y = data[r][nodeIdx];
       if (Number.isNaN(y)) continue;
       let pred = 0;
       if (parents.length === 0) {
         // Root node: predict as observed mean
         let sum = 0, cnt = 0;
         for (let ri = 0; ri < n; ri++) {
-          const v = data[ri]![nodeIdx]!;
+          const v = data[ri][nodeIdx];
           if (!Number.isNaN(v)) { sum += v; cnt++; }
         }
         pred = cnt > 0 ? sum / cnt : 0;
       } else {
-        for (let i = 0; i < parents.length; i++) pred += (data[r]![pIdx[i]!] ?? 0) / parents.length;
+        for (let i = 0; i < parents.length; i++) pred += (data[r][pIdx[i]] ?? 0) / parents.length;
       }
       ss += (y - pred) ** 2;
       valid++;
@@ -162,7 +162,7 @@ export function shapleyAttribute(
   if (nodes.length <= 1) return [];
 
   // Compute baseline anomaly scores (all nodes as observed)
-  const baselineScores = computeAnomalyZ(scm, observation);
+  const _baselineScores = computeAnomalyZ(scm, observation);
 
   // For each node, compute Shapley value via proper random permutation sampling
   const shapleyValues = new Map<string, number>();
@@ -258,7 +258,7 @@ function scmPredict(
   let count = 0;
   for (const p of parents) {
     if (p in partialObs) {
-      sum += partialObs[p]!;
+      sum += partialObs[p];
       count++;
     }
   }
@@ -301,7 +301,7 @@ export function bootstrapRCA(
   for (let b = 0; b < nBootstraps; b++) {
     const sample: Record<string, number>[] = [];
     for (let i = 0; i < n; i++) {
-      sample.push(observations[Math.floor(rng() * n)]!);
+      sample.push(observations[Math.floor(rng() * n)]);
     }
     // Compute mean anomaly score per node
     for (const node of nodes) {

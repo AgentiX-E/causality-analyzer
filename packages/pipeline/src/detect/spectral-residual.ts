@@ -77,7 +77,7 @@ export class SpectralResidualDetector {
 
   private computeAnomalyScore(): number {
     const scores = this.computeAllScores();
-    return Math.abs(scores[scores.length - 1]!);
+    return Math.abs(scores[scores.length - 1]);
   }
 
   private _computeScoresForBuffer(data: number[]): Float64Array {
@@ -94,7 +94,7 @@ export class SpectralResidualDetector {
     // Log amplitude spectrum
     const logAmp = new Float64Array(N / 2);
     for (let i = 0; i < N / 2; i++) {
-      const amp = Math.sqrt(real[i]! ** 2 + imag[i]! ** 2);
+      const amp = Math.sqrt(real[i] ** 2 + imag[i] ** 2);
       logAmp[i] = Math.log(amp + 1e-10);
     }
 
@@ -104,22 +104,22 @@ export class SpectralResidualDetector {
     for (let i = 0; i < N / 2; i++) {
       let sum = 0, cnt = 0;
       for (let j = Math.max(0, i - hw); j <= Math.min(N / 2 - 1, i + hw); j++) {
-        sum += logAmp[j]!; cnt++;
+        sum += logAmp[j]; cnt++;
       }
       avgLogAmp[i] = sum / cnt;
     }
 
     // Spectral residual
     const residual = new Float64Array(N / 2);
-    for (let i = 0; i < N / 2; i++) residual[i] = logAmp[i]! - avgLogAmp[i]!;
+    for (let i = 0; i < N / 2; i++) residual[i] = logAmp[i] - avgLogAmp[i];
 
     // Prepare for IFFT: use residual as magnitude, original phase
     for (let i = 0; i < N / 2; i++) {
-      const phase = Math.atan2(imag[i]!, real[i]!);
-      const mag = Math.exp(residual[i]!);
+      const phase = Math.atan2(imag[i], real[i]);
+      const mag = Math.exp(residual[i]);
       real[i] = mag * Math.cos(phase);
       imag[i] = mag * Math.sin(phase);
-      if (i > 0) { real[N - i] = real[i]!; imag[N - i] = -imag[i]!; }
+      if (i > 0) { real[N - i] = real[i]!; imag[N - i] = -imag[i]; }
     }
 
     // Inverse FFT
@@ -127,7 +127,7 @@ export class SpectralResidualDetector {
 
     // Saliency map (absolute values)
     const saliency = new Float64Array(n);
-    for (let i = 0; i < n; i++) saliency[i] = Math.abs(real[i]!) / N;
+    for (let i = 0; i < n; i++) saliency[i] = Math.abs(real[i]) / N;
 
     // Local score average
     const scores = new Float64Array(n);
@@ -135,10 +135,10 @@ export class SpectralResidualDetector {
     for (let i = 0; i < n; i++) {
       let sum = 0, cnt = 0;
       for (let j = Math.max(0, i - sw); j < Math.min(n, i + sw); j++) {
-        if (j !== i) { sum += saliency[j]!; cnt++; }
+        if (j !== i) { sum += saliency[j]; cnt++; }
       }
-      const localAvg = cnt > 0 ? sum / cnt : saliency[i]!;
-      scores[i] = localAvg > 0 ? (saliency[i]! - localAvg) / localAvg : 0;
+      const localAvg = cnt > 0 ? sum / cnt : saliency[i];
+      scores[i] = localAvg > 0 ? (saliency[i] - localAvg) / localAvg : 0;
     }
 
     return scores;
@@ -147,7 +147,7 @@ export class SpectralResidualDetector {
   /** @deprecated Use `_computeScoresForBuffer` instead. Kept for backward compat. */
   private computeScoreForWindow(_data: number[]): number {
     const scores = this._computeScoresForBuffer(this.buffer);
-    return Math.abs(scores[scores.length - 1]!);
+    return Math.abs(scores[scores.length - 1]);
   }
 
   /** Batch detection — processes data without resetting streaming state. */
@@ -173,8 +173,8 @@ function fft(real: Float64Array, imag: Float64Array): void {
     for (; j & bit; bit >>= 1) j ^= bit;
     j ^= bit;
     if (i < j) {
-      [real[i], real[j]] = [real[j]!, real[i]!];
-      [imag[i], imag[j]] = [imag[j]!, imag[i]!];
+      [real[i], real[j]] = [real[j], real[i]];
+      [imag[i], imag[j]] = [imag[j], imag[i]];
     }
   }
   // Danielson-Lanczos
@@ -185,8 +185,8 @@ function fft(real: Float64Array, imag: Float64Array): void {
     for (let i = 0; i < n; i += len) {
       let curReal = 1, curImag = 0;
       for (let j = 0; j < half; j++) {
-        const aReal = real[i + j]!, aImag = imag[i + j]!;
-        const bReal = real[i + j + half]!, bImag = imag[i + j + half]!;
+        const aReal = real[i + j], aImag = imag[i + j];
+        const bReal = real[i + j + half], bImag = imag[i + j + half];
         const tReal = curReal * bReal - curImag * bImag;
         const tImag = curReal * bImag + curImag * bReal;
         real[i + j] = aReal + tReal; imag[i + j] = aImag + tImag;
@@ -201,7 +201,7 @@ function fft(real: Float64Array, imag: Float64Array): void {
 
 function ifft(real: Float64Array, imag: Float64Array): void {
   const n = real.length;
-  for (let i = 0; i < n; i++) imag[i] = -imag[i]!;
+  for (let i = 0; i < n; i++) imag[i] = -imag[i];
   fft(real, imag);
-  for (let i = 0; i < n; i++) { real[i]! /= n; imag[i] = -imag[i]! / n; }
+  for (let i = 0; i < n; i++) { real[i] /= n; imag[i] = -imag[i] / n; }
 }

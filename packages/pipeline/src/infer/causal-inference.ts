@@ -2,12 +2,12 @@
  * Causal Inference Engine.
  *
  * Implements the five-step causal analysis framework:
- * 0. Ingest â€? data preparation
- * 1. Model  â€? causal graph specification
- * 2. Identify â€? estimand identification (backdoor, IV, frontdoor)
- * 3. Estimate â€? effect estimation (linear regression, propensity score)
- * 4. Refute  â€? sensitivity and robustness checks
- * 5. Act     â€? action suggestion for AIOps
+ * 0. Ingest ï¿½? data preparation
+ * 1. Model  ï¿½? causal graph specification
+ * 2. Identify ï¿½? estimand identification (backdoor, IV, frontdoor)
+ * 3. Estimate ï¿½? effect estimation (linear regression, propensity score)
+ * 4. Refute  ï¿½? sensitivity and robustness checks
+ * 5. Act     ï¿½? action suggestion for AIOps
  */
 import { CausalGraph } from '../graph/causal-graph.js';
 import type { IdentifiedEstimand, CausalEstimate, CausalEdge } from '@agentix-e/causality-analyzer-core';
@@ -61,7 +61,7 @@ export function estimateLinearRegression(
   const allPred = [...covariateIndices, treatmentIdx];
   const k = allPred.length;
 
-  // OLS: y = Î²â‚€ + Î£ Î²áµ? * xáµ?
+  // OLS: y = Î²â‚€ + Î£ Î²ï¿½? * xï¿½?
   const X = allPred.map(i => data.map(r => r[i] ?? 0));
   const y = data.map(r => r[outcomeIdx] ?? 0);
 
@@ -70,19 +70,19 @@ export function estimateLinearRegression(
   let ySum = 0;
 
   for (let r = 0; r < n; r++) {
-    ySum += y[r]!;
+    ySum += y[r];
     for (let i = 0; i < k; i++) {
-      Xty[i] += X[i]![r]! * y[r]!;
-      for (let j = 0; j < k; j++) XtX[i]![j] += X[i]![r]! * X[j]![r]!;
+      Xty[i] += X[i][r] * y[r];
+      for (let j = 0; j < k; j++) XtX[i][j] += X[i][r] * X[j][r];
     }
   }
 
   const coef = solveLinear(XtX, Xty);
   const yMean = ySum / n;
-  const intercept = yMean - coef.reduce((s, c, i) => s + c * (X[i]!.reduce((a, v) => a + v, 0) / n), 0);
+  const intercept = yMean - coef.reduce((s, c, i) => s + c * (X[i].reduce((a, v) => a + v, 0) / n), 0);
 
   // ATE = coefficient of treatment
-  const treatBeta = coef[covariateIndices.length]!;
+  const treatBeta = coef[covariateIndices.length];
   const se = computeSE(data, treatmentIdx, outcomeIdx, coef, intercept, allPred);
 
   const model: LinearRegressionEstimate = {
@@ -100,8 +100,8 @@ function computeSE(
   let ss = 0;
   for (let r = 0; r < n; r++) {
     let pred = intercept;
-    for (let i = 0; i < predIdx.length; i++) pred += coef[i]! * (data[r]![predIdx[i]!] ?? 0);
-    ss += ((data[r]![oIdx] ?? 0) - pred) ** 2;
+    for (let i = 0; i < predIdx.length; i++) pred += coef[i] * (data[r][predIdx[i]] ?? 0);
+    ss += ((data[r][oIdx] ?? 0) - pred) ** 2;
   }
   return Math.sqrt(ss / Math.max(1, n - predIdx.length));
 }
@@ -130,7 +130,7 @@ export function refutePlaceboTreatment(
     const scrambled = data.map(row => {
       const newRow = [...row];
       const randIdx = Math.floor(rng() * data.length);
-      newRow[treatmentIdx] = data[randIdx]![treatmentIdx]!;
+      newRow[treatmentIdx] = data[randIdx][treatmentIdx]!;
       return newRow;
     });
     nullEstimates.push(estimateLinearRegression(scrambled, treatmentIdx, outcomeIdx).ate);
@@ -180,7 +180,7 @@ export function refuteBootstrap(
   for (let b = 0; b < nBootstraps; b++) {
     const sample: number[][] = [];
     for (let i = 0; i < n; i++) {
-      sample.push(data[Math.floor(rng() * n)]!);
+      sample.push(data[Math.floor(rng() * n)]);
     }
     estimates.push(estimateLinearRegression(sample, treatmentIdx, outcomeIdx).ate);
   }
@@ -196,7 +196,7 @@ function shuffle<T>(arr: T[], rng: () => number): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
-    [a[i], a[j]] = [a[j]!, a[i]!];
+    [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
 }

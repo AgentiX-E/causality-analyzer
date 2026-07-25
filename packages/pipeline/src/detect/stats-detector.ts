@@ -41,7 +41,7 @@ export class StatsDetector {
   /** Train on historical data to establish baseline statistics */
   train(data: number[][]): void {
     if (data.length === 0) return;
-    const nMetrics = data[0]!.length;
+    const nMetrics = data[0].length;
     this.means = new Float64Array(nMetrics);
     this.scales = new Float64Array(nMetrics);
     this.nSamples = data.length;
@@ -51,31 +51,31 @@ export class StatsDetector {
       if (this.config.method === 'zscore') {
         // Single-pass: sum + sum-of-squares → mean + std
         let sum = 0, sumSq = 0;
-        for (let r = 0; r < n; r++) { const v = data[r]![m]!; sum += v; sumSq += v * v; }
+        for (let r = 0; r < n; r++) { const v = data[r][m]; sum += v; sumSq += v * v; }
         const mean = sum / n;
-        this.means![m] = mean;
+        this.means[m] = mean;
         const variance = sumSq / n - mean * mean;
-        this.scales![m] = Math.sqrt(Math.max(0, variance)) || 1;
+        this.scales[m] = Math.sqrt(Math.max(0, variance)) || 1;
       } else {
         // Extract column (one pass), sort for mad/iqr
         const vals = new Float64Array(n);
         let sum = 0;
-        for (let r = 0; r < n; r++) { const v = data[r]![m]!; sum += v; vals[r] = v; }
+        for (let r = 0; r < n; r++) { const v = data[r][m]; sum += v; vals[r] = v; }
         const mean = sum / n;
-        this.means![m] = mean;
+        this.means[m] = mean;
 
         if (this.config.method === 'mad') {
           // MAD = CONSTANTS.MAD_CONSISTENCY × median(|x_i - median(x)|)
           // The center must be the median, not the mean, for robustness.
           const sVals = Array.from(vals).sort((a, b) => a - b);
-          const median = sVals[Math.floor(sVals.length / 2)]!;
+          const median = sVals[Math.floor(sVals.length / 2)];
           const absDevs = Array.from(vals, v => Math.abs(v - median)).sort((a, b) => a - b);
-          this.scales![m] = CONSTANTS.MAD_CONSISTENCY * (absDevs[Math.floor(absDevs.length / 2)]! || 1);
+          this.scales[m] = CONSTANTS.MAD_CONSISTENCY * (absDevs[Math.floor(absDevs.length / 2)] || 1);
         } else { // iqr
           const sorted = Array.from(vals).sort((a, b) => a - b);
-          const q1 = sorted[Math.floor(sorted.length * 0.25)]!;
-          const q3 = sorted[Math.floor(sorted.length * 0.75)]!;
-          this.scales![m] = (q3 - q1) || 1;
+          const q1 = sorted[Math.floor(sorted.length * 0.25)];
+          const q3 = sorted[Math.floor(sorted.length * 0.75)];
+          this.scales[m] = (q3 - q1) || 1;
         }
       }
     }
@@ -98,7 +98,7 @@ export class StatsDetector {
     let anyAnomaly = false;
 
     for (let i = 0; i < n; i++) {
-      const dev = Math.abs(point[i]! - this.means![i]!) / this.scales![i]!;
+      const dev = Math.abs(point[i] - this.means[i]) / this.scales![i];
       scores[i] = dev;
       if (dev > this.config.threshold) { labels[i] = 1; anyAnomaly = true; }
     }

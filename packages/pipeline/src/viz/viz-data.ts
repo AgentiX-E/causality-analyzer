@@ -90,8 +90,8 @@ export function buildTimeseriesVizData(
   }));
   const anomalyRegions: AnomalyRegion[] = [];
   if (anomalousIndices.length > 0) {
-    const t0 = timestamps[anomalousIndices[0]!] ?? anomalousIndices[0]!;
-    const t1 = timestamps[anomalousIndices[anomalousIndices.length - 1]!] ?? anomalousIndices[anomalousIndices.length - 1]!;
+    const t0 = timestamps[anomalousIndices[0]] ?? anomalousIndices[0];
+    const t1 = timestamps[anomalousIndices[anomalousIndices.length - 1]] ?? anomalousIndices[anomalousIndices.length - 1];
     anomalyRegions.push({ start: t0, end: t1, severity: 'critical', rootCause });
   }
   return { series, anomalyRegions };

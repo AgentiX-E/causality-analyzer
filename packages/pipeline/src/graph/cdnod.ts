@@ -49,13 +49,13 @@ export function cdnodAlgorithm(
   // Start with a complete undirected graph
   for (let i = 0; i < n; i++)
     for (let j = i + 1; j < n; j++)
-      g.undirectedEdge(nodeNames[i]!, nodeNames[j]!);
+      g.undirectedEdge(nodeNames[i], nodeNames[j]);
 
   // Remove edges where variables are unconditionally independent
   for (let i = 0; i < n; i++)
     for (let j = i + 1; j < n; j++)
       if (matrixFisherZ(data, i, j, []) > alpha)
-        g.removeEdge(nodeNames[i]!, nodeNames[j]!);
+        g.removeEdge(nodeNames[i], nodeNames[j]);
 
   let depth = 1;
   const maxDepth = maxDegree === -1 ? n : maxDegree;
@@ -66,15 +66,15 @@ export function cdnodAlgorithm(
     changed = false;
     for (let i = 0; i < n; i++) {
       for (let j = i + 1; j < n; j++) {
-        if (!g.hasEdge(nodeNames[i]!, nodeNames[j]!)) continue;
-        const neighbors = g.neighbors(nodeNames[i]!).filter(c => c !== nodeNames[j]);
+        if (!g.hasEdge(nodeNames[i], nodeNames[j])) continue;
+        const neighbors = g.neighbors(nodeNames[i]).filter(c => c !== nodeNames[j]);
         if (neighbors.length < depth) continue;
         const subsets = combinations(neighbors, depth);
         for (const S of subsets) {
           const sIdx = S.map(s => nodeNames.indexOf(s));
           if (matrixFisherZ(data, i, j, sIdx) > alpha) {
-            g.removeEdge(nodeNames[i]!, nodeNames[j]!);
-            g.removeEdge(nodeNames[j]!, nodeNames[i]!);
+            g.removeEdge(nodeNames[i], nodeNames[j]);
+            g.removeEdge(nodeNames[j], nodeNames[i]);
             sepSet.set(`${Math.min(i, j)}-${Math.max(i, j)}`, new Set(S));
             changed = true; break;
           }
@@ -87,15 +87,15 @@ export function cdnodAlgorithm(
   // Phase 2: V-structure orientation
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
-      if (g.hasEdge(nodeNames[i]!, nodeNames[j]!)) continue;
+      if (g.hasEdge(nodeNames[i], nodeNames[j])) continue;
       for (let k = 0; k < n; k++) {
         if (k === i || k === j) continue;
-        if (!g.hasEdge(nodeNames[i]!, nodeNames[k]!) || !g.hasEdge(nodeNames[j]!, nodeNames[k]!)) continue;
+        if (!g.hasEdge(nodeNames[i], nodeNames[k]) || !g.hasEdge(nodeNames[j], nodeNames[k])) continue;
         const key = `${Math.min(i, j)}-${Math.max(i, j)}`;
         const sep = sepSet.get(key);
-        if (!sep || !sep.has(nodeNames[k]!)) {
-          g.orientEdge(nodeNames[i]!, nodeNames[k]!);
-          g.orientEdge(nodeNames[j]!, nodeNames[k]!);
+        if (!sep || !sep.has(nodeNames[k])) {
+          g.orientEdge(nodeNames[i], nodeNames[k]);
+          g.orientEdge(nodeNames[j], nodeNames[k]);
         }
       }
     }
@@ -105,7 +105,7 @@ export function cdnodAlgorithm(
   if (domains.length === N) {
     for (let i = 0; i < n; i++) {
       for (let j = i + 1; j < n; j++) {
-        if (!g.hasEdge(nodeNames[i]!, nodeNames[j]!) || !g.hasEdge(nodeNames[j]!, nodeNames[i]!)) continue;
+        if (!g.hasEdge(nodeNames[i], nodeNames[j]) || !g.hasEdge(nodeNames[j], nodeNames[i])) continue;
 
         let domainChange = false;
         const uniqueDomains = [...new Set(domains)];
@@ -118,7 +118,7 @@ export function cdnodAlgorithm(
           const subData = new Matrix(dRows.length, data.columns);
           for (let ri = 0; ri < dRows.length; ri++)
             for (let c = 0; c < data.columns; c++)
-              subData.set(ri, c, data.get(dRows[ri]!, c));
+              subData.set(ri, c, data.get(dRows[ri], c));
 
           const pDomain = matrixFisherZ(subData, i, j, []);
           if (pDomain < alpha) {

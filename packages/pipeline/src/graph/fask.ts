@@ -61,12 +61,12 @@ export function faskAlgorithm(
   // Start complete, remove independent edges
   for (let i = 0; i < n; i++)
     for (let j = i + 1; j < n; j++)
-      g.undirectedEdge(nodeNames[i]!, nodeNames[j]!);
+      g.undirectedEdge(nodeNames[i], nodeNames[j]);
 
   for (let i = 0; i < n; i++)
     for (let j = i + 1; j < n; j++)
       if (fisherZTest(dataArr, i, j, []) > alpha)
-        g.removeEdge(nodeNames[i]!, nodeNames[j]!);
+        g.removeEdge(nodeNames[i], nodeNames[j]);
 
   let depth = 1;
   const maxDepth = maxDegree === -1 ? n : maxDegree;
@@ -76,16 +76,16 @@ export function faskAlgorithm(
     changed = false;
     for (let i = 0; i < n; i++) {
       for (let j = i + 1; j < n; j++) {
-        if (!g.hasEdge(nodeNames[i]!, nodeNames[j]!)) continue;
-        const neighbors = g.neighbors(nodeNames[i]!).filter(c => c !== nodeNames[j]);
+        if (!g.hasEdge(nodeNames[i], nodeNames[j])) continue;
+        const neighbors = g.neighbors(nodeNames[i]).filter(c => c !== nodeNames[j]);
         if (neighbors.length < depth) continue;
         const subsets = combinations(neighbors, depth);
         for (const S of subsets) {
           const sIdx = S.map(s => nodeNames.indexOf(s));
           const p = fisherZTest(dataArr, i, j, sIdx);
           if (p > alpha) {
-            g.removeEdge(nodeNames[i]!, nodeNames[j]!);
-            g.removeEdge(nodeNames[j]!, nodeNames[i]!);
+            g.removeEdge(nodeNames[i], nodeNames[j]);
+            g.removeEdge(nodeNames[j], nodeNames[i]);
             changed = true; break;
           }
         }
@@ -100,7 +100,7 @@ export function faskAlgorithm(
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
       // Must be undirected (both directions present)
-      if (!g.hasEdge(nodeNames[i]!, nodeNames[j]!) || !g.hasEdge(nodeNames[j]!, nodeNames[i]!))
+      if (!g.hasEdge(nodeNames[i], nodeNames[j]) || !g.hasEdge(nodeNames[j], nodeNames[i]))
         continue;
 
       const skewIJ = computeResidualSkewness(data, i, j, skewIter);
@@ -114,11 +114,11 @@ export function faskAlgorithm(
         const confidence = Math.min(0.95, diff / (diff + skewThreshold));
         if (absIJ < absJI) {
           // i → j: residuals when predicting j from i have less skew
-          g.orientEdge(nodeNames[i]!, nodeNames[j]!);
+          g.orientEdge(nodeNames[i], nodeNames[j]);
           orientationConfidence.set(`${nodeNames[i]}→${nodeNames[j]}`, confidence);
         } else {
           // j → i
-          g.orientEdge(nodeNames[j]!, nodeNames[i]!);
+          g.orientEdge(nodeNames[j], nodeNames[i]);
           orientationConfidence.set(`${nodeNames[j]}→${nodeNames[i]}`, confidence);
         }
       }
@@ -195,7 +195,7 @@ function computeResidualSkewness(
 
     // Pearson-Fisher skewness: (mean - median) / std
     const sorted = [...residuals].sort((a, b) => a - b);
-    const median = sorted[Math.floor(sorted.length / 2)]!;
+    const median = sorted[Math.floor(sorted.length / 2)];
     const mean = residuals.reduce((s, v) => s + v, 0) / residuals.length;
     const std = Math.sqrt(residuals.reduce((s, v) => s + (v - mean) ** 2, 0) / residuals.length);
 

@@ -77,7 +77,7 @@ export class CausalForest {
    */
   train(X: number[][], y: number[], t: number[]): void {
     const n = X.length;
-    const p = n > 0 ? X[0]!.length : 0;
+    const p = n > 0 ? X[0].length : 0;
     const cfg = this.config;
 
     this.trees = [];
@@ -150,14 +150,14 @@ function buildCausalTree(
 
   for (const v of vars) {
     for (const s of randomSplitPoints(structIdx, v, X, 10)) {
-      const left = structIdx.filter(i => X[i]![v]! <= s);
-      const right = structIdx.filter(i => X[i]![v]! > s);
+      const left = structIdx.filter(i => X[i][v] <= s);
+      const right = structIdx.filter(i => X[i][v] > s);
 
       if (left.length < minLeaf || right.length < minLeaf) continue;
 
       // Split estimation set the same way
-      const leftEst = estIdx.filter(i => X[i]![v]! <= s);
-      const rightEst = estIdx.filter(i => X[i]![v]! > s);
+      const leftEst = estIdx.filter(i => X[i][v] <= s);
+      const rightEst = estIdx.filter(i => X[i][v] > s);
 
       if (leftEst.length < minLeaf || rightEst.length < minLeaf) continue;
 
@@ -179,10 +179,10 @@ function buildCausalTree(
   }
 
   // Recursively build children
-  const leftStruct = structIdx.filter(i => X[i]![bestVar]! <= bestVal);
-  const rightStruct = structIdx.filter(i => X[i]![bestVar]! > bestVal);
-  const leftEst = estIdx.filter(i => X[i]![bestVar]! <= bestVal);
-  const rightEst = estIdx.filter(i => X[i]![bestVar]! > bestVal);
+  const leftStruct = structIdx.filter(i => X[i][bestVar] <= bestVal);
+  const rightStruct = structIdx.filter(i => X[i][bestVar] > bestVal);
+  const leftEst = estIdx.filter(i => X[i][bestVar] <= bestVal);
+  const rightEst = estIdx.filter(i => X[i][bestVar] > bestVal);
 
   return {
     isLeaf: false,
@@ -200,8 +200,8 @@ function buildCausalTree(
 function estimateATE(X: number[][], y: number[], t: number[], indices: number[]): number {
   let tSum = 0, tN = 0, cSum = 0, cN = 0;
   for (const i of indices) {
-    if (t[i]! > 0.5) { tSum += y[i]!; tN++; }
-    else { cSum += y[i]!; cN++; }
+    if (t[i] > 0.5) { tSum += y[i]; tN++; }
+    else { cSum += y[i]; cN++; }
   }
   return (tN > 0 ? tSum / tN : 0) - (cN > 0 ? cSum / cN : 0);
 }
@@ -227,12 +227,12 @@ function subsample(n: number, size: number, seed: number): number[] {
 
 function randomSplitPoints(indices: number[], varIdx: number, X: number[][], k: number): number[] {
   if (indices.length === 0) return [];
-  const vals = indices.map(i => X[i]![varIdx]!).filter(v => v != null);
+  const vals = indices.map(i => X[i][varIdx]).filter(v => v != null);
   vals.sort((a, b) => a - b);
   const pts: number[] = [];
   if (vals.length <= 1) return [vals[0] ?? 0];
   for (let j = 1; j <= k && j < vals.length; j++) {
-    pts.push(vals[Math.floor(j * vals.length / (k + 1))]!);
+    pts.push(vals[Math.floor(j * vals.length / (k + 1))]);
   }
   return pts;
 }
@@ -242,7 +242,7 @@ function shuffleRange(n: number, seed: number): number[] {
   const rng = mulberry(seed);
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
-    [arr[i], arr[j]] = [arr[j]!, arr[i]!];
+    [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
 }

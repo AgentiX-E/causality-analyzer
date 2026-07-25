@@ -17,7 +17,7 @@
  * @packageDocumentation
  */
 import { StructuralCausalModel } from './structural-causal-model.js';
-import { colMean, createRNG } from '@agentix-e/causality-analyzer-core';
+import { createRNG } from '@agentix-e/causality-analyzer-core';
 
 /**
  * Result of mechanism change detection for a single node.
@@ -141,8 +141,8 @@ export function changeAttributionCI(
   for (let b = 0; b < nBootstraps; b++) {
     const bootBefore: Record<string, number>[] = [];
     const bootAfter: Record<string, number>[] = [];
-    for (let i = 0; i < n1; i++) bootBefore.push(before[Math.floor(rng() * n1)]!);
-    for (let i = 0; i < n2; i++) bootAfter.push(after[Math.floor(rng() * n2)]!);
+    for (let i = 0; i < n1; i++) bootBefore.push(before[Math.floor(rng() * n1)]);
+    for (let i = 0; i < n2; i++) bootAfter.push(after[Math.floor(rng() * n2)]);
 
     const attrib = distributionChangeRobust(scm, bootBefore, bootAfter);
     for (const [node, val] of attrib) {

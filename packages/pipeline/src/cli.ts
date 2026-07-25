@@ -29,10 +29,10 @@ function parseArgs(argv: string[]): { cmd: string; args: CliArgs } {
   const args: CliArgs = {};
   let i = 1;
   while (i < argv.length) {
-    const a = argv[i]!;
-    if (a === '--nodes' && i + 1 < argv.length) { args.nodes = argv[++i]!.split(','); }
-    else if (a === '--slis' && i + 1 < argv.length) { args.slis = argv[++i]!.split(','); }
-    else if (a === '--port' && i + 1 < argv.length) { args.port = parseInt(argv[++i]!, 10); }
+    const a = argv[i];
+    if (a === '--nodes' && i + 1 < argv.length) { args.nodes = argv[++i].split(','); }
+    else if (a === '--slis' && i + 1 < argv.length) { args.slis = argv[++i].split(','); }
+    else if (a === '--port' && i + 1 < argv.length) { args.port = parseInt(argv[++i], 10); }
     else if (!a.startsWith('--')) { args.file = a; }
     i++;
   }

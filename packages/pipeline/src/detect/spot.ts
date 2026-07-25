@@ -163,7 +163,7 @@ function estimateGPD(peaks: number[]): GPDParams {
   const interval2 = [-(1 - 1e-10) / maxY, -1e-10 / maxY]; // (-1/maxY, 0)
 
   for (const interval of [interval1, interval2]) {
-      const lo = interval[0]!, hi = interval[1]!;
+      const lo = interval[0], hi = interval[1];
     for (let k = 0; k < 50; k++) {
       const s = lo + (hi - lo) * k / 49;
       const w = grimshawW(s, peaks);

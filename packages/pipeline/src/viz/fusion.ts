@@ -4,7 +4,7 @@
  * Implements cascaded (nested) RCA: first coarse-grained Metric RCA,
  * then fine-grained Trace RCA within the identified scope.
  */
-import type { RootCause, RootCausePath, RCAResult } from '@agentix-e/causality-analyzer-core';
+import type { RootCause, RCAResult } from '@agentix-e/causality-analyzer-core';
 
 export type FusionStrategy = 'weighted' | 'nested' | 'voting';
 
@@ -81,7 +81,7 @@ export class FusionAnalyzer {
         toJSON() { return { rootCauses: this.rootCauses, paths: metricRCA.paths, metadata: this.metadata }; },
       };
     }
-    return metricRCA ?? traceRCA ?? { rootCauses: [], paths: [], metadata: { method: 'fusion_empty', analyzedAt: Date.now(), durationMs: 0, extra: {} }, toJSON() { return {} as any; } };
+    return metricRCA ?? traceRCA ?? { rootCauses: [], paths: [], metadata: { method: 'fusion_empty', analyzedAt: Date.now(), durationMs: 0, extra: {} }, toJSON() { return {}; } };
   }
 
   /** Voting: majority vote across RCA methods, tie-breaking by score. */

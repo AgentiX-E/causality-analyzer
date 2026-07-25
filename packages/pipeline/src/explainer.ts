@@ -73,7 +73,7 @@ export function explainRCA(
     };
   }
 
-  const topCause = causes[0]!;
+  const topCause = causes[0];
   const confidenceLevel = topCause.score > 0.7 ? 'high' : topCause.score > 0.4 ? 'medium' : 'low';
 
   // Summary
@@ -119,7 +119,7 @@ export function explainRCA(
   return { summary, reasoning, ranking, caveats, confidence: confidenceLevel };
 }
 
-function interpretScore(score: number, name: string, isTop: boolean): string {
+function interpretScore(score: number, name: string, _isTop: boolean): string {
   if (score > 0.8) return `Very strong evidence — ${name} is likely the root cause`;
   if (score > 0.6) return `Strong evidence — ${name} is a probable root cause`;
   if (score > 0.4) return `Moderate evidence — ${name} should be investigated`;

@@ -77,7 +77,7 @@ export function tsIcdAlgorithm(
   for (let j = 0; j < d; j++) {
     for (let lag = 0; lag <= maxLag; lag++) {
       const colIdx = j * (maxLag + 1) + lag;
-      expandedNames.push(lag === 0 ? nodeNames[j]! : `${nodeNames[j]}(t-${lag})`);
+      expandedNames.push(lag === 0 ? nodeNames[j] : `${nodeNames[j]}(t-${lag})`);
       for (let t = 0; t < effectiveT; t++) {
         expanded.set(t, colIdx, data[t + maxLag - lag]?.[j] ?? NaN);
       }
@@ -120,7 +120,7 @@ export function tsIcdAlgorithm(
 
     for (const key of adj) {
       const [ii, jj] = key.split('-').map(Number);
-      const i = ii!, j = jj!;
+      const i = ii, j = jj;
       if (i >= d && j >= d) continue; // lag-lag pairs not tested
 
       const iNeighbors = getNeighbors(adj, i, allN);
@@ -128,7 +128,7 @@ export function tsIcdAlgorithm(
       const cands = [...new Set([...iNeighbors, ...jNeighbors])].filter(c => c !== i && c !== j);
 
       if (cands.length < depth) continue;
-      const subsets = combinations(cands.map(c => allNodes[c]!), depth);
+      const subsets = combinations(cands.map(c => allNodes[c]), depth);
 
       for (const S of subsets) {
         const sIdx = S.map(s => allNodes.indexOf(s));
@@ -158,9 +158,9 @@ export function tsIcdAlgorithm(
         if (!adj.has(`${i}-${k}`) || !adj.has(`${j}-${k}`)) continue;
         const key = `${Math.min(i,j)}-${Math.max(i,j)}`;
         const sep = sepSet.get(key);
-        if (!sep || !sep.has(nodeNames[k]!)) {
-          g.orientEdge(nodeNames[i]!, nodeNames[k]!);
-          g.orientEdge(nodeNames[j]!, nodeNames[k]!);
+        if (!sep || !sep.has(nodeNames[k])) {
+          g.orientEdge(nodeNames[i], nodeNames[k]);
+          g.orientEdge(nodeNames[j], nodeNames[k]);
         }
       }
     }
@@ -173,11 +173,11 @@ export function tsIcdAlgorithm(
       const bicIJ = bicNodeScore(expanded, i, [j], N);
       const bicJI = bicNodeScore(expanded, j, [i], N);
       if (bicIJ < bicJI) {
-        g.orientEdge(nodeNames[i]!, nodeNames[j]!);
-        edges.push({ source: nodeNames[i]!, target: nodeNames[j]!, lag: 0, weight: 1 });
+        g.orientEdge(nodeNames[i], nodeNames[j]);
+        edges.push({ source: nodeNames[i], target: nodeNames[j], lag: 0, weight: 1 });
       } else {
-        g.orientEdge(nodeNames[j]!, nodeNames[i]!);
-        edges.push({ source: nodeNames[j]!, target: nodeNames[i]!, lag: 0, weight: 1 });
+        g.orientEdge(nodeNames[j], nodeNames[i]);
+        edges.push({ source: nodeNames[j], target: nodeNames[i], lag: 0, weight: 1 });
       }
     }
   }
@@ -193,8 +193,8 @@ export function tsIcdAlgorithm(
         // Compute partial correlation to determine edge weight
         const rho = partialCorrCI(expanded, i, lagIdx, N);
         edges.push({
-          source: nodeNames[j]!,
-          target: nodeNames[i]!,
+          source: nodeNames[j],
+          target: nodeNames[i],
           lag,
           weight: Math.abs(rho),
         });
@@ -235,7 +235,7 @@ function fisherZ(data: Matrix, i: number, j: number, condSet: number[]): number 
     for (let b = a; b < indices.length; b++) {
       let sum = 0;
       for (let r = 0; r < N; r++) sum += (sub.get(r, a) - means[a]!) * (sub.get(r, b) - means[b]!);
-      cov[a]![b] = sum / (N - 1); cov[b]![a] = cov[a]![b]!;
+      cov[a][b] = sum / (N - 1); cov[b][a] = cov[a][b]!;
     }
 
   const rho = partialCorr2D(cov, 0, 1);
@@ -247,12 +247,12 @@ function fisherZ(data: Matrix, i: number, j: number, condSet: number[]): number 
 function partialCorr2D(cov: number[][], i: number, j: number): number {
   const m = cov.length;
   if (m === 2) {
-    const d = cov[i]![i]! * cov[j]![j]!;
-    return d > 0 ? cov[i]![j]! / Math.sqrt(d) : 0;
+    const d = cov[i][i] * cov[j][j];
+    return d > 0 ? cov[i][j] / Math.sqrt(d) : 0;
   }
   const prec = invert2D(cov);
-  const d = prec[i]![i]! * prec[j]![j]!;
-  return d > 0 ? -prec[i]![j]! / Math.sqrt(d) : 0;
+  const d = prec[i][i] * prec[j][j];
+  return d > 0 ? -prec[i][j] / Math.sqrt(d) : 0;
 }
 
 function partialCorrCI(data: Matrix, i: number, j: number, _N: number): number {
@@ -276,14 +276,14 @@ function invert2D(m: number[][]): number[][] {
   const aug = m.map((r, ri) => [...r, ...Array.from({length: n}, (_, ci) => ri === ci ? 1 : 0)]);
   for (let c = 0; c < n; c++) {
     let pivot = c;
-    for (let r = c + 1; r < n; r++) if (Math.abs(aug[r]![c]!) > Math.abs(aug[pivot]![c]!)) pivot = r;
-    [aug[c], aug[pivot]] = [aug[pivot]!, aug[c]!];
-    if (Math.abs(aug[c]![c]!) < 1e-12) continue;
-    for (let j = c; j < 2 * n; j++) aug[c]![j]! /= aug[c]![c]!;
+    for (let r = c + 1; r < n; r++) if (Math.abs(aug[r][c]) > Math.abs(aug[pivot][c])) pivot = r;
+    [aug[c], aug[pivot]] = [aug[pivot], aug[c]];
+    if (Math.abs(aug[c][c]) < 1e-12) continue;
+    for (let j = c; j < 2 * n; j++) aug[c][j] /= aug[c][c];
     for (let r = 0; r < n; r++) {
       if (r === c) continue;
-      const f = aug[r]![c]!;
-      for (let j = c; j < 2 * n; j++) aug[r]![j]! -= f * aug[c]![j]!;
+      const f = aug[r][c];
+      for (let j = c; j < 2 * n; j++) aug[r][j] -= f * aug[c][j];
     }
   }
   return aug.map(r => r.slice(n));

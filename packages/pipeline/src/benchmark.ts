@@ -105,7 +105,7 @@ export function randomDAG(nodes: number, density: number, seed: number): CausalG
 
   for (let i = 0; i < nodes; i++) {
     for (let j = i + 1; j < nodes; j++) {
-      if (rng() < density) g.addEdge(names[i]!, names[j]!);
+      if (rng() < density) g.addEdge(names[i], names[j]);
     }
   }
   return g;
@@ -182,14 +182,14 @@ export function generateLinearData(graph: CausalGraph, n: number, seed: number, 
       let val = 0;
       for (const p of parents) {
         const pIdx = nodes.indexOf(p);
-        val += coeff * data[i]![pIdx]!;
+        val += coeff * data[i][pIdx];
       }
       // Box-Muller for Gaussian noise: root nodes get unit variance, children get specified noise
       const sigma = parents.length === 0 ? rootNoise : noise;
       const u1 = Math.max(1e-10, rng());
       const u2 = rng();
       val += sigma * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-      data[i]![nodeIdx] = val;
+      data[i][nodeIdx] = val;
     }
   }
   return { data, nodeNames: nodes };
@@ -229,8 +229,8 @@ export function runBenchmark(
 ): BenchmarkResult {
   const algorithms: Array<{ name: string; fn: (d: Matrix, nodes: string[]) => CausalGraph }> = [
     { name: 'PC', fn: (d, n) => (pcAlgorithm as any)(d, n).graph },
-    { name: 'GES', fn: (d, n) => gesAlgorithm(d as any, n) },
-    { name: 'BOSS', fn: (d, n) => bossAlgorithm(d as any, n, { numStarts: 2, maxIter: 20 }) },
+    { name: 'GES', fn: (d, n) => gesAlgorithm(d, n) },
+    { name: 'BOSS', fn: (d, n) => bossAlgorithm(d, n, { numStarts: 2, maxIter: 20 }) },
     { name: 'NOTEARS', fn: (_d, n) => notearsAlgorithm([...Array(_d.rows)].map((_, i) => [...Array(_d.columns)].map((_, j) => _d.get(i, j))), n, { lambda1: 0.1, maxOuterIter: 10, wThreshold: 0.2 }).graph },
     { name: 'LiNGAM', fn: (d, n) => (directLiNGAM as any)(d, n).graph },
     { name: 'FCI', fn: (d, n) => (fciAlgorithm as any)(d, n).graph },

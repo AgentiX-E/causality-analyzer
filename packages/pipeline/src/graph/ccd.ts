@@ -50,14 +50,14 @@ export function ccdAlgorithm(
   // Phase 1: Complete graph (CCD starts with all possible edges)
   for (let i = 0; i < n; i++)
     for (let j = 0; j < n; j++)
-      if (i !== j) g.addEdge(nodeNames[i]!, nodeNames[j]!);
+      if (i !== j) g.addEdge(nodeNames[i], nodeNames[j]);
 
   // Phase 2: Unconditional CI pruning
   for (let i = 0; i < n; i++)
     for (let j = 0; j < n; j++)
       if (i !== j && fisherZTest(dataArr, i, j, []) > alpha) {
-        g.removeEdge(nodeNames[i]!, nodeNames[j]!);
-        g.removeEdge(nodeNames[j]!, nodeNames[i]!);
+        g.removeEdge(nodeNames[i], nodeNames[j]);
+        g.removeEdge(nodeNames[j], nodeNames[i]);
       }
 
   // Phase 3: Conditional CI pruning
@@ -69,8 +69,8 @@ export function ccdAlgorithm(
     changed = false;
     for (let i = 0; i < n; i++) {
       for (let j = 0; j < n; j++) {
-        if (i === j || !g.hasEdge(nodeNames[i]!, nodeNames[j]!)) continue;
-        const neighbors = g.neighbors(nodeNames[i]!).filter(c => c !== nodeNames[j]);
+        if (i === j || !g.hasEdge(nodeNames[i], nodeNames[j])) continue;
+        const neighbors = g.neighbors(nodeNames[i]).filter(c => c !== nodeNames[j]);
         if (neighbors.length < depth) continue;
 
         const subsets = combinations(neighbors, depth);
@@ -78,7 +78,7 @@ export function ccdAlgorithm(
           const sIdx = S.map(s => nodeNames.indexOf(s));
           const p = fisherZTest(dataArr, i, j, sIdx);
           if (p > alpha) {
-            g.removeEdge(nodeNames[i]!, nodeNames[j]!);
+            g.removeEdge(nodeNames[i], nodeNames[j]);
             changed = true; break;
           }
         }
@@ -91,7 +91,7 @@ export function ccdAlgorithm(
   for (let i = 0; i < n; i++) {
     for (let j = 0; j < n; j++) {
       if (i === j) continue;
-      if (g.hasEdge(nodeNames[i]!, nodeNames[j]!) && g.hasEdge(nodeNames[j]!, nodeNames[i]!)) {
+      if (g.hasEdge(nodeNames[i], nodeNames[j]) && g.hasEdge(nodeNames[j], nodeNames[i])) {
         // Bidirectional edges suggest a cycle
         cycleEdges.set(`${nodeNames[i]}↔${nodeNames[j]}`, true);
       }
@@ -102,19 +102,19 @@ export function ccdAlgorithm(
   for (let i = 0; i < n; i++) {
     for (let j = 0; j < n; j++) {
       if (i === j) continue;
-      if (!g.hasEdge(nodeNames[i]!, nodeNames[j]!)) continue;
+      if (!g.hasEdge(nodeNames[i], nodeNames[j])) continue;
       for (let k = 0; k < n; k++) {
         if (k === i || k === j) continue;
-        if (!g.hasEdge(nodeNames[k]!, nodeNames[j]!)) continue;
+        if (!g.hasEdge(nodeNames[k], nodeNames[j])) continue;
         // i→j and k→j but i and k not adjacent → possible collider
-        if (!g.hasEdge(nodeNames[i]!, nodeNames[k]!) && !g.hasEdge(nodeNames[k]!, nodeNames[i]!)) {
+        if (!g.hasEdge(nodeNames[i], nodeNames[k]) && !g.hasEdge(nodeNames[k], nodeNames[i])) {
           // Orient: keep i→j and k→j as-is (they're already present)
           // Mark as directed (remove j→i if present)
-          if (g.hasEdge(nodeNames[j]!, nodeNames[i]!)) {
-            g.orientEdge(nodeNames[i]!, nodeNames[j]!);
+          if (g.hasEdge(nodeNames[j], nodeNames[i])) {
+            g.orientEdge(nodeNames[i], nodeNames[j]);
           }
-          if (g.hasEdge(nodeNames[j]!, nodeNames[k]!)) {
-            g.orientEdge(nodeNames[k]!, nodeNames[j]!);
+          if (g.hasEdge(nodeNames[j], nodeNames[k])) {
+            g.orientEdge(nodeNames[k], nodeNames[j]);
           }
         }
       }

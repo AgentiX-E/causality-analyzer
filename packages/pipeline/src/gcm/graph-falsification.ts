@@ -49,7 +49,7 @@ export function falsifyGraph(
   alpha: number = 0.05,
   seed?: number,
 ): FalsificationResult {
-  const rng = createRNG(seed ?? null);
+  const _rng = createRNG(seed ?? null);
   const n = nodeNames.length;
   const missingEdges: FalsificationResult['missingEdges'] = [];
   const spuriousEdges: FalsificationResult['spuriousEdges'] = [];
@@ -60,16 +60,16 @@ export function falsifyGraph(
   // Check spurious edges: adjacent pairs that are conditionally independent
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
-      if (!graph.hasEdge(nodeNames[i]!, nodeNames[j]!)) continue;
+      if (!graph.hasEdge(nodeNames[i], nodeNames[j])) continue;
       // Test multiple conditioning sets: neighbors of i (excluding j)
-      const neighbors = graph.neighbors(nodeNames[i]!).filter(k => k !== nodeNames[j]);
+      const neighbors = graph.neighbors(nodeNames[i]).filter(k => k !== nodeNames[j]);
       // Try conditioning sets of increasing size from neighbors
       for (let size = 0; size <= Math.min(3, neighbors.length); size++) {
         const subsets = size === 0 ? [[]] : combinations(neighbors, size);
         for (const S of subsets) {
           const condSet = S.map(k => nodeNames.indexOf(k));
           const p = fisherZTest(data, i, j, condSet);
-          rawResults.push({ type: 'spurious', from: nodeNames[i]!, to: nodeNames[j]!, pValue: p });
+          rawResults.push({ type: 'spurious', from: nodeNames[i], to: nodeNames[j], pValue: p });
         }
       }
     }
@@ -78,9 +78,9 @@ export function falsifyGraph(
   // Check missing edges: non-adjacent pairs that are unconditionally dependent
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
-      if (graph.hasEdge(nodeNames[i]!, nodeNames[j]!)) continue;
+      if (graph.hasEdge(nodeNames[i], nodeNames[j])) continue;
       const p = fisherZTest(data, i, j, []);
-      rawResults.push({ type: 'missing', from: nodeNames[i]!, to: nodeNames[j]!, pValue: p });
+      rawResults.push({ type: 'missing', from: nodeNames[i], to: nodeNames[j], pValue: p });
     }
   }
 
@@ -127,7 +127,7 @@ export function lmcFalsification(
   const results = new Map<string, { violated: boolean; pValue: number; explanation: string }>();
 
   for (let i = 0; i < nodeNames.length; i++) {
-    const node = nodeNames[i]!;
+    const node = nodeNames[i];
     const parents = graph.parents(node);
     const parentIdx = parents.map(p => nodeNames.indexOf(p));
 
@@ -140,9 +140,9 @@ export function lmcFalsification(
     let tested = false;
     let minP = 1;
     for (let j = 0; j < nodeNames.length; j++) {
-      if (j === i || parents.includes(nodeNames[j]!)) continue;
+      if (j === i || parents.includes(nodeNames[j])) continue;
       // Skip descendants (all descendants, not just children)
-      const isDescendant = graph.hasDirectedPath(node, nodeNames[j]!);
+      const isDescendant = graph.hasDirectedPath(node, nodeNames[j]);
       if (isDescendant) continue;
 
       const p = fisherZTest(data, i, j, parentIdx);

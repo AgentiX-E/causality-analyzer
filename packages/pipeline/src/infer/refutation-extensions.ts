@@ -68,7 +68,7 @@ export function refuteRandomCommonCause(
     // Since the estimator takes [data,treatmentIdx,outcomeIdx,covariateIndices],
     // and our estimateFn interface is generic, we rely on the caller to handle it.
     // Here we use a simple approach: augment data and estimate directly.
-    const augmentedIdx = data[0]?.length ?? 0;
+    const _augmentedIdx = data[0]?.length ?? 0;
     simulatedATEs.push(estimateFn(augmentedData).ate);
   }
 

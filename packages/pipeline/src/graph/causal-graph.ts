@@ -76,8 +76,8 @@ export class CausalGraph {
         if (this.adj.get(i, j) === 1 && i !== j) {
           const isBidirected = this.adj.get(j, i) === 1;
           result.push({
-            source: this.nodes[i]!,
-            target: this.nodes[j]!,
+            source: this.nodes[i],
+            target: this.nodes[j],
             weight: 1,
             directed: !isBidirected,
           });
@@ -94,7 +94,7 @@ export class CausalGraph {
     const j = this.nodeIndex(node);
     const result: string[] = [];
     for (let i = 0; i < this.nodeCount; i++) {
-      if (i !== j && this.adj.get(i, j) === 1) result.push(this.nodes[i]!);
+      if (i !== j && this.adj.get(i, j) === 1) result.push(this.nodes[i]);
     }
     return result;
   }
@@ -104,7 +104,7 @@ export class CausalGraph {
     const i = this.nodeIndex(node);
     const result: string[] = [];
     for (let j = 0; j < this.nodeCount; j++) {
-      if (i !== j && this.adj.get(i, j) === 1) result.push(this.nodes[j]!);
+      if (i !== j && this.adj.get(i, j) === 1) result.push(this.nodes[j]);
     }
     return result;
   }
@@ -115,7 +115,7 @@ export class CausalGraph {
     const result: string[] = [];
     for (let k = 0; k < this.nodeCount; k++) {
       if (k !== idx && this.adj.get(idx, k) === 1 && this.adj.get(k, idx) === 1)
-        result.push(this.nodes[k]!);
+        result.push(this.nodes[k]);
     }
     return result;
   }
@@ -129,13 +129,13 @@ export class CausalGraph {
   ancestors(nodes: string[]): Set<string> {
     const anc = new Set<string>();
     const stack = nodes.map(n => this.nodeIndex(n));
-    for (const v of stack) anc.add(this.nodes[v]!);
+    for (const v of stack) anc.add(this.nodes[v]);
 
     while (stack.length > 0) {
       const v = stack.pop()!;
       for (let u = 0; u < this.nodeCount; u++) {
         if (this.adj.get(u, v) === 1) {
-          const name = this.nodes[u]!;
+          const name = this.nodes[u];
           if (!anc.has(name)) {
             anc.add(name);
             stack.push(u);
@@ -159,7 +159,7 @@ export class CausalGraph {
       const v = stack.pop()!;
       for (let w = 0; w < this.nodeCount; w++) {
         if (this.adj.get(v, w) === 1) {
-          const name = this.nodes[w]!;
+          const name = this.nodes[w];
           if (!desc.has(name)) {
             desc.add(name);
             stack.push(w);
@@ -228,7 +228,7 @@ export class CausalGraph {
   dSeparated(x: string, y: string, z: string[]): boolean {
     const ix = this.nodeIndex(x);
     const iy = this.nodeIndex(y);
-    const zIdx = new Set(z.map(n => this.nodeIndex(n)));
+    const _zIdx = new Set(z.map(n => this.nodeIndex(n)));
     const zn = new Set(z);
 
     // A collider is activated iff the collider itself is in Z,
@@ -311,7 +311,7 @@ export class CausalGraph {
 
           if (isCollider(prev, current, w)) {
             // current is a collider: trail opens if current or any descendant is in Z
-            const cName = this.nodes[current]!;
+            const cName = this.nodes[current];
             // Collider activation: collider ∈ Z OR ∃ node in Z that descends from collider
             // i.e., collider ∈ Z OR collider is an ancestor of some node in Z
             if (zn.has(cName) || zAncestors.has(cName)) {
@@ -323,7 +323,7 @@ export class CausalGraph {
             }
           } else {
             // current is NOT a collider: trail is blocked if current is in Z
-            if (zn.has(this.nodes[current]!)) continue;
+            if (zn.has(this.nodes[current])) continue;
             // otherwise trail stays in current state
           }
         } else {
@@ -428,7 +428,7 @@ export class CausalGraph {
     const result: string[] = [];
     while (queue.length > 0) {
       const v = queue.shift()!;
-      result.push(this.nodes[v]!);
+      result.push(this.nodes[v]);
       for (let w = 0; w < n; w++) {
         if (this.adj.get(v, w) === 1 && --inDegree[w] === 0) queue.push(w);
       }

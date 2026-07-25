@@ -256,10 +256,10 @@ export function detectDriftFromGraphs(
   const driftScores: number[] = [];
 
   for (let i = 0; i < graphs.length; i++) {
-    const graph = graphs[i]!;
+    const graph = graphs[i];
     let driftScore = 0;
     if (i > 0) {
-      const result = computeSHD(graphs[i - 1]!, graph);
+      const result = computeSHD(graphs[i - 1], graph);
       driftScore = result.normalizedSHD;
       driftScores.push(driftScore);
     }

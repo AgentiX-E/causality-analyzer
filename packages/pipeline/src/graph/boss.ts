@@ -100,16 +100,16 @@ class GrowShrinkTree {
     // OLS regression: y ~ parents
     const X = Array.from({ length: this.N }, () => [1]);
     for (let r = 0; r < this.N; r++) {
-      for (const p of parents) X[r]!.push(this.data.get(r, p));
+      for (const p of parents) X[r].push(this.data.get(r, p));
     }
 
     const XtX = Array.from({ length: k + 1 }, () => new Float64Array(k + 1));
     const Xty = new Float64Array(k + 1);
     for (let r = 0; r < this.N; r++) {
       for (let i = 0; i <= k; i++) {
-        Xty[i] += (X[r]![i] ?? 0) * y[r]!;
+        Xty[i] += (X[r][i] ?? 0) * y[r];
         for (let j = 0; j <= k; j++) {
-          XtX[i]![j] += (X[r]![i] ?? 0) * (X[r]![j] ?? 0);
+          XtX[i][j] += (X[r][i] ?? 0) * (X[r][j] ?? 0);
         }
       }
     }
@@ -121,8 +121,8 @@ class GrowShrinkTree {
     let rss = 0;
     for (let r = 0; r < this.N; r++) {
       let pred = 0;
-      for (let i = 0; i <= k; i++) pred += (beta[i] ?? 0) * (X[r]![i] ?? 0);
-      rss += (y[r]! - pred) ** 2;
+      for (let i = 0; i <= k; i++) pred += (beta[i] ?? 0) * (X[r][i] ?? 0);
+      rss += (y[r] - pred) ** 2;
     }
 
     const bic = -this.N * Math.log(Math.max(1e-10, rss / this.N)) - (k + 1) * this.penaltyFactor;
@@ -206,7 +206,7 @@ class GrowShrinkTree {
 
     const X = Array.from({ length: this.N }, () => [1]);
     for (let r = 0; r < this.N; r++) {
-      for (const p of parents) X[r]!.push(this.data.get(r, p));
+      for (const p of parents) X[r].push(this.data.get(r, p));
     }
 
     const kp = k + 1;
@@ -214,9 +214,9 @@ class GrowShrinkTree {
     const Xty = new Float64Array(kp);
     for (let r = 0; r < this.N; r++) {
       for (let i = 0; i < kp; i++) {
-        Xty[i] += (X[r]![i] ?? 0) * y[r]!;
+        Xty[i] += (X[r][i] ?? 0) * y[r];
         for (let j = 0; j < kp; j++) {
-          XtX[i]![j] += (X[r]![i] ?? 0) * (X[r]![j] ?? 0);
+          XtX[i][j] += (X[r][i] ?? 0) * (X[r][j] ?? 0);
         }
       }
     }
@@ -228,8 +228,8 @@ class GrowShrinkTree {
     let rss = 0;
     for (let r = 0; r < this.N; r++) {
       let pred = 0;
-      for (let i = 0; i < kp; i++) pred += (beta[i] ?? 0) * (X[r]![i] ?? 0);
-      rss += (y[r]! - pred) ** 2;
+      for (let i = 0; i < kp; i++) pred += (beta[i] ?? 0) * (X[r][i] ?? 0);
+      rss += (y[r] - pred) ** 2;
     }
 
     const bic = -this.N * Math.log(Math.max(1e-10, rss / this.N)) - penaltyMult * this.penaltyFactor * kp;
@@ -272,10 +272,10 @@ export function bossAlgorithm(
     // Initial parent sets from GST trees
     const parents: number[][] = Array.from({ length: d }, () => [] as number[]);
     for (let pos = 0; pos < d; pos++) {
-      const v = perm[pos]!;
+      const v = perm[pos];
       const predecessors = perm.slice(0, pos);
       if (predecessors.length > 0) {
-        parents[v] = gstTrees[v]!.findOptimal(predecessors, cfg.maxParents);
+        parents[v] = gstTrees[v].findOptimal(predecessors, cfg.maxParents);
       }
     }
 
@@ -301,7 +301,7 @@ export function bossAlgorithm(
           // Build candidate permutation with v at newPos
           const candidate: number[] = [];
           for (let i = 0; i < d; i++) {
-            if (perm[i] !== v) candidate.push(perm[i]!);
+            if (perm[i] !== v) candidate.push(perm[i]);
           }
           candidate.splice(newPos > currentPos ? newPos - 1 : newPos, 0, v);
 
@@ -323,9 +323,9 @@ export function bossAlgorithm(
 
           // Recompute parent sets for affected variables
           for (let pos = 0; pos < d; pos++) {
-            const node = perm[pos]!;
+            const node = perm[pos];
             const preds = perm.slice(0, pos);
-            parents[node] = gstTrees[node]!.findOptimal(preds, cfg.maxParents);
+            parents[node] = gstTrees[node].findOptimal(preds, cfg.maxParents);
           }
 
           currentBIC = computeTotalBIC(gstTrees, parents, perm);
@@ -344,7 +344,7 @@ export function bossAlgorithm(
   const g = new CausalGraph([...nodeNames]);
   for (let v = 0; v < d; v++) {
     for (const p of bestParents[v] ?? []) {
-      g.addEdge(nodeNames[p]!, nodeNames[v]!);
+      g.addEdge(nodeNames[p], nodeNames[v]);
     }
   }
 
@@ -365,7 +365,7 @@ function computeTotalBIC(
 ): number {
   let total = 0;
   for (let i = 0; i < parents.length; i++) {
-    total += trees[i]!.score(parents[i] ?? []);
+    total += trees[i].score(parents[i] ?? []);
   }
   return total;
 }
@@ -377,10 +377,10 @@ function computeBICForOrder(
 ): number {
   let total = 0;
   for (let pos = 0; pos < perm.length; pos++) {
-    const v = perm[pos]!;
+    const v = perm[pos];
     const preds = perm.slice(0, pos);
-    const opt = trees[v]!.findOptimal(preds, maxParents);
-    total += trees[v]!.score(opt);
+    const opt = trees[v].findOptimal(preds, maxParents);
+    total += trees[v].score(opt);
   }
   return total;
 }

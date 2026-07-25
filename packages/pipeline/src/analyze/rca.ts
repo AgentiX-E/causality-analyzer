@@ -82,10 +82,10 @@ export class HeuristicPathRCA {
           const m2 = s2 / n; const sd2 = Math.sqrt(Math.max(1e-10, c2 / n - m2 * m2)); return m2 + CONSTANTS.ANOMALY_THRESHOLD_SIGMA * sd2;
         });
         for (let r = 0; r < n; r++) {
-          const key = parents.map((_, i) => data.get(r, pIndices[i]!) > parentThresholds[i]! ? '1' : '0').join('');
+          const key = parents.map((_, i) => data.get(r, pIndices[i]) > parentThresholds[i] ? '1' : '0').join('');
           if (!counts[key]) counts[key] = { anom: 0, total: 0 };
-          counts[key]!.total++;
-          if (isAnomalous(r)) counts[key]!.anom++;
+          counts[key].total++;
+          if (isAnomalous(r)) counts[key].anom++;
         }
         for (const [key, cnt] of Object.entries(counts)) {
           cpt[key] = Math.max(0.01, Math.min(0.99, cnt.total > 0 ? cnt.anom / cnt.total : 0.5));
@@ -97,7 +97,7 @@ export class HeuristicPathRCA {
 
   findRootCauses(anomalousNodes: string[]): RCAResult {
     if (!this.graph) return buildResult([], [], 'heuristic_path');
-    const anomalous = new Set(anomalousNodes);
+    const _anomalous = new Set(anomalousNodes);
     const rootNodes = [...this.graph.nodes].filter(n => this.graph!.parents(n).length === 0);
 
     // Variable Elimination: P(root | evidence)
@@ -194,7 +194,7 @@ export class RandomWalkRCA {
           // Walk upstream (toward root causes)
           const candidates = parents.length > 0 ? parents : children;
           if (candidates.length === 0) break;
-          const next = candidates[Math.floor(this.nextRand() * candidates.length)]!;
+          const next = candidates[Math.floor(this.nextRand() * candidates.length)];
           visitCounts.set(next, (visitCounts.get(next) ?? 0) + 1);
           current = next;
         }
@@ -238,10 +238,10 @@ export class HTRCA {
       const XtX = Array.from({ length: k }, () => new Array(k).fill(0));
       const Xty = new Array(k).fill(0);
       for (let r = 0; r < n; r++) {
-        const xr = X[r]!;
+        const xr = X[r];
         for (let i = 0; i < k; i++) {
-          Xty[i] += xr[i]! * (data.get(r, yIdx) - yMean);
-          for (let j = 0; j < k; j++) XtX[i]![j]! += xr[i]! * xr[j]!;
+          Xty[i] += xr[i] * (data.get(r, yIdx) - yMean);
+          for (let j = 0; j < k; j++) XtX[i][j]! += xr[i] * xr[j];
         }
       }
       const coef = solveLinear(XtX, Xty);
@@ -254,7 +254,7 @@ export class HTRCA {
       // Residual std
       let ss = 0; for (let r = 0; r < n; r++) {
         let pred = intercept;
-        for (let i = 0; i < k; i++) pred += coef[i]! * data.get(r, pIdx[i]!);
+        for (let i = 0; i < k; i++) pred += coef[i] * data.get(r, pIdx[i]);
         ss += (data.get(r, yIdx) - pred) ** 2;
       }
       this.regressors.set(node, { coef, intercept, std: Math.sqrt(ss / Math.max(1, n - k - 1)) });
@@ -276,7 +276,7 @@ export class HTRCA {
       let maxZ = 0;
       for (let r = 0; r < n; r++) {
         let pred = reg.intercept;
-        for (let i = 0; i < reg.coef.length; i++) pred += reg.coef[i]! * data.get(r, pIdx[i]!);
+        for (let i = 0; i < reg.coef.length; i++) pred += reg.coef[i] * data.get(r, pIdx[i]);
         const residual = data.get(r, nodeIdx) - pred;
         const z = Math.abs(residual) / reg.std;
         if (z > maxZ) maxZ = z;
@@ -450,7 +450,7 @@ export class FPGrowthRCA {
         for (let mask = 1; mask < (1 << freqItems.length); mask++) {
           const combo = new Set(prefix);
           for (let b = 0; b < freqItems.length; b++) {
-            if (mask & (1 << b)) combo.add(freqItems[b]!);
+            if (mask & (1 << b)) combo.add(freqItems[b]);
           }
           if (combo.size > prefix.size) {
             // Find min support along path

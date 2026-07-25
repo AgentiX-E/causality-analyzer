@@ -56,13 +56,13 @@ export function notearsAlgorithm(
     let sum = 0,
       sq = 0;
     for (let i = 0; i < n; i++) {
-      const v = XArr[i]![j]!;
+      const v = XArr[i][j];
       sum += v;
       sq += v * v;
     }
     const mean = sum / n,
       std = Math.sqrt(Math.max(1e-10, sq / n - mean * mean));
-    for (let i = 0; i < n; i++) X[i * d + j] = (XArr[i]![j]! - mean) / std;
+    for (let i = 0; i < n; i++) X[i * d + j] = (XArr[i][j] - mean) / std;
   }
 
   // Precompute X^T X / n (scaled covariance, d×d)
@@ -70,7 +70,7 @@ export function notearsAlgorithm(
   for (let j = 0; j < d; j++)
     for (let k = j; k < d; k++) {
       let s = 0;
-      for (let i = 0; i < n; i++) s += X[i * d + j]! * X[i * d + k]!;
+      for (let i = 0; i < n; i++) s += X[i * d + j] * X[i * d + k];
       cov[j * d + k] = cov[k * d + j] = s / n;
     }
 
@@ -103,8 +103,8 @@ export function notearsAlgorithm(
   const g = new CausalGraph([...nodeNames]);
   for (let i = 0; i < d; i++)
     for (let j = 0; j < d; j++)
-      if (i !== j && Math.abs(W[i * d + j]!) > cfg.wThreshold)
-        g.addEdge(nodeNames[i]!, nodeNames[j]!);
+      if (i !== j && Math.abs(W[i * d + j]) > cfg.wThreshold)
+        g.addEdge(nodeNames[i], nodeNames[j]);
 
   if (domainKnowledge) g.applyDomainKnowledge(domainKnowledge);
 
@@ -132,14 +132,14 @@ function noteLoss(
   for (let i = 0; i < d; i++) {
     for (let j = 0; j < d; j++) {
       let wCov = 0;
-      for (let l = 0; l < d; l++) wCov += w[i * d + l]! * cov[l * d + j]!;
-      gf[i * d + j] = -cov[i * d + j]! + wCov;
-      f -= w[i * d + j]! * cov[i * d + j]!;
-      f += 0.5 * w[i * d + j]! * wCov;
+      for (let l = 0; l < d; l++) wCov += w[i * d + l] * cov[l * d + j];
+      gf[i * d + j] = -cov[i * d + j] + wCov;
+      f -= w[i * d + j] * cov[i * d + j];
+      f += 0.5 * w[i * d + j] * wCov;
     }
   }
   // Add constant trace term (doesn't affect gradient)
-  for (let i = 0; i < d; i++) f += 0.5 * cov[i * d + i]!;
+  for (let i = 0; i < d; i++) f += 0.5 * cov[i * d + i];
 
   // h(W) = tr(e^(W⊙W)) - d  and  dh = 2·[(exp(W⊙W))ᵀ ⊙ W]
   const [h, dh] = hAndGrad(w, d);
@@ -152,9 +152,9 @@ function noteLoss(
   const multiplierCoeff = alpha + rho * h;
   for (let i = 0; i < d * d; i++) {
     grad[i] =
-      gf[i]! +
-      lambda1 * (w[i]! > 0 ? 1 : w[i]! < 0 ? -1 : 0) +
-      multiplierCoeff * dh[i]!;
+      gf[i] +
+      lambda1 * (w[i] > 0 ? 1 : w[i] < 0 ? -1 : 0) +
+      multiplierCoeff * dh[i];
   }
 
   return [loss, grad];
@@ -178,7 +178,7 @@ function hAndGrad(W: Float64Array, d: number): [number, Float64Array] {
   const S = new Float64Array(d * d);
   let normSq = 0;
   for (let i = 0; i < d * d; i++) {
-    const v = W[i]! * W[i]!;
+    const v = W[i] * W[i];
     S[i] = v;
     normSq += v;
   }
@@ -192,7 +192,7 @@ function hAndGrad(W: Float64Array, d: number): [number, Float64Array] {
   // Scaled matrix: B = S / 2^j
   const invScale = 1 / scale;
   const B = new Float64Array(d * d);
-  for (let i = 0; i < d * d; i++) B[i] = S[i]! * invScale;
+  for (let i = 0; i < d * d; i++) B[i] = S[i] * invScale;
 
   // exp(B) via Taylor series
   let expCurr = matExp(B, d);
@@ -203,7 +203,7 @@ function hAndGrad(W: Float64Array, d: number): [number, Float64Array] {
     for (let i = 0; i < d; i++)
       for (let k = 0; k < d; k++) {
         let v = 0;
-        for (let l = 0; l < d; l++) v += expCurr[i * d + l]! * expCurr[l * d + k]!;
+        for (let l = 0; l < d; l++) v += expCurr[i * d + l] * expCurr[l * d + k];
         next[i * d + k] = v;
       }
     expCurr = next;
@@ -211,14 +211,14 @@ function hAndGrad(W: Float64Array, d: number): [number, Float64Array] {
 
   // h = tr(expS) - d
   let tr = 0;
-  for (let i = 0; i < d; i++) tr += expCurr[i * d + i]!;
+  for (let i = 0; i < d; i++) tr += expCurr[i * d + i];
   const h = tr - d;
 
   // Gradient: dh = 2 * expSᵀ ⊙ W  (element-wise)
   const grad = new Float64Array(d * d);
   for (let i = 0; i < d; i++)
     for (let j = 0; j < d; j++)
-      grad[i * d + j] = 2 * expCurr[j * d + i]! * W[i * d + j]!;
+      grad[i * d + j] = 2 * expCurr[j * d + i] * W[i * d + j];
 
   return [h, grad];
 }
@@ -250,13 +250,13 @@ function matExp(A: Float64Array, d: number): Float64Array {
     for (let i = 0; i < d; i++)
       for (let j = 0; j < d; j++) {
         let v = 0;
-        for (let l = 0; l < d; l++) v += Ak[i * d + l]! * A[l * d + j]!;
+        for (let l = 0; l < d; l++) v += Ak[i * d + l] * A[l * d + j];
         buf1[i * d + j] = v;
       }
     fact *= k;
 
     // result += buf1 / k!
-    for (let i = 0; i < d * d; i++) result[i] += buf1[i]! / fact;
+    for (let i = 0; i < d * d; i++) result[i] += buf1[i] / fact;
 
     // Swap: Ak = buf1, but we need buf1 for next iteration
     // Copy buf1 -> buf2, then point Ak to buf2
@@ -271,6 +271,6 @@ function matExp(A: Float64Array, d: number): Float64Array {
 
 function l1Norm(v: Float64Array, len: number): number {
   let s = 0;
-  for (let i = 0; i < len; i++) s += Math.abs(v[i]!);
+  for (let i = 0; i < len; i++) s += Math.abs(v[i]);
   return s;
 }

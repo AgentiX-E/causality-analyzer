@@ -58,8 +58,8 @@ export function adjustBackdoor(
     // No confounders: ATE = simple mean difference
     let tMean = 0, cMean = 0, tN = 0, cN = 0;
     for (let r = 0; r < n; r++) {
-      if (data[r]![tIdx]! > 0.5) { tMean += data[r]![oIdx]!; tN++; }
-      else { cMean += data[r]![oIdx]!; cN++; }
+      if (data[r][tIdx] > 0.5) { tMean += data[r][oIdx]; tN++; }
+      else { cMean += data[r][oIdx]; cN++; }
     }
     const ate = (tN > 0 ? tMean / tN : 0) - (cN > 0 ? cMean / cN : 0);
     // Pooled SE
@@ -76,13 +76,13 @@ export function adjustBackdoor(
   let ySum = 0;
 
   for (let r = 0; r < n; r++) {
-    const y = data[r]![oIdx] ?? 0;
+    const y = data[r][oIdx] ?? 0;
     ySum += y;
     for (let i = 0; i < k; i++) {
-      const xi = data[r]![allPred[i]!] ?? 0;
+      const xi = data[r][allPred[i]] ?? 0;
       Xty[i] += xi * y;
       for (let j = 0; j < k; j++) {
-        XtX[i]![j] += xi * (data[r]![allPred[j]!] ?? 0);
+        XtX[i][j] += xi * (data[r][allPred[j]] ?? 0);
       }
     }
   }
@@ -91,16 +91,16 @@ export function adjustBackdoor(
     XtX.map(row => Array.from(row)),
     Array.from(Xty),
   );
-  const ate = coef[0]!; // treatment coefficient
+  const ate = coef[0]; // treatment coefficient
   const yMean = ySum / n;
-  const intercept = yMean - coef.reduce((s, c, i) => s + c * (allPred[i]! >= 0 ? colMean(data, allPred[i]!) : 0), 0);
+  const intercept = yMean - coef.reduce((s, c, i) => s + c * (allPred[i] >= 0 ? colMean(data, allPred[i]) : 0), 0);
 
   // SE via residual variance
   let ss = 0;
   for (let r = 0; r < n; r++) {
     let pred = intercept;
-    for (let i = 0; i < k; i++) pred += coef[i]! * (data[r]![allPred[i]!] ?? 0);
-    ss += ((data[r]![oIdx] ?? 0) - pred) ** 2;
+    for (let i = 0; i < k; i++) pred += coef[i] * (data[r][allPred[i]] ?? 0);
+    ss += ((data[r][oIdx] ?? 0) - pred) ** 2;
   }
   const residualVar = ss / Math.max(1, n - k);
   // SE of treatment coef via (X^T X)^-1[0,0] * σ²
@@ -145,8 +145,8 @@ export function estimateFrontdoor(
       // X → M coefficient
       let xSum = 0, mSum = 0, xxSum = 0, xmSum = 0;
       for (let r = 0; r < n; r++) {
-        const xi = data[r]![tIdx] ?? 0;
-        const m = data[r]![mi] ?? 0;
+        const xi = data[r][tIdx] ?? 0;
+        const m = data[r][mi] ?? 0;
         xSum += xi; mSum += m;
         xxSum += xi * xi; xmSum += xi * m;
       }
@@ -155,8 +155,8 @@ export function estimateFrontdoor(
       // M → Y coefficient (controlling for X)
       let mySum = 0, mmSum = 0, ySum2 = 0, myYm = 0;
       for (let r = 0; r < n; r++) {
-        const m = data[r]![mi] ?? 0;
-        const y = data[r]![oIdx] ?? 0;
+        const m = data[r][mi] ?? 0;
+        const y = data[r][oIdx] ?? 0;
         mySum += m; mmSum += m * m; ySum2 += y; myYm += m * y;
       }
       const betaMY = (n * myYm - mySum * ySum2) /
@@ -195,10 +195,10 @@ export function estimateIV(
 
   for (let r = 0; r < n; r++) {
     for (let i = 0; i < k1; i++) {
-      const xi = data[r]![pred1[i]!] ?? 0;
-      Xty1[i] += xi * (data[r]![treatmentIdx] ?? 0);
+      const xi = data[r][pred1[i]] ?? 0;
+      Xty1[i] += xi * (data[r][treatmentIdx] ?? 0);
       for (let j = 0; j < k1; j++) {
-        XtX1[i]![j] += xi * (data[r]![pred1[j]!] ?? 0);
+        XtX1[i][j] += xi * (data[r][pred1[j]] ?? 0);
       }
     }
   }
@@ -212,7 +212,7 @@ export function estimateIV(
   const Xhat = new Float64Array(n);
   for (let r = 0; r < n; r++) {
     let pred = 0;
-    for (let i = 0; i < k1; i++) pred += gamma[i]! * (data[r]![pred1[i]!] ?? 0);
+    for (let i = 0; i < k1; i++) pred += gamma[i] * (data[r][pred1[i]] ?? 0);
     Xhat[r] = pred;
   }
 
@@ -223,17 +223,17 @@ export function estimateIV(
   const Xty2 = new Float64Array(k2);
 
   for (let r = 0; r < n; r++) {
-    const y = data[r]![outcomeIdx] ?? 0;
-    const xhat = Xhat[r]!;
+    const y = data[r][outcomeIdx] ?? 0;
+    const xhat = Xhat[r];
     Xty2[0] += xhat * y;
-    XtX2[0]![0] += xhat * xhat;
+    XtX2[0][0] += xhat * xhat;
     for (let i = 0; i < covariateIndices.length; i++) {
-      const ci = data[r]![covariateIndices[i]!] ?? 0;
+      const ci = data[r][covariateIndices[i]] ?? 0;
       Xty2[i + 1] += ci * y;
-      XtX2[0]![i + 1] += xhat * ci;
-      XtX2[i + 1]![0] += ci * xhat;
+      XtX2[0][i + 1] += xhat * ci;
+      XtX2[i + 1][0] += ci * xhat;
       for (let j = 0; j < covariateIndices.length; j++) {
-        XtX2[i + 1]![j + 1] += ci * (data[r]![covariateIndices[j]!] ?? 0);
+        XtX2[i + 1][j + 1] += ci * (data[r][covariateIndices[j]] ?? 0);
       }
     }
   }
@@ -243,16 +243,16 @@ export function estimateIV(
     Array.from(Xty2),
   );
 
-  const ate = beta[0]!;
+  const ate = beta[0];
   // SE via residual variance / (n * var(Xhat))
   let ss = 0, xhatSum = 0, xhatSq = 0;
   for (let r = 0; r < n; r++) {
     let pred = 0;
-    pred += beta[0]! * Xhat[r]!;
-    for (let i = 0; i < covariateIndices.length; i++) pred += beta[i + 1]! * (data[r]![covariateIndices[i]!] ?? 0);
-    ss += ((data[r]![outcomeIdx] ?? 0) - pred) ** 2;
-    xhatSum += Xhat[r]!;
-    xhatSq += Xhat[r]! ** 2;
+    pred += beta[0] * Xhat[r];
+    for (let i = 0; i < covariateIndices.length; i++) pred += beta[i + 1] * (data[r][covariateIndices[i]] ?? 0);
+    ss += ((data[r][outcomeIdx] ?? 0) - pred) ** 2;
+    xhatSum += Xhat[r];
+    xhatSq += Xhat[r] ** 2;
   }
   const varXhat = xhatSq / n - (xhatSum / n) ** 2;
   const se = Math.sqrt(Math.max(1e-10, ss / (n - k2)) / Math.max(1e-10, n * varXhat));
@@ -278,7 +278,7 @@ export function estimatePropensityScore(
   if (covariateIndices.length === 0) {
     // No covariates: propensity = overall treatment probability
     let tCount = 0;
-    for (let r = 0; r < n; r++) if ((data[r]![treatmentIdx] ?? 0) > 0.5) tCount++;
+    for (let r = 0; r < n; r++) if ((data[r][treatmentIdx] ?? 0) > 0.5) tCount++;
     const p = tCount / n;
     scores.fill(p);
     return scores;
@@ -293,7 +293,7 @@ export function estimatePropensityScore(
   for (let r = 0; r < n; r++) {
     X[r * k] = 1; // intercept
     for (let i = 0; i < covariateIndices.length; i++) {
-      X[r * k + i + 1] = data[r]![covariateIndices[i]!] ?? 0;
+      X[r * k + i + 1] = data[r][covariateIndices[i]] ?? 0;
     }
   }
 
@@ -302,22 +302,22 @@ export function estimatePropensityScore(
     const p = new Float64Array(n);
     for (let r = 0; r < n; r++) {
       let dot = 0;
-      for (let j = 0; j < k; j++) dot += X[r * k + j]! * beta[j]!;
+      for (let j = 0; j < k; j++) dot += X[r * k + j] * beta[j];
       p[r] = 1 / (1 + Math.exp(-Math.min(Math.max(dot, -15), 15))); // clamp for stability
-      const t = data[r]![treatmentIdx]! > 0.5 ? 1 : 0;
+      const _t = data[r][treatmentIdx] > 0.5 ? 1 : 0;
     }
 
     // IRLS update
     const XtWX = new Float64Array(k * k);
     const XtWz = new Float64Array(k);
     for (let r = 0; r < n; r++) {
-      const w = p[r]! * (1 - p[r]!);
-      const t = data[r]![treatmentIdx]! > 0.5 ? 1 : 0;
-      const z = Math.log(Math.max(1e-10, p[r]! / (1 - p[r]!))) + (t - p[r]!) / Math.max(1e-10, w);
+      const w = p[r] * (1 - p[r]);
+      const t = data[r][treatmentIdx] > 0.5 ? 1 : 0;
+      const z = Math.log(Math.max(1e-10, p[r] / (1 - p[r]))) + (t - p[r]) / Math.max(1e-10, w);
       for (let i = 0; i < k; i++) {
-        XtWz[i] += X[r * k + i]! * w * z;
+        XtWz[i] += X[r * k + i] * w * z;
         for (let j = 0; j < k; j++) {
-          XtWX[i * k + j] += X[r * k + i]! * w * X[r * k + j]!;
+          XtWX[i * k + j] += X[r * k + i] * w * X[r * k + j];
         }
       }
     }
@@ -334,7 +334,7 @@ export function estimatePropensityScore(
 
     // Check convergence
     let delta = 0;
-    for (let j = 0; j < k; j++) delta += (newBeta[j]! - beta[j]!) ** 2;
+    for (let j = 0; j < k; j++) delta += (newBeta[j] - beta[j]) ** 2;
     beta = Float64Array.from(newBeta);
     if (Math.sqrt(delta) < tol) break;
   }
@@ -342,7 +342,7 @@ export function estimatePropensityScore(
   // Compute final propensity scores
   for (let r = 0; r < n; r++) {
     let dot = 0;
-    for (let j = 0; j < k; j++) dot += X[r * k + j]! * beta[j]!;
+    for (let j = 0; j < k; j++) dot += X[r * k + j] * beta[j];
     scores[r] = 1 / (1 + Math.exp(-Math.min(Math.max(dot, -15), 15)));
   }
 
@@ -369,8 +369,8 @@ export function estimatePSMatching(
   const treated: Array<{ idx: number; score: number; y: number }> = [];
   const control: Array<{ idx: number; score: number; y: number }> = [];
   for (let r = 0; r < n; r++) {
-    const entry = { idx: r, score: scores[r]!, y: data[r]![outcomeIdx] ?? 0 };
-    if ((data[r]![treatmentIdx] ?? 0) > 0.5) treated.push(entry);
+    const entry = { idx: r, score: scores[r], y: data[r][outcomeIdx] ?? 0 };
+    if ((data[r][treatmentIdx] ?? 0) > 0.5) treated.push(entry);
     else control.push(entry);
   }
 
@@ -397,7 +397,7 @@ export function estimatePSMatching(
     let sum = 0, cnt = 0;
     for (const t of treated) {
       const ri = Math.floor(rng() * control.length);
-      sum += t.y - control[ri]!.y;
+      sum += t.y - control[ri].y;
       cnt++;
     }
     seEst += ((sum / cnt) - ate) ** 2;
@@ -429,8 +429,8 @@ export function estimateDoublyRobust(
   const treatedData: number[][] = [];
   const controlData: number[][] = [];
   for (let r = 0; r < n; r++) {
-    if ((data[r]![treatmentIdx] ?? 0) > 0.5) treatedData.push(data[r]!);
-    else controlData.push(data[r]!);
+    if ((data[r][treatmentIdx] ?? 0) > 0.5) treatedData.push(data[r]);
+    else controlData.push(data[r]);
   }
 
   // Pre-fit outcome models ONCE (not per-observation)
@@ -445,11 +445,11 @@ export function estimateDoublyRobust(
   let drSum = 0;
   const drValues = new Float64Array(n);
   for (let r = 0; r < n; r++) {
-    const t = (data[r]![treatmentIdx] ?? 0) > 0.5 ? 1 : 0;
-    const y = data[r]![outcomeIdx] ?? 0;
-    const pi = Math.min(Math.max(scores[r]!, 0.05), 0.95);
-    const m1 = beta1 ? predictFromBeta(covariateIndices, beta1, data[r]!) : 0;
-    const m0 = beta0 ? predictFromBeta(covariateIndices, beta0, data[r]!) : 0;
+    const t = (data[r][treatmentIdx] ?? 0) > 0.5 ? 1 : 0;
+    const y = data[r][outcomeIdx] ?? 0;
+    const pi = Math.min(Math.max(scores[r], 0.05), 0.95);
+    const m1 = beta1 ? predictFromBeta(covariateIndices, beta1, data[r]) : 0;
+    const m0 = beta0 ? predictFromBeta(covariateIndices, beta0, data[r]) : 0;
     const dr = m1 - m0 + t * (y - m1) / pi - (1 - t) * (y - m0) / (1 - pi);
     drSum += dr;
     drValues[r] = dr;
@@ -459,11 +459,11 @@ export function estimateDoublyRobust(
   // Influence-function based SE (reuses pre-fitted betas)
   let ifVar = 0;
   for (let r = 0; r < n; r++) {
-    const t = (data[r]![treatmentIdx] ?? 0) > 0.5 ? 1 : 0;
-    const y = data[r]![outcomeIdx] ?? 0;
-    const pi = Math.min(Math.max(scores[r]!, 0.05), 0.95);
-    const m1 = beta1 ? predictFromBeta(covariateIndices, beta1, data[r]!) : 0;
-    const m0 = beta0 ? predictFromBeta(covariateIndices, beta0, data[r]!) : 0;
+    const t = (data[r][treatmentIdx] ?? 0) > 0.5 ? 1 : 0;
+    const y = data[r][outcomeIdx] ?? 0;
+    const pi = Math.min(Math.max(scores[r], 0.05), 0.95);
+    const m1 = beta1 ? predictFromBeta(covariateIndices, beta1, data[r]) : 0;
+    const m0 = beta0 ? predictFromBeta(covariateIndices, beta0, data[r]) : 0;
     const dr = m1 - m0 + t * (y - m1) / pi - (1 - t) * (y - m0) / (1 - pi);
     ifVar += (dr - ate) ** 2;
   }
@@ -492,7 +492,7 @@ function collectDescendants(graph: CausalGraph, node: string): Set<string> {
 
 function pooledVar(
   data: number[][], outcomeIdx: number, treatIdx: number,
-  treatVal: number, covIdx: number[],
+  treatVal: number, _covIdx: number[],
 ): number {
   let ss = 0, n = 0;
   for (const row of data) {
@@ -523,12 +523,12 @@ function fitOLS(
   const Xty = new Float64Array(k);
 
   for (let r = 0; r < n; r++) {
-    const y = data[r]![outcomeIdx] ?? 0;
+    const y = data[r][outcomeIdx] ?? 0;
     for (let i = 0; i < k; i++) {
-      const xi = data[r]![covariateIndices[i]!] ?? 0;
+      const xi = data[r][covariateIndices[i]] ?? 0;
       Xty[i] += xi * y;
       for (let j = 0; j < k; j++) {
-        XtX[i]![j] += xi * (data[r]![covariateIndices[j]!] ?? 0);
+        XtX[i][j] += xi * (data[r][covariateIndices[j]] ?? 0);
       }
     }
   }
@@ -548,7 +548,7 @@ function predictFromBeta(
 ): number {
   let pred = 0;
   for (let i = 0; i < covariateIndices.length; i++) {
-    pred += (beta[i] ?? 0) * (row[covariateIndices[i]!] ?? 0);
+    pred += (beta[i] ?? 0) * (row[covariateIndices[i]] ?? 0);
   }
   return pred;
 }

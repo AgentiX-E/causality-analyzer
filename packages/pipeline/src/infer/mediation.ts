@@ -104,11 +104,11 @@ export function arrowStrength(
   const normalized = new Map<string, number>();
   const nodeTotals = new Map<string, number>();
   for (const [key, val] of strengths) {
-    const target = key.split('→')[1]!;
+    const target = key.split('→')[1];
     nodeTotals.set(target, (nodeTotals.get(target) ?? 0) + val);
   }
   for (const [key, val] of strengths) {
-    const target = key.split('→')[1]!;
+    const target = key.split('→')[1];
     const total = nodeTotals.get(target) ?? 1;
     normalized.set(key, total > 0 ? val / total : 0);
   }
@@ -122,8 +122,8 @@ function simpleRegression(data: number[][], xIdx: number, yIdx: number): number 
   const n = data.length;
   let sx = 0, sy = 0, sxx = 0, sxy = 0;
   for (let r = 0; r < n; r++) {
-    const x = data[r]![xIdx] ?? 0;
-    const y = data[r]![yIdx] ?? 0;
+    const x = data[r][xIdx] ?? 0;
+    const y = data[r][yIdx] ?? 0;
     sx += x; sy += y; sxx += x * x; sxy += x * y;
   }
   return (n * sxy - sx * sy) / Math.max(1e-10, n * sxx - sx * sx);
@@ -139,18 +139,18 @@ function multipleRegression(
   let ySum = 0;
 
   for (let r = 0; r < n; r++) {
-    const y = data[r]![yIdx] ?? 0;
+    const y = data[r][yIdx] ?? 0;
     ySum += y;
     for (let i = 0; i < k; i++) {
-      const xi = data[r]![xIndices[i]!] ?? 0;
+      const xi = data[r][xIndices[i]] ?? 0;
       Xty[i] += xi * y;
-      for (let j = 0; j < k; j++) XtX[i]![j] += xi * (data[r]![xIndices[j]!] ?? 0);
+      for (let j = 0; j < k; j++) XtX[i][j] += xi * (data[r][xIndices[j]] ?? 0);
     }
   }
 
   const coefs = solveLinear(XtX, Xty);
   const yMean = ySum / n;
-  const intercept = yMean - coefs.reduce((s, c, i) => s + c * colMean(data, xIndices[i]!), 0);
+  const intercept = yMean - coefs.reduce((s, c, i) => s + c * colMean(data, xIndices[i]), 0);
   return { coefs, intercept };
 }
 

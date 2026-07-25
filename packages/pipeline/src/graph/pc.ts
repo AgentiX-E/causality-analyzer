@@ -6,7 +6,7 @@
  */
 import { Matrix } from 'ml-matrix';
 import type { DomainKnowledge } from '@agentix-e/causality-analyzer-core';
-import { partialCorrelationFromCov, invertMatrix, combinations, fisherZTest as coreFisherZ, _resetFisherZCache } from '@agentix-e/causality-analyzer-core';
+import { combinations, fisherZTest as coreFisherZ, _resetFisherZCache } from '@agentix-e/causality-analyzer-core';
 import { CausalGraph } from './causal-graph.js';
 
 export interface PCConfig {
@@ -53,7 +53,7 @@ export function pcAlgorithm(
 
   // Start with complete undirected graph
   const g = new CausalGraph(nodeNames);
-  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) g.undirectedEdge(nodeNames[i]!, nodeNames[j]!);
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) g.undirectedEdge(nodeNames[i], nodeNames[j]);
 
   // Phase 1: Skeleton estimation
   let depth = 0;
@@ -65,11 +65,11 @@ export function pcAlgorithm(
     const edgesToRemove: Array<[string, string, number[]]> = [];
 
     for (let i = 0; i < n; i++) {
-      const neighbors = g.neighbors(nodeNames[i]!);
+      const neighbors = g.neighbors(nodeNames[i]);
       if (neighbors.length - 1 < depth) continue;
 
       for (const jName of neighbors) {
-        if (jName <= nodeNames[i]!) continue;
+        if (jName <= nodeNames[i]) continue;
         const j = nodeNames.indexOf(jName);
         // Find conditioning sets of size depth
         const otherNeighbors = neighbors.filter(n => n !== jName);
@@ -79,7 +79,7 @@ export function pcAlgorithm(
           const sIndices = S.map(s => nodeNames.indexOf(s));
           const p = fisherZTest(data, i, j, sIndices);
           if (p > cfg.alpha) {
-            edgesToRemove.push([nodeNames[i]!, jName, sIndices]);
+            edgesToRemove.push([nodeNames[i], jName, sIndices]);
             const key = `${Math.min(i, j)}-${Math.max(i, j)}`;
             sepSet.set(key, new Set(S));
             break;
@@ -102,17 +102,17 @@ export function pcAlgorithm(
   // Phase 2: Orient v-structures (colliders)
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
-      if (g.hasEdge(nodeNames[i]!, nodeNames[j]!)) continue; // i and j not adjacent
+      if (g.hasEdge(nodeNames[i], nodeNames[j])) continue; // i and j not adjacent
       for (let k = 0; k < n; k++) {
         if (k === i || k === j) continue;
-        if (!g.hasEdge(nodeNames[i]!, nodeNames[k]!) || !g.hasEdge(nodeNames[j]!, nodeNames[k]!)) continue;
+        if (!g.hasEdge(nodeNames[i], nodeNames[k]) || !g.hasEdge(nodeNames[j], nodeNames[k])) continue;
         // i-k-j is an unshielded triple
         const key = `${Math.min(i, j)}-${Math.max(i, j)}`;
         const sep = sepSet.get(key);
-        if (!sep || !sep.has(nodeNames[k]!)) {
+        if (!sep || !sep.has(nodeNames[k])) {
           // k is NOT in separating set → orient i→k←j
-          g.orientEdge(nodeNames[i]!, nodeNames[k]!);
-          g.orientEdge(nodeNames[j]!, nodeNames[k]!);
+          g.orientEdge(nodeNames[i], nodeNames[k]);
+          g.orientEdge(nodeNames[j], nodeNames[k]);
         }
       }
     }
@@ -126,11 +126,11 @@ export function pcAlgorithm(
     // R1: i→j—k with i,k non-adjacent → orient j→k
     for (let i = 0; i < n; i++) {
       for (let j = 0; j < n; j++) {
-        if (!g.hasEdge(nodeNames[i]!, nodeNames[j]!) || g.hasEdge(nodeNames[j]!, nodeNames[i]!)) continue;
+        if (!g.hasEdge(nodeNames[i], nodeNames[j]) || g.hasEdge(nodeNames[j], nodeNames[i])) continue;
         for (let k = 0; k < n; k++) {
-          if (!g.hasEdge(nodeNames[j]!, nodeNames[k]!) || !g.hasEdge(nodeNames[k]!, nodeNames[j]!)) continue;
-          if (g.hasEdge(nodeNames[i]!, nodeNames[k]!) || g.hasEdge(nodeNames[k]!, nodeNames[i]!)) continue;
-          g.orientEdge(nodeNames[j]!, nodeNames[k]!);
+          if (!g.hasEdge(nodeNames[j], nodeNames[k]) || !g.hasEdge(nodeNames[k], nodeNames[j])) continue;
+          if (g.hasEdge(nodeNames[i], nodeNames[k]) || g.hasEdge(nodeNames[k], nodeNames[i])) continue;
+          g.orientEdge(nodeNames[j], nodeNames[k]);
           changed = true;
         }
       }
@@ -138,11 +138,11 @@ export function pcAlgorithm(
     // R2: i→j→k and i—k → orient i→k
     for (let i = 0; i < n; i++) {
       for (let k = 0; k < n; k++) {
-        if (!g.hasEdge(nodeNames[i]!, nodeNames[k]!) || !g.hasEdge(nodeNames[k]!, nodeNames[i]!)) continue;
+        if (!g.hasEdge(nodeNames[i], nodeNames[k]) || !g.hasEdge(nodeNames[k], nodeNames[i])) continue;
         for (let j = 0; j < n; j++) {
-          if (!g.hasEdge(nodeNames[i]!, nodeNames[j]!) || g.hasEdge(nodeNames[j]!, nodeNames[i]!)) continue;
-          if (!g.hasEdge(nodeNames[j]!, nodeNames[k]!) || g.hasEdge(nodeNames[k]!, nodeNames[j]!)) continue;
-          g.orientEdge(nodeNames[i]!, nodeNames[k]!);
+          if (!g.hasEdge(nodeNames[i], nodeNames[j]) || g.hasEdge(nodeNames[j], nodeNames[i])) continue;
+          if (!g.hasEdge(nodeNames[j], nodeNames[k]) || g.hasEdge(nodeNames[k], nodeNames[j])) continue;
+          g.orientEdge(nodeNames[i], nodeNames[k]);
           changed = true;
         }
       }
@@ -150,16 +150,16 @@ export function pcAlgorithm(
     // R3: i—k→j, i—l→j, k and l non-adjacent → orient i→j
     for (let i = 0; i < n; i++) {
       for (let j = 0; j < n; j++) {
-        if (!g.hasEdge(nodeNames[i]!, nodeNames[j]!) || !g.hasEdge(nodeNames[j]!, nodeNames[i]!)) continue;
+        if (!g.hasEdge(nodeNames[i], nodeNames[j]) || !g.hasEdge(nodeNames[j], nodeNames[i])) continue;
         for (let k = 0; k < n; k++) {
-          if (!g.hasEdge(nodeNames[i]!, nodeNames[k]!) || !g.hasEdge(nodeNames[k]!, nodeNames[i]!)) continue;
-          if (!g.hasEdge(nodeNames[k]!, nodeNames[j]!) || g.hasEdge(nodeNames[j]!, nodeNames[k]!)) continue;
+          if (!g.hasEdge(nodeNames[i], nodeNames[k]) || !g.hasEdge(nodeNames[k], nodeNames[i])) continue;
+          if (!g.hasEdge(nodeNames[k], nodeNames[j]) || g.hasEdge(nodeNames[j], nodeNames[k])) continue;
           for (let l = 0; l < n; l++) {
             if (l === k) continue;
-            if (!g.hasEdge(nodeNames[i]!, nodeNames[l]!) || !g.hasEdge(nodeNames[l]!, nodeNames[i]!)) continue;
-            if (!g.hasEdge(nodeNames[l]!, nodeNames[j]!) || g.hasEdge(nodeNames[j]!, nodeNames[l]!)) continue;
-            if (g.hasEdge(nodeNames[k]!, nodeNames[l]!) || g.hasEdge(nodeNames[l]!, nodeNames[k]!)) continue;
-            g.orientEdge(nodeNames[i]!, nodeNames[j]!);
+            if (!g.hasEdge(nodeNames[i], nodeNames[l]) || !g.hasEdge(nodeNames[l], nodeNames[i])) continue;
+            if (!g.hasEdge(nodeNames[l], nodeNames[j]) || g.hasEdge(nodeNames[j], nodeNames[l])) continue;
+            if (g.hasEdge(nodeNames[k], nodeNames[l]) || g.hasEdge(nodeNames[l], nodeNames[k])) continue;
+            g.orientEdge(nodeNames[i], nodeNames[j]);
             changed = true;
             break;
           }

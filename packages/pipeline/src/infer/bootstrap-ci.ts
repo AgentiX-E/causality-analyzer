@@ -35,7 +35,7 @@ export function bootstrapATE(
   const estimates = new Float64Array(nBootstraps);
   for (let b = 0; b < nBootstraps; b++) {
     const sample: number[][] = [];
-    for (let i = 0; i < n; i++) sample.push(data[Math.floor(rng() * n)]!);
+    for (let i = 0; i < n; i++) sample.push(data[Math.floor(rng() * n)]);
     estimates[b] = estimator(sample);
   }
 
@@ -115,7 +115,7 @@ async function runBootstrapChunk<T>(
     const taskSeed = (seed ?? 0) + i * 101;
     const rng = createRNG(taskSeed);
     const sample: number[][] = [];
-    for (let j = 0; j < n; j++) sample.push(data[Math.floor(rng() * n)]!);
+    for (let j = 0; j < n; j++) sample.push(data[Math.floor(rng() * n)]);
     results.push(taskFn(sample, taskSeed));
   }
   return results;
@@ -134,7 +134,7 @@ function sequentialBootstrap<T>(
     const taskSeed = (seed ?? 0) + i * 101;
     const rng = createRNG(taskSeed);
     const sample: number[][] = [];
-    for (let j = 0; j < n; j++) sample.push(data[Math.floor(rng() * n)]!);
+    for (let j = 0; j < n; j++) sample.push(data[Math.floor(rng() * n)]);
     results.push(taskFn(sample, taskSeed));
   }
   return results;

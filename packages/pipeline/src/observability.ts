@@ -130,8 +130,8 @@ export class MetricsRegistry {
         name,
         count: values.length,
         sum: values.reduce((a, b) => a + b, 0),
-        min: sorted[0]!,
-        max: sorted[sorted.length - 1]!,
+        min: sorted[0],
+        max: sorted[sorted.length - 1],
       };
     });
   }

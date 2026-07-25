@@ -45,7 +45,7 @@ export function rcdAlgorithm(
   for (let i = 0; i < n; i++)
     for (let j = i + 1; j < n; j++)
       if (matrixFisherZ(data, i, j, []) > alpha)
-        g.undirectedEdge(nodeNames[i]!, nodeNames[j]!);
+        g.undirectedEdge(nodeNames[i], nodeNames[j]);
 
   let depth = 1;
   const maxDepth = maxDegree === -1 ? n : maxDegree;
@@ -55,15 +55,15 @@ export function rcdAlgorithm(
     changed = false;
     for (let i = 0; i < n; i++) {
       for (let j = i + 1; j < n; j++) {
-        if (!g.hasEdge(nodeNames[i]!, nodeNames[j]!)) continue;
-        const neighbors = g.neighbors(nodeNames[i]!).filter(c => c !== nodeNames[j]);
+        if (!g.hasEdge(nodeNames[i], nodeNames[j])) continue;
+        const neighbors = g.neighbors(nodeNames[i]).filter(c => c !== nodeNames[j]);
         if (neighbors.length < depth) continue;
         const subsets = combinations(neighbors, depth);
         for (const S of subsets) {
           const p = matrixFisherZ(data, i, j, S.map(s => nodeNames.indexOf(s)));
           if (p > alpha) {
-            g.removeEdge(nodeNames[i]!, nodeNames[j]!);
-            g.removeEdge(nodeNames[j]!, nodeNames[i]!);
+            g.removeEdge(nodeNames[i], nodeNames[j]);
+            g.removeEdge(nodeNames[j], nodeNames[i]);
             changed = true; break;
           }
         }
@@ -75,9 +75,9 @@ export function rcdAlgorithm(
   // Phase 2: BIC-based orientation
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
-      if (!g.hasEdge(nodeNames[i]!, nodeNames[j]!)) continue;
-      if (!g.hasEdge(nodeNames[j]!, nodeNames[i]!)) continue;
-      const iName = nodeNames[i]!, jName = nodeNames[j]!;
+      if (!g.hasEdge(nodeNames[i], nodeNames[j])) continue;
+      if (!g.hasEdge(nodeNames[j], nodeNames[i])) continue;
+      const iName = nodeNames[i], jName = nodeNames[j];
 
       const bicIJ = rcdBicScore(data, i, [j], N);
       const bicJI = rcdBicScore(data, j, [i], N);
@@ -90,15 +90,15 @@ export function rcdAlgorithm(
   // V-structure detection
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
-      if (g.hasEdge(nodeNames[i]!, nodeNames[j]!) || g.hasEdge(nodeNames[j]!, nodeNames[i]!)) continue;
+      if (g.hasEdge(nodeNames[i], nodeNames[j]) || g.hasEdge(nodeNames[j], nodeNames[i])) continue;
       for (let k = 0; k < n; k++) {
         if (k === i || k === j) continue;
-        if (!g.hasEdge(nodeNames[i]!, nodeNames[k]!) || !g.hasEdge(nodeNames[j]!, nodeNames[k]!)) continue;
-        if (g.hasEdge(nodeNames[k]!, nodeNames[i]!) || g.hasEdge(nodeNames[k]!, nodeNames[j]!)) continue;
+        if (!g.hasEdge(nodeNames[i], nodeNames[k]) || !g.hasEdge(nodeNames[j], nodeNames[k])) continue;
+        if (g.hasEdge(nodeNames[k], nodeNames[i]) || g.hasEdge(nodeNames[k], nodeNames[j])) continue;
         const p = matrixFisherZ(data, i, j, [k]);
-        if (p <= alpha && g.hasEdge(nodeNames[i]!, nodeNames[k]!) && g.hasEdge(nodeNames[j]!, nodeNames[k]!)) {
-          g.orientEdge(nodeNames[i]!, nodeNames[k]!);
-          g.orientEdge(nodeNames[j]!, nodeNames[k]!);
+        if (p <= alpha && g.hasEdge(nodeNames[i], nodeNames[k]) && g.hasEdge(nodeNames[j], nodeNames[k])) {
+          g.orientEdge(nodeNames[i], nodeNames[k]);
+          g.orientEdge(nodeNames[j], nodeNames[k]);
         }
       }
     }

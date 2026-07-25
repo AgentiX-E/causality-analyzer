@@ -190,7 +190,7 @@ export class OnlinePC {
       // Update means incrementally
       for (let j = 0; j < d; j++) {
         const x = row[j] ?? 0;
-        const oldMean = this.means[j]!;
+        const oldMean = this.means[j];
         const delta = x - oldMean;
         this.means[j] = oldMean + delta / this.nEffective;
       }
@@ -201,11 +201,11 @@ export class OnlinePC {
       for (let a = 0; a < d; a++) {
         for (let b = a; b < d; b++) {
           let s = 0;
-          const meanA = this.means[a]!;
-          const meanB = this.means[b]!;
+          const meanA = this.means[a];
+          const meanB = this.means[b];
           for (let r = 0; r < this.bufferFill; r++) {
-            const va = this.buffer[r * d + a]! - meanA;
-            const vb = this.buffer[r * d + b]! - meanB;
+            const va = this.buffer[r * d + a] - meanA;
+            const vb = this.buffer[r * d + b] - meanB;
             s += va * vb;
           }
           this.cov[a * d + b] = s / (this.bufferFill - 1);
@@ -225,7 +225,7 @@ export class OnlinePC {
   private runDiscoveryIteration(): void {
     const d = this.nodeCount;
     const alpha = this.config.alpha;
-    const stabilityK = this.config.stabilityWindows;
+    const _stabilityK = this.config.stabilityWindows;
     const n = this.bufferFill;
 
     if (n < 10) return; // not enough data
@@ -235,7 +235,7 @@ export class OnlinePC {
     for (let r = 0; r < n; r++) {
       const row: number[] = [];
       for (let c = 0; c < d; c++) {
-        row.push(this.buffer[r * d + c]!);
+        row.push(this.buffer[r * d + c]);
       }
       data.push(row);
     }
@@ -247,7 +247,7 @@ export class OnlinePC {
     // Phase 1: Skeleton — complete graph + conditional independence tests
     for (let i = 0; i < d; i++)
       for (let j = i + 1; j < d; j++)
-        newGraph.undirectedEdge(this.nodeNames[i]!, this.nodeNames[j]!);
+        newGraph.undirectedEdge(this.nodeNames[i], this.nodeNames[j]);
 
     let depth = 0;
     const maxDepth = this.config.maxDegree === -1 ? d : this.config.maxDegree;
@@ -256,9 +256,9 @@ export class OnlinePC {
     while (changed && depth <= maxDepth) {
       changed = false;
       for (let i = 0; i < d; i++) {
-        const neighbors = newGraph.neighbors(this.nodeNames[i]!);
+        const neighbors = newGraph.neighbors(this.nodeNames[i]);
         for (const jName of neighbors) {
-          if (jName <= this.nodeNames[i]!) continue;
+          if (jName <= this.nodeNames[i]) continue;
           const j = this.nodeNames.indexOf(jName);
           if (j < 0) continue;
           const otherNeighbors = neighbors.filter(n => n !== jName);
@@ -271,7 +271,7 @@ export class OnlinePC {
             let bitCount = 0;
             for (let b = 0; b < otherNeighbors.length && bitCount <= depth; b++) {
               if (mask & (1 << b)) {
-                condSet.push(otherNeighbors[b]!);
+                condSet.push(otherNeighbors[b]);
                 bitCount++;
               }
             }
@@ -280,8 +280,8 @@ export class OnlinePC {
             const condIdx = condSet.map(s => this.nodeNames.indexOf(s));
             const p = fisherZTestCore(data, i, j, condIdx);
             if (p > alpha) {
-              newGraph.removeEdge(this.nodeNames[i]!, jName);
-              newGraph.removeEdge(jName, this.nodeNames[i]!);
+              newGraph.removeEdge(this.nodeNames[i], jName);
+              newGraph.removeEdge(jName, this.nodeNames[i]);
               changed = true;
               removed = true;
               break;
@@ -298,18 +298,18 @@ export class OnlinePC {
     // Re-derive sepSet from current skeleton
     for (let i = 0; i < d; i++) {
       for (let j = i + 1; j < d; j++) {
-        if (newGraph.hasEdge(this.nodeNames[i]!, this.nodeNames[j]!)) continue;
+        if (newGraph.hasEdge(this.nodeNames[i], this.nodeNames[j])) continue;
         // Find the minimal conditioning set that separates i and j
-        const neighbors = newGraph.neighbors(this.nodeNames[i]!).filter(n => n !== this.nodeNames[j]);
+        const neighbors = newGraph.neighbors(this.nodeNames[i]).filter(n => n !== this.nodeNames[j]);
         for (let k = 0; k < d; k++) {
           if (k === i || k === j) continue;
-          if (!newGraph.hasEdge(this.nodeNames[i]!, this.nodeNames[k]!)) continue;
-          if (!newGraph.hasEdge(this.nodeNames[j]!, this.nodeNames[k]!)) continue;
+          if (!newGraph.hasEdge(this.nodeNames[i], this.nodeNames[k])) continue;
+          if (!newGraph.hasEdge(this.nodeNames[j], this.nodeNames[k])) continue;
           const key = `${Math.min(i, j)}-${Math.max(i, j)}`;
           const set = sepSet.get(key) ?? new Set<string>();
-          if (!set.has(this.nodeNames[k]!)) {
-            newGraph.orientEdge(this.nodeNames[i]!, this.nodeNames[k]!);
-            newGraph.orientEdge(this.nodeNames[j]!, this.nodeNames[k]!);
+          if (!set.has(this.nodeNames[k])) {
+            newGraph.orientEdge(this.nodeNames[i], this.nodeNames[k]);
+            newGraph.orientEdge(this.nodeNames[j], this.nodeNames[k]);
           }
         }
       }
@@ -329,8 +329,8 @@ export class OnlinePC {
     // Track edges that differ between old and new graph
     for (let i = 0; i < d; i++) {
       for (let j = i + 1; j < d; j++) {
-        const iName = this.nodeNames[i]!;
-        const jName = this.nodeNames[j]!;
+        const iName = this.nodeNames[i];
+        const jName = this.nodeNames[j];
 
         const oldHasEdge = this.graph.hasEdge(iName, jName) || this.graph.hasEdge(jName, iName);
         const newHasEdge = newGraph.hasEdge(iName, jName) || newGraph.hasEdge(jName, iName);

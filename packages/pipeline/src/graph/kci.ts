@@ -94,7 +94,7 @@ function rbfKernel(x: Float64Array, sigma: number): Float64Array {
   for (let i = 0; i < n; i++) {
     K[i * n + i] = 1; // k(x_i, x_i) = 1
     for (let j = i + 1; j < n; j++) {
-      const d = x[i]! - x[j]!;
+      const d = x[i] - x[j];
       const val = Math.exp(-(d * d) / denom);
       K[i * n + j] = val;
       K[j * n + i] = val;
@@ -105,7 +105,7 @@ function rbfKernel(x: Float64Array, sigma: number): Float64Array {
 
 /** RBF kernel for multivariate Z: k(z_i, z_j) = exp(-||z_i - z_j||² / (2σ²)) */
 function rbfKernelMulti(zCols: Float64Array[], sigma: number): Float64Array {
-  const n = zCols[0]!.length;
+  const n = zCols[0].length;
   const K = new Float64Array(n * n);
   const denom = 2 * sigma * sigma;
 
@@ -134,14 +134,14 @@ function centerKernel(K: Float64Array, n: number): Float64Array {
   const rowMeans = new Float64Array(n);
   for (let i = 0; i < n; i++) {
     let sum = 0;
-    for (let j = 0; j < n; j++) sum += K[i * n + j]!;
+    for (let j = 0; j < n; j++) sum += K[i * n + j];
     rowMeans[i] = sum / n;
   }
   const grandMean = rowMeans.reduce((a, b) => a + b, 0) / n;
 
   for (let i = 0; i < n; i++) {
     for (let j = 0; j < n; j++) {
-      Kc[i * n + j] = K[i * n + j]! - rowMeans[i]! - rowMeans[j]! + grandMean;
+      Kc[i * n + j] = K[i * n + j] - rowMeans[i] - rowMeans[j] + grandMean;
     }
   }
   return Kc;
@@ -153,7 +153,7 @@ function regularizedInverse(K: Float64Array, eps: number, n: number): Float64Arr
   const A = new Float64Array(n * n);
   for (let i = 0; i < n; i++) {
     for (let j = 0; j < n; j++) {
-      A[i * n + j] = K[i * n + j]! + (i === j ? eps : 0);
+      A[i * n + j] = K[i * n + j] + (i === j ? eps : 0);
     }
   }
 
@@ -161,14 +161,14 @@ function regularizedInverse(K: Float64Array, eps: number, n: number): Float64Arr
   const L = new Float64Array(n * n);
   for (let i = 0; i < n; i++) {
     for (let j = 0; j <= i; j++) {
-      let sum = A[i * n + j]!;
+      let sum = A[i * n + j];
       for (let k = 0; k < j; k++) {
-        sum -= L[i * n + k]! * L[j * n + k]!;
+        sum -= L[i * n + k] * L[j * n + k];
       }
       if (i === j) {
         L[i * n + i] = Math.sqrt(Math.max(1e-12, sum));
       } else {
-        L[i * n + j] = sum / L[j * n + j]!;
+        L[i * n + j] = sum / L[j * n + j];
       }
     }
   }
@@ -181,14 +181,14 @@ function regularizedInverse(K: Float64Array, eps: number, n: number): Float64Arr
     const y = new Float64Array(n);
     for (let i = 0; i < n; i++) {
       let sum = (i === col ? 1 : 0);
-      for (let j = 0; j < i; j++) sum -= L[i * n + j]! * y[j]!;
-      y[i] = sum / L[i * n + i]!;
+      for (let j = 0; j < i; j++) sum -= L[i * n + j] * y[j];
+      y[i] = sum / L[i * n + i];
     }
     // Back: solve Lᵀ x = y
     for (let i = n - 1; i >= 0; i--) {
-      let sum = y[i]!;
-      for (let j = i + 1; j < n; j++) sum -= L[j * n + i]! * inv[j * n + col]!;
-      inv[i * n + col] = sum / L[i * n + i]!;
+      let sum = y[i];
+      for (let j = i + 1; j < n; j++) sum -= L[j * n + i] * inv[j * n + col];
+      inv[i * n + col] = sum / L[i * n + i];
     }
   }
   return inv;
@@ -202,7 +202,7 @@ function matrixTripleProduct(K: Float64Array, R: Float64Array, n: number): Float
   for (let i = 0; i < n; i++) {
     for (let j = 0; j < n; j++) {
       let sum = 0;
-      for (let k = 0; k < n; k++) sum += K[i * n + k]! * R[j * n + k]!;
+      for (let k = 0; k < n; k++) sum += K[i * n + k] * R[j * n + k];
       temp[i * n + j] = sum;
     }
   }
@@ -211,7 +211,7 @@ function matrixTripleProduct(K: Float64Array, R: Float64Array, n: number): Float
   for (let i = 0; i < n; i++) {
     for (let j = 0; j < n; j++) {
       let sum = 0;
-      for (let k = 0; k < n; k++) sum += R[i * n + k]! * temp[k * n + j]!;
+      for (let k = 0; k < n; k++) sum += R[i * n + k] * temp[k * n + j];
       result[i * n + j] = sum;
     }
   }
@@ -223,7 +223,7 @@ function traceProduct(A: Float64Array, B: Float64Array, n: number): number {
   let trace = 0;
   for (let i = 0; i < n; i++) {
     for (let j = 0; j < n; j++) {
-      trace += A[i * n + j]! * B[j * n + i]!;
+      trace += A[i * n + j] * B[j * n + i];
     }
   }
   return trace;
@@ -232,7 +232,7 @@ function traceProduct(A: Float64Array, B: Float64Array, n: number): number {
 // ── Median heuristic for kernel width ──────────────────────────────────
 
 function medianHeuristic(columns: Float64Array[]): number {
-  const n = columns[0]!.length;
+  const n = columns[0].length;
   // Sample pairwise distances
   const sampleSize = Math.min(500, n * (n - 1) / 2);
   const dists: number[] = [];
@@ -280,7 +280,7 @@ function kciPermutationPValue(
     // Fisher-Yates shuffle of Y
     for (let i = yCopy.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [yCopy[i], yCopy[j]] = [yCopy[j]!, yCopy[i]!];
+      [yCopy[i], yCopy[j]] = [yCopy[j], yCopy[i]];
     }
 
     const KyPerm = rbfKernel(yCopy, sigma);

@@ -101,7 +101,7 @@ export class StreamingPipeline {
     // Extract window data
     const nodeNames = [...this.graph.nodes];
     const data: number[][] = [];
-    const n = this.buffer.get(nodeNames[0]!)!.length;
+    const n = this.buffer.get(nodeNames[0])!.length;
     const windowSize = Math.min(this.config.windowSize, n);
     const offset = n - windowSize;
 
@@ -121,7 +121,7 @@ export class StreamingPipeline {
     // Train detector and detect anomalies
     this.detector.train(cleanData);
     const detection = this.detector.update(
-      cleanData[cleanData.length - 1]!,
+      cleanData[cleanData.length - 1],
     );
 
     const anomalies: StreamingResult['anomalies'] = [];
@@ -131,7 +131,7 @@ export class StreamingPipeline {
       for (let i = 0; i < nodeNames.length; i++) {
         if (Math.abs(detection.scores[i] ?? 0) > 2) {
           hasAnomalies = true;
-          anomalies.push({ node: nodeNames[i]!, score: detection.scores[i]! });
+          anomalies.push({ node: nodeNames[i], score: detection.scores[i] });
         }
       }
     }
