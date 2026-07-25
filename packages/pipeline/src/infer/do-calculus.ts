@@ -124,7 +124,7 @@ export function identifyByDoCalculus(
  * Wraps the {treatment, outcome} as single-element sets and delegates
  * to the recursive `fullID` function.
  */
-function tryIDAlgorithm(
+export function tryIDAlgorithm(
   graph: CausalGraph,
   treatment: string,
   outcome: string,
