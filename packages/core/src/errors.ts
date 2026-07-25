@@ -106,7 +106,11 @@ export class CausalityError extends Error {
       code: this.code,
       message: this.message,
       context: this.context,
-      cause: this.cause instanceof Error ? this.cause.message : String(this.cause ?? ''),
+      cause:
+        this.cause instanceof Error ? this.cause.message :
+        typeof this.cause === 'string' ? this.cause :
+        typeof this.cause === 'number' || typeof this.cause === 'boolean' ? `${this.cause}` :
+        '',
     };
   }
 }

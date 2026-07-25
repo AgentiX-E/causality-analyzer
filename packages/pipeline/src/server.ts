@@ -14,6 +14,7 @@
  * @packageDocumentation
  */
 import { createServer, type IncomingMessage, type ServerResponse, type Server } from 'node:http';
+import { Matrix } from 'ml-matrix';
 import { CausalGraph } from './graph/causal-graph.js';
 import { pcAlgorithm } from './graph/pc.js';
 import { identifyBackdoor } from './infer/causal-inference.js';
@@ -295,9 +296,7 @@ export class CausalityServer {
     });
   }
 
-  /** Convert number[][] to ml-matrix Matrix */
-  private toMatrix(data: number[][]): import('ml-matrix').Matrix {
-    const { Matrix } = require('ml-matrix');
+  private toMatrix(data: number[][]): Matrix {
     return new Matrix(data);
   }
 }

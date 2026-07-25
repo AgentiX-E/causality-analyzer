@@ -8,6 +8,7 @@
  * @packageDocumentation
  */
 import { CausalGraph } from './graph/causal-graph.js';
+import { Matrix } from 'ml-matrix';
 import { StatsDetector } from './detect/stats-detector.js';
 import { HeuristicPathRCA } from './analyze/rca.js';
 import type { RCAResult } from '@agentix-e/causality-analyzer-core';
@@ -147,8 +148,7 @@ export class StreamingPipeline {
     return { anomalies, rootCauses };
   }
 
-  private toMatrix(data: number[][]): import('ml-matrix').Matrix {
-    const { Matrix } = require('ml-matrix');
+  private toMatrix(data: number[][]): Matrix {
     return new Matrix(data);
   }
 }
