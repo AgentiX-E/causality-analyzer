@@ -183,3 +183,27 @@ jobs:
       - name: Audit dependencies
         run: pnpm audit --audit-level high
 
+  perf-regression:
+    needs: [build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: 'pnpm'
+      - run: pnpm config set approve-builds true
+      - run: pnpm install --frozen-lockfile
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq build-essential python3 make g++
+      - run: pnpm run --filter @agentix-e/causality-analyzer-core build
+      - run: pnpm run --filter @agentix-e/causality-analyzer-pipeline build
+      - name: Run performance benchmarks
+        run: npx vitest run --root packages/pipeline src/__tests__/i29-perf-bench.test.ts
+

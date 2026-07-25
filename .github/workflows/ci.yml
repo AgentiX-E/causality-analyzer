@@ -106,3 +106,16 @@ jobs:
       - run: pnpm run --filter @agentix-e/causality-analyzer-pipeline build
       - name: Run benchmark parity tests
         run: pnpm run --filter @agentix-e/causality-analyzer-pipeline test -- src/__tests__/i68-benchmark-parity.test.ts
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # Docker — verify Dockerfile builds on push to master
+  # ═══════════════════════════════════════════════════════════════════════
+  docker:
+    if: github.event_name != 'pull_request'
+    needs: [quality]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build Docker image
+        run: docker build -t causality-analyzer:ci .
