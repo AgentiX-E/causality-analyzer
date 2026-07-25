@@ -357,6 +357,38 @@ export function bicScore(rss: number, n: number, k: number): number {
   return n * Math.log(Math.max(1e-10, rss / n)) + k * Math.log(Math.max(2, n));
 }
 
+/**
+ * Generalized Information Criterion (GIC).
+ *
+ * GIC(γ) = n·ln(RSS/n) + γ·k
+ *
+ * γ = 2    → AIC-like (minimal penalty, more edges)
+ * γ = log(n) → BIC (standard, balanced)
+ * γ = c·log(n) → tunable (c>1 = sparser)
+ *
+ * @param rss — Residual Sum of Squares
+ * @param n — sample size
+ * @param k — number of parameters
+ * @param gamma — penalty multiplier (default: log(n))
+ */
+export function gicScore(rss: number, n: number, k: number, gamma?: number): number {
+  if (n <= 0) return Infinity;
+  const penalty = gamma ?? Math.log(Math.max(2, n));
+  return n * Math.log(Math.max(1e-10, rss / n)) + k * penalty;
+}
+
+/**
+ * Internal Score Criterion (IS-BIC) for continuous data.
+ *
+ * Used in Tetrad for mixed data types. Combines BIC-like penalty
+ * with variance-weighted scoring.
+ */
+export function isBicScore(rss: number, n: number, k: number): number {
+  if (n <= 0) return Infinity;
+  // IS-BIC = BIC/2 (half the standard penalty)
+  return n * Math.log(Math.max(1e-10, rss / n)) + 0.5 * k * Math.log(Math.max(2, n));
+}
+
 // ── Chi-Square Independence Test ────────────────────────────────────
 
 /**
