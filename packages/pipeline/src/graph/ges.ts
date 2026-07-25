@@ -121,20 +121,24 @@ export function gesAlgorithm(
 
     for (let i = 0; i < n; i++) {
       const u = nodeNames[i]!;
-      const uParents = [...g.parents(u)];
+      // Use neighbors (undirected) for degree check in CPDAG space
+      const uDegree = g.neighbors(u).length;
 
-      if (maxDegree >= 0 && uParents.length >= maxDegree) continue;
+      if (maxDegree >= 0 && uDegree >= maxDegree) continue;
 
       for (let j = 0; j < n; j++) {
         if (i === j) continue;
         const v = nodeNames[j]!;
         if (isAdjacent(u, v)) continue;
 
-        // Try both orientations: v→u and u→v
+        const vDegree = g.neighbors(v).length;
+
+        // BIC computation uses parents (one-way edges), degree check uses neighbors
+        const uParents = [...g.parents(u)];
         const vParents = [...g.parents(v)];
 
-        // Orientation 1: v → u (v is parent of u)
-        if (!(maxDegree >= 0 && uParents.length >= maxDegree)) {
+        // Try both orientations: v→u and u→v
+        if (!(maxDegree >= 0 && uDegree >= maxDegree)) {
           const bicNew1 = computeBIC(u, [...uParents, v]);
           const bicOld1 = computeBIC(u, uParents);
           const delta1 = bicNew1 - bicOld1;
@@ -146,7 +150,7 @@ export function gesAlgorithm(
         }
 
         // Orientation 2: u → v (u is parent of v)
-        if (!(maxDegree >= 0 && vParents.length >= maxDegree)) {
+        if (!(maxDegree >= 0 && vDegree >= maxDegree)) {
           const bicNew2 = computeBIC(v, [...vParents, u]);
           const bicOld2 = computeBIC(v, vParents);
           const delta2 = bicNew2 - bicOld2;
@@ -160,20 +164,17 @@ export function gesAlgorithm(
     }
 
     if (bestEdge) {
-      g.addEdge(bestEdge[0], bestEdge[1]);
-      // Convert to CPDAG after each edge addition
-      const cpdag = g.pdag2dag();
-      // Rebuild g from CPDAG state: make all edges undirected
-      for (const e of cpdag.edges) {
-        if (e.directed) {
-          g.orientEdge(e.source, e.target);
-        }
-      }
+      // Add as undirected edge in CPDAG space.
+      // Direction is ambiguous for the first edge — scores are
+      // symmetric for both orientations.  Later edges and the
+      // backward phase will resolve the orientation via BIC.
+      g.undirectedEdge(bestEdge[0], bestEdge[1]);
       improved = true;
     }
   }
 
-  // ── Phase 2: Backward (remove edges greedily) in CPDAG space ───
+  // ── Phase 2: Backward (remove edges greedily) ──
+  // Operates on both directed and undirected edges.
   improved = true;
   iter = 0;
 
@@ -184,23 +185,34 @@ export function gesAlgorithm(
 
     for (let i = 0; i < n; i++) {
       const u = nodeNames[i]!;
-      const currentParents = [...g.parents(u)];
+      // Use neighbors (includes both directed parents and undirected adjacencies)
+      for (const v of g.neighbors(u)) {
+        // Try removing edge as parent: BIC(u without v) vs BIC(u with v)
+        const currentParents = [...g.parents(u)];
+        if (currentParents.includes(v)) {
+          const newParents = currentParents.filter(p => p !== v);
+          const bicNew = computeBIC(u, newParents);
+          const bicOld = computeBIC(u, currentParents);
+          const delta = bicNew - bicOld;
+          if (delta > bestDelta) { bestDelta = delta; bestRemove = [v, u]; }
+        } else {
+          // Undirected edge: check both directions
+          const bicNew1 = computeBIC(u, []);
+          const bicOld1 = computeBIC(u, [v]);
+          const delta1 = bicNew1 - bicOld1;
+          if (delta1 > bestDelta) { bestDelta = delta1; bestRemove = [v, u]; }
 
-      for (const v of currentParents) {
-        const newParents = currentParents.filter(p => p !== v);
-        const bicNew = computeBIC(u, newParents);
-        const bicOld = computeBIC(u, currentParents);
-        const delta = bicNew - bicOld;
-
-        if (delta > bestDelta) {
-          bestDelta = delta;
-          bestRemove = [v, u];
+          const bicNew2 = computeBIC(v, []);
+          const bicOld2 = computeBIC(v, [u]);
+          const delta2 = bicNew2 - bicOld2;
+          if (delta2 > bestDelta) { bestDelta = delta2; bestRemove = [u, v]; }
         }
       }
     }
 
     if (bestRemove) {
       g.removeEdge(bestRemove[0], bestRemove[1]);
+      g.removeEdge(bestRemove[1], bestRemove[0]);
       improved = true;
     }
   }

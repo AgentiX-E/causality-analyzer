@@ -90,9 +90,9 @@ describe('gesAlgorithm', () => {
     ];
     const data = generateLinearDAGData(nodes, edges, 400, 0.2);
     const g = gesAlgorithm(data, nodes, { maxDegree: 1 });
-    // With maxDegree=1, no node should have more than 1 parent
+    // With maxDegree=1, no node should have more than 1 neighbor (CPDAG space)
     for (const node of nodes) {
-      expect(g.parents(node).length).toBeLessThanOrEqual(1);
+      expect(g.neighbors(node).length).toBeLessThanOrEqual(1);
     }
   });
 

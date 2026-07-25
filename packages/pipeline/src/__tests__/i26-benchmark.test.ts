@@ -65,9 +65,7 @@ function generateBenchmarkData(graph: CausalGraph, nSamples: number): Matrix {
 }
 
 function edgeCount(g: CausalGraph): number {
-  let count = 0;
-  for (const e of g.edges) if (e.directed) count++;
-  return count;
+  return g.edges.length;
 }
 
 describe('Benchmark: ASIA', () => {
