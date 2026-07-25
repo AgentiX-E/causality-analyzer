@@ -7,3 +7,5 @@ export {
   detectMechanismChanges, distributionChangeRobust, changeAttributionCI,
 } from './distribution-change.js';
 export type { MechanismChangeResult } from './distribution-change.js';
+export { resitTest } from './resit.js';
+export type { RESITResult, RESITConfig } from './resit.js';
