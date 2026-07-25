@@ -88,6 +88,7 @@ export type { ErrorCodeType } from './errors.js';
 
 // ── Math ─────────────────────────────────────────────────────────
 export { solveLinear, solveLinearSafe, normalTail, normalCDFTail, normalCDF, erf, colMean, createRNG, combinations, fisherZTest, partialCorrelationFromCov, invertMatrix, solveOLS, bicScore, chiSquareTest, gSquareTest } from './math.js';
+export { logGamma, bdeuScore, discretize } from './bdeu.js';
 
 // ── Visualization Types ───────────────────────────────────────────
 export type {
