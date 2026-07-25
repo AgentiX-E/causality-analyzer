@@ -149,8 +149,8 @@ export function fciAlgorithm(
         const key = `${Math.min(i, j)}-${Math.max(i, j)}`;
         if (!sepSet.get(key)?.has(nodeNames[k]!)) {
           // Orient v-structure: i→k←j
-          g.toUndirected(nodeNames[i]!, nodeNames[k]!);
-          g.toUndirected(nodeNames[j]!, nodeNames[k]!);
+          g.orientEdge(nodeNames[i]!, nodeNames[k]!);
+          g.orientEdge(nodeNames[j]!, nodeNames[k]!);
         }
       }
     }
@@ -175,7 +175,7 @@ export function fciAlgorithm(
         for (let k = 0; k < n; k++) {
           if (!g.hasEdge(nodeNames[j]!, nodeNames[k]!) || !g.hasEdge(nodeNames[k]!, nodeNames[j]!)) continue;
           if (g.hasEdge(nodeNames[i]!, nodeNames[k]!) || g.hasEdge(nodeNames[k]!, nodeNames[i]!)) continue;
-          g.toUndirected(nodeNames[j]!, nodeNames[k]!);
+          g.orientEdge(nodeNames[j]!, nodeNames[k]!);
           changed = true;
         }
       }
@@ -188,7 +188,7 @@ export function fciAlgorithm(
         for (let j = 0; j < n; j++) {
           if (!g.hasEdge(nodeNames[i]!, nodeNames[j]!) || g.hasEdge(nodeNames[j]!, nodeNames[i]!)) continue;
           if (!g.hasEdge(nodeNames[j]!, nodeNames[k]!) || g.hasEdge(nodeNames[k]!, nodeNames[j]!)) continue;
-          g.toUndirected(nodeNames[i]!, nodeNames[k]!);
+          g.orientEdge(nodeNames[i]!, nodeNames[k]!);
           changed = true;
         }
       }
@@ -206,7 +206,7 @@ export function fciAlgorithm(
             if (!g.hasEdge(nodeNames[i]!, nodeNames[l]!) || !g.hasEdge(nodeNames[l]!, nodeNames[i]!)) continue;
             if (!g.hasEdge(nodeNames[l]!, nodeNames[j]!) || g.hasEdge(nodeNames[j]!, nodeNames[l]!)) continue;
             if (g.hasEdge(nodeNames[k]!, nodeNames[l]!) || g.hasEdge(nodeNames[l]!, nodeNames[k]!)) continue;
-            g.toUndirected(nodeNames[i]!, nodeNames[j]!);
+            g.orientEdge(nodeNames[i]!, nodeNames[j]!);
             changed = true;
             break;
           }
@@ -239,7 +239,7 @@ export function fciAlgorithm(
           // Check if A has a directed edge to B
           if (g.hasEdge(nodeNames[j]!, nodeNames[i]!)) continue;
           // Orient: B→C
-          g.toUndirected(nodeNames[j]!, nodeNames[k]!);
+          g.orientEdge(nodeNames[j]!, nodeNames[k]!);
           changed = true;
         }
       }
@@ -257,7 +257,7 @@ export function fciAlgorithm(
           // A∗∗C absent
           if (g.hasEdge(nodeNames[i]!, nodeNames[k]!) || g.hasEdge(nodeNames[k]!, nodeNames[i]!)) continue;
           // Orient: B→A (i.e., A←B)
-          g.toUndirected(nodeNames[j]!, nodeNames[i]!);
+          g.orientEdge(nodeNames[j]!, nodeNames[i]!);
           changed = true;
         }
       }
@@ -278,7 +278,7 @@ export function fciAlgorithm(
           // B not an ancestor of C and also no undirected path
           // Orient A∘→C away from A OR A→C away from A?
           // In PAG: orient the circle at C away from A
-          g.toUndirected(nodeNames[k]!, nodeNames[i]!); // A←C
+          g.orientEdge(nodeNames[k]!, nodeNames[i]!); // A←C
           changed = true;
         }
       }
@@ -293,7 +293,7 @@ export function fciAlgorithm(
           if (j === i || j === k) continue;
           if (!g.hasEdge(nodeNames[i]!, nodeNames[j]!) || g.hasEdge(nodeNames[j]!, nodeNames[i]!)) continue;
           if (!g.hasEdge(nodeNames[j]!, nodeNames[k]!) || g.hasEdge(nodeNames[k]!, nodeNames[j]!)) continue;
-          g.toUndirected(nodeNames[i]!, nodeNames[k]!);
+          g.orientEdge(nodeNames[i]!, nodeNames[k]!);
           changed = true;
         }
       }
@@ -313,7 +313,7 @@ export function fciAlgorithm(
           if (!g.hasEdge(nodeNames[i]!, nodeNames[k]!) || g.hasEdge(nodeNames[k]!, nodeNames[i]!)) continue;
           if (!g.hasEdge(nodeNames[j]!, nodeNames[k]!) || !g.hasEdge(nodeNames[k]!, nodeNames[j]!)) continue;
           if (!g.hasEdge(nodeNames[i]!, nodeNames[j]!) || g.hasEdge(nodeNames[j]!, nodeNames[i]!)) continue;
-          g.toUndirected(nodeNames[j]!, nodeNames[k]!);
+          g.orientEdge(nodeNames[j]!, nodeNames[k]!);
           changed = true;
         }
       }
@@ -328,7 +328,7 @@ export function fciAlgorithm(
           if (k === i || k === j) continue;
           if (!g.hasEdge(nodeNames[j]!, nodeNames[k]!) || !g.hasEdge(nodeNames[k]!, nodeNames[j]!)) continue;
           if (g.hasEdge(nodeNames[i]!, nodeNames[k]!) || g.hasEdge(nodeNames[k]!, nodeNames[i]!)) continue;
-          g.toUndirected(nodeNames[j]!, nodeNames[k]!);
+          g.orientEdge(nodeNames[j]!, nodeNames[k]!);
           changed = true;
         }
       }
@@ -400,17 +400,17 @@ function applyR4DiscriminatingPath(
         if (sep && sep.has(nodeNames[x]!)) {
           // X is in sepSet(W,Y) → X is NOT a collider → orient X→Y
           if (g.hasEdge(nodeNames[y]!, nodeNames[x]!)) {
-            g.toUndirected(nodeNames[x]!, nodeNames[y]!);
+            g.orientEdge(nodeNames[x]!, nodeNames[y]!);
             changed = true;
           }
         } else {
           // X is NOT in sepSet(W,Y) → X IS a collider → orient W→X←Y
           if (g.hasEdge(nodeNames[x]!, nodeNames[w]!))
-            g.toUndirected(nodeNames[w]!, nodeNames[x]!);
+            g.orientEdge(nodeNames[w]!, nodeNames[x]!);
           if (g.hasEdge(nodeNames[x]!, nodeNames[y]!))
-            g.toUndirected(nodeNames[y]!, nodeNames[x]!);
+            g.orientEdge(nodeNames[y]!, nodeNames[x]!);
           if (g.hasEdge(nodeNames[y]!, nodeNames[x]!))
-            g.toUndirected(nodeNames[x]!, nodeNames[y]!);
+            g.orientEdge(nodeNames[x]!, nodeNames[y]!);
           changed = true;
         }
       }

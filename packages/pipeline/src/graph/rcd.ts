@@ -82,8 +82,8 @@ export function rcdAlgorithm(
       const bicIJ = rcdBicScore(data, i, [j], N);
       const bicJI = rcdBicScore(data, j, [i], N);
 
-      if (bicIJ < bicJI) g.toUndirected(iName, jName);
-      else if (bicJI < bicIJ) g.toUndirected(jName, iName);
+      if (bicIJ < bicJI) g.orientEdge(iName, jName);
+      else if (bicJI < bicIJ) g.orientEdge(jName, iName);
     }
   }
 
@@ -97,8 +97,8 @@ export function rcdAlgorithm(
         if (g.hasEdge(nodeNames[k]!, nodeNames[i]!) || g.hasEdge(nodeNames[k]!, nodeNames[j]!)) continue;
         const p = matrixFisherZ(data, i, j, [k]);
         if (p <= alpha && g.hasEdge(nodeNames[i]!, nodeNames[k]!) && g.hasEdge(nodeNames[j]!, nodeNames[k]!)) {
-          g.toUndirected(nodeNames[i]!, nodeNames[k]!);
-          g.toUndirected(nodeNames[j]!, nodeNames[k]!);
+          g.orientEdge(nodeNames[i]!, nodeNames[k]!);
+          g.orientEdge(nodeNames[j]!, nodeNames[k]!);
         }
       }
     }

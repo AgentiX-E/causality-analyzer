@@ -159,8 +159,8 @@ export function tsIcdAlgorithm(
         const key = `${Math.min(i,j)}-${Math.max(i,j)}`;
         const sep = sepSet.get(key);
         if (!sep || !sep.has(nodeNames[k]!)) {
-          g.toUndirected(nodeNames[i]!, nodeNames[k]!);
-          g.toUndirected(nodeNames[j]!, nodeNames[k]!);
+          g.orientEdge(nodeNames[i]!, nodeNames[k]!);
+          g.orientEdge(nodeNames[j]!, nodeNames[k]!);
         }
       }
     }
@@ -173,10 +173,10 @@ export function tsIcdAlgorithm(
       const bicIJ = bicNodeScore(expanded, i, [j], N);
       const bicJI = bicNodeScore(expanded, j, [i], N);
       if (bicIJ < bicJI) {
-        g.toUndirected(nodeNames[i]!, nodeNames[j]!);
+        g.orientEdge(nodeNames[i]!, nodeNames[j]!);
         edges.push({ source: nodeNames[i]!, target: nodeNames[j]!, lag: 0, weight: 1 });
       } else {
-        g.toUndirected(nodeNames[j]!, nodeNames[i]!);
+        g.orientEdge(nodeNames[j]!, nodeNames[i]!);
         edges.push({ source: nodeNames[j]!, target: nodeNames[i]!, lag: 0, weight: 1 });
       }
     }

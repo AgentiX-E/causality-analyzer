@@ -308,8 +308,8 @@ export class OnlinePC {
           const key = `${Math.min(i, j)}-${Math.max(i, j)}`;
           const set = sepSet.get(key) ?? new Set<string>();
           if (!set.has(this.nodeNames[k]!)) {
-            newGraph.toUndirected(this.nodeNames[i]!, this.nodeNames[k]!);
-            newGraph.toUndirected(this.nodeNames[j]!, this.nodeNames[k]!);
+            newGraph.orientEdge(this.nodeNames[i]!, this.nodeNames[k]!);
+            newGraph.orientEdge(this.nodeNames[j]!, this.nodeNames[k]!);
           }
         }
       }

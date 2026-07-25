@@ -94,8 +94,8 @@ export function cdnodAlgorithm(
         const key = `${Math.min(i, j)}-${Math.max(i, j)}`;
         const sep = sepSet.get(key);
         if (!sep || !sep.has(nodeNames[k]!)) {
-          g.toUndirected(nodeNames[i]!, nodeNames[k]!);
-          g.toUndirected(nodeNames[j]!, nodeNames[k]!);
+          g.orientEdge(nodeNames[i]!, nodeNames[k]!);
+          g.orientEdge(nodeNames[j]!, nodeNames[k]!);
         }
       }
     }

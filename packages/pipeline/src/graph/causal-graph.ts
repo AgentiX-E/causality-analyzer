@@ -60,8 +60,8 @@ export class CausalGraph {
     this.addEdge(b, a);
   }
 
-  /** Convert an undirected edge to directed a→b. */
-  toUndirected(a: string, b: string): void {
+  /** Orient edge a→b by removing b→a (converts undirected to directed). */
+  orientEdge(a: string, b: string): void {
     this.removeEdge(b, a);
     this.addEdge(a, b);
   }

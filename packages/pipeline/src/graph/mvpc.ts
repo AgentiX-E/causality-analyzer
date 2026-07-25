@@ -92,8 +92,8 @@ export function mvpcAlgorithm(
 
         const p = missingValueCI(data, i, j, [k], minObs);
         if (p <= alpha) {
-          g.toUndirected(nodeNames[i]!, nodeNames[k]!);
-          g.toUndirected(nodeNames[j]!, nodeNames[k]!);
+          g.orientEdge(nodeNames[i]!, nodeNames[k]!);
+          g.orientEdge(nodeNames[j]!, nodeNames[k]!);
         }
       }
     }
@@ -109,7 +109,7 @@ export function mvpcAlgorithm(
         for (let k = 0; k < n; k++) {
           if (!g.hasEdge(nodeNames[j]!, nodeNames[k]!) || !g.hasEdge(nodeNames[k]!, nodeNames[j]!)) continue;
           if (g.hasEdge(nodeNames[i]!, nodeNames[k]!) || g.hasEdge(nodeNames[k]!, nodeNames[i]!)) continue;
-          g.toUndirected(nodeNames[j]!, nodeNames[k]!);
+          g.orientEdge(nodeNames[j]!, nodeNames[k]!);
           rulesChanged = true;
         }
       }
@@ -120,7 +120,7 @@ export function mvpcAlgorithm(
         for (let j = 0; j < n; j++) {
           if (!g.hasEdge(nodeNames[i]!, nodeNames[j]!) || g.hasEdge(nodeNames[j]!, nodeNames[i]!)) continue;
           if (!g.hasEdge(nodeNames[j]!, nodeNames[k]!) || g.hasEdge(nodeNames[k]!, nodeNames[j]!)) continue;
-          g.toUndirected(nodeNames[i]!, nodeNames[k]!);
+          g.orientEdge(nodeNames[i]!, nodeNames[k]!);
           rulesChanged = true;
         }
       }

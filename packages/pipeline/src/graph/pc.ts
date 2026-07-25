@@ -155,8 +155,8 @@ export function pcAlgorithm(
         const sep = sepSet.get(key);
         if (!sep || !sep.has(nodeNames[k]!)) {
           // k is NOT in separating set → orient i→k←j
-          g.toUndirected(nodeNames[i]!, nodeNames[k]!);
-          g.toUndirected(nodeNames[j]!, nodeNames[k]!);
+          g.orientEdge(nodeNames[i]!, nodeNames[k]!);
+          g.orientEdge(nodeNames[j]!, nodeNames[k]!);
         }
       }
     }
@@ -174,7 +174,7 @@ export function pcAlgorithm(
         for (let k = 0; k < n; k++) {
           if (!g.hasEdge(nodeNames[j]!, nodeNames[k]!) || !g.hasEdge(nodeNames[k]!, nodeNames[j]!)) continue;
           if (g.hasEdge(nodeNames[i]!, nodeNames[k]!) || g.hasEdge(nodeNames[k]!, nodeNames[i]!)) continue;
-          g.toUndirected(nodeNames[j]!, nodeNames[k]!);
+          g.orientEdge(nodeNames[j]!, nodeNames[k]!);
           changed = true;
         }
       }
@@ -186,7 +186,7 @@ export function pcAlgorithm(
         for (let j = 0; j < n; j++) {
           if (!g.hasEdge(nodeNames[i]!, nodeNames[j]!) || g.hasEdge(nodeNames[j]!, nodeNames[i]!)) continue;
           if (!g.hasEdge(nodeNames[j]!, nodeNames[k]!) || g.hasEdge(nodeNames[k]!, nodeNames[j]!)) continue;
-          g.toUndirected(nodeNames[i]!, nodeNames[k]!);
+          g.orientEdge(nodeNames[i]!, nodeNames[k]!);
           changed = true;
         }
       }
@@ -203,7 +203,7 @@ export function pcAlgorithm(
             if (!g.hasEdge(nodeNames[i]!, nodeNames[l]!) || !g.hasEdge(nodeNames[l]!, nodeNames[i]!)) continue;
             if (!g.hasEdge(nodeNames[l]!, nodeNames[j]!) || g.hasEdge(nodeNames[j]!, nodeNames[l]!)) continue;
             if (g.hasEdge(nodeNames[k]!, nodeNames[l]!) || g.hasEdge(nodeNames[l]!, nodeNames[k]!)) continue;
-            g.toUndirected(nodeNames[i]!, nodeNames[j]!);
+            g.orientEdge(nodeNames[i]!, nodeNames[j]!);
             changed = true;
             break;
           }
