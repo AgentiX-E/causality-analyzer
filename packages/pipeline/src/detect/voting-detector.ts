@@ -11,9 +11,9 @@ export type VotingStrategy = 'majority' | 'weighted' | 'maximum';
 export interface VotingDetectorConfig {
   strategy: VotingStrategy;
   /** Minimum number of detectors that must agree (majority only) */
-  minAgreement?: number;
+  minAgreement?: number | undefined;
   /** Per-detector weights (weighted only) */
-  weights?: number[];
+  weights?: number[] | undefined;
 }
 
 export class VotingDetector {

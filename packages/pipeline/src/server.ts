@@ -28,8 +28,8 @@ import { HealthChecker, type HealthStatus } from './health.js';
 interface ApiResponse {
   success: boolean;
   data?: unknown;
-  error?: string;
-  requestId?: string;
+  error?: string | undefined;
+  requestId?: string | undefined;
 }
 
 interface DiscoverRequest {

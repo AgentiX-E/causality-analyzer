@@ -22,9 +22,9 @@ export interface AuditEntry {
   /** Whether the operation succeeded */
   success: boolean;
   /** Arbitrary context data */
-  context?: Record<string, unknown>;
+  context?: Record<string, unknown> | undefined;
   /** Optional error message */
-  error?: string;
+  error?: string | undefined;
 }
 
 /**

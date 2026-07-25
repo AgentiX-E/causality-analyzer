@@ -42,7 +42,7 @@ export interface DriftDetectionResult {
     beforeWindow: number;
     afterWindow: number;
     driftMagnitude: number;
-  };
+  } | undefined;
   /** Drift severity classification */
   severity: 'none' | 'mild' | 'moderate' | 'severe';
 }

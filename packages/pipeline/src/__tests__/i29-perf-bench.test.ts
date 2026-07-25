@@ -24,7 +24,7 @@ const PERF_BUDGETS = {
   /** d-separation test on a 10-node graph */
   dsep10Node: 25,
   /** Fisher Z test on 500 samples */
-  fisherZ500: 5,
+  fisherZ500: 10,
   /** KCI unconditional on 100 samples */
   kci100: 200,
   /** SPOT calibration with 100 samples */

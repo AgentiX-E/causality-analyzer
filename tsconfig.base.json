@@ -16,6 +16,6 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "verbatimModuleSyntax": true,
-    "exactOptionalPropertyTypes": false
+    "exactOptionalPropertyTypes": true
   }
 }

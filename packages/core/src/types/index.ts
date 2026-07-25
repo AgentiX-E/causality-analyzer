@@ -256,7 +256,7 @@ export interface GraphVizNode {
 export interface GraphVisualizationData { nodes: GraphVizNode[]; edges: Array<{ source: string; target: string; weight: number; directed: boolean }>; }
 
 export interface TimeSeriesDataPoint { ts: number; value: number; q10?: number; q90?: number; }
-export interface AnomalyRegion { start: number; end: number; severity: 'critical' | 'warning' | 'info'; rootCause?: string; }
+export interface AnomalyRegion { start: number; end: number; severity: 'critical' | 'warning' | 'info'; rootCause?: string | undefined; }
 export interface TimeSeriesChartData { series: Array<{ name: string; data: TimeSeriesDataPoint[] }>; anomalyRegions: AnomalyRegion[]; }
 
 export interface RankingEntry { rank: number; name: string; score: number; confidence: number; evidence: Evidence[]; }
