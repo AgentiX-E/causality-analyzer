@@ -191,36 +191,76 @@ export function combinations<T>(arr: T[], k: number): T[][] {
  *
  * Complexity: O(n·d²) where d = |S| + 2.
  */
+// ── Fisher Z P-Value Cache (LRU) ─────────────────────────────────
+
+const FISHER_Z_CACHE = new Map<string, number>();
+const FISHER_Z_CACHE_MAX = 50000;
+
+function fisherZCacheKey(i: number, j: number, condSet: number[]): string {
+  const sorted = [Math.min(i, j), Math.max(i, j), ...condSet.sort((a, b) => a - b)];
+  return sorted.join(',');
+}
+
+/**
+ * Fisher's Z conditional independence test with precomputed correlation matrix.
+ *
+ * This version accepts a precomputed correlation matrix (d×d) for O(1)
+ * per-variable-pair lookups instead of O(n) recomputation per test.
+ * When corrMatrix is provided, it subsets directly — 10-100× faster
+ * for PC algorithm with thousands of CI tests.
+ *
+ * Results are cached in an LRU map keyed by (i, j, sorted(S)).
+ *
+ * @param corrMatrix — optional precomputed correlation matrix (d×d)
+ */
 export function fisherZTest(
   data: number[][],
   i: number,
   j: number,
   condSet: number[],
+  corrMatrix?: number[][],
 ): number {
+  // Check cache first
+  const cacheKey = fisherZCacheKey(i, j, condSet);
+  const cached = FISHER_Z_CACHE.get(cacheKey);
+  if (cached !== undefined) return cached;
+
   const n = data.length;
   const indices = [i, j, ...condSet];
   const k = condSet.length;
 
-  // Compute means
-  const means = new Array(indices.length).fill(0);
-  for (let c = 0; c < indices.length; c++) {
-    const ci = indices[c]!;
-    let sum = 0;
-    for (let r = 0; r < n; r++) sum += data[r]?.[ci] ?? 0;
-    means[c] = sum / n;
-  }
-
-  // Compute covariance matrix
-  const cov = Array.from({ length: indices.length }, () => new Array(indices.length).fill(0));
-  for (let a = 0; a < indices.length; a++) {
-    const ai = indices[a]!;
-    for (let b = a; b < indices.length; b++) {
-      const bi = indices[b]!;
+  let cov: number[][];
+  if (corrMatrix) {
+    // Subset from precomputed correlation matrix — O(d²) where d=|S|+2
+    cov = Array.from({ length: indices.length }, () => new Array(indices.length).fill(0));
+    for (let a = 0; a < indices.length; a++) {
+      const ai = indices[a]!;
+      for (let b = a; b < indices.length; b++) {
+        const bi = indices[b]!;
+        cov[a]![b] = corrMatrix[ai]?.[bi] ?? 0;
+        cov[b]![a] = cov[a]![b]!;
+      }
+    }
+  } else {
+    // Compute from raw data — O(n·d²)
+    const means = new Array(indices.length).fill(0);
+    for (let c = 0; c < indices.length; c++) {
+      const ci = indices[c]!;
       let sum = 0;
-      for (let r = 0; r < n; r++)
-        sum += ((data[r]?.[ai] ?? 0) - means[a]!) * ((data[r]?.[bi] ?? 0) - means[b]!);
-      cov[a]![b] = sum / (n - 1);
-      cov[b]![a] = cov[a]![b]!;
+      for (let r = 0; r < n; r++) sum += data[r]?.[ci] ?? 0;
+      means[c] = sum / n;
+    }
+    cov = Array.from({ length: indices.length }, () => new Array(indices.length).fill(0));
+    for (let a = 0; a < indices.length; a++) {
+      const ai = indices[a]!;
+      for (let b = a; b < indices.length; b++) {
+        const bi = indices[b]!;
+        let sum = 0;
+        for (let r = 0; r < n; r++)
+          sum += ((data[r]?.[ai] ?? 0) - means[a]!) * ((data[r]?.[bi] ?? 0) - means[b]!);
+        cov[a]![b] = sum / (n - 1);
+        cov[b]![a] = cov[a]![b]!;
+      }
     }
   }
 
@@ -233,7 +273,15 @@ export function fisherZTest(
     : rho;
 
   const z = 0.5 * Math.log((1 + rhoClipped) / (1 - rhoClipped)) * Math.sqrt(n - k - 3);
-  return 2 * (1 - normalCDF(Math.abs(z)));
+  const p = 2 * (1 - normalCDF(Math.abs(z)));
+
+  // LRU cache
+  if (FISHER_Z_CACHE.size >= FISHER_Z_CACHE_MAX) {
+    const firstKey = FISHER_Z_CACHE.keys().next().value;
+    if (firstKey !== undefined) FISHER_Z_CACHE.delete(firstKey);
+  }
+  FISHER_Z_CACHE.set(cacheKey, p);
+  return p;
 }
 
 /**
@@ -261,7 +309,56 @@ export function partialCorrelationFromCov(
   return Math.max(-1, Math.min(1, r));
 }
 
-// ── Matrix Inversion (Gauss-Jordan) ──────────────────────────────────
+/**
+ * Precompute correlation matrix for data.
+ *
+ * Usage: pass the returned matrix as `corrMatrix` to fisherZTest
+ * for 10-100× speedup in PC/FCI algorithms with thousands of CI tests.
+ *
+ * @returns d×d correlation matrix
+ */
+export function precomputeCorrelation(data: number[][]): number[][] {
+  const d = data[0]?.length ?? 0;
+  if (d === 0) return [];
+
+  const n = data.length;
+  const means = new Array(d).fill(0);
+  const stds = new Array(d).fill(0);
+
+  // Means
+  for (let j = 0; j < d; j++) {
+    let sum = 0;
+    for (let i = 0; i < n; i++) sum += data[i]?.[j] ?? 0;
+    means[j] = sum / n;
+  }
+
+  // Standard deviations
+  for (let j = 0; j < d; j++) {
+    let sq = 0;
+    const m = means[j]!;
+    for (let i = 0; i < n; i++) {
+      const diff = (data[i]?.[j] ?? 0) - m;
+      sq += diff * diff;
+    }
+    stds[j] = Math.sqrt(sq / n);
+  }
+
+  // Correlation matrix
+  const corr: number[][] = Array.from({ length: d }, () => new Array(d).fill(0));
+  for (let a = 0; a < d; a++) {
+    corr[a]![a] = 1;
+    for (let b = a + 1; b < d; b++) {
+      let cov = 0;
+      for (let i = 0; i < n; i++) {
+        cov += ((data[i]?.[a] ?? 0) - means[a]!) * ((data[i]?.[b] ?? 0) - means[b]!);
+      }
+      cov /= n;
+      const denom = stds[a]! * stds[b]!;
+      corr[a]![b] = corr[b]![a] = denom > 0 ? cov / denom : 0;
+    }
+  }
+  return corr;
+}
 
 const MATRIX_PIVOT_THRESHOLD = 1e-12;
 

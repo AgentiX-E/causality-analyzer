@@ -171,7 +171,7 @@ export class StoreError extends CausalityError {
  */
 export class ValidationError extends CausalityError {
   /** Which field failed validation */
-  readonly field?: string;
+  readonly field?: string | undefined;
   /** Expected value description */
   readonly expected?: unknown;
   /** Actual value received */
@@ -197,9 +197,11 @@ export class ValidationError extends CausalityError {
         ...options?.context,
       },
     });
-    this.field = options?.field;
-    this.expected = options?.expected;
-    this.received = options?.received;
+    const ensure = <T,>(v: T | undefined): T | undefined => v;
+    const { field, expected, received } = options ?? {};
+    this.field = ensure(field);
+    this.expected = ensure(expected);
+    this.received = ensure(received);
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
@@ -213,7 +215,7 @@ export class ValidationError extends CausalityError {
  */
 export class ConfigError extends CausalityError {
   /** Which config module was being loaded */
-  readonly configName?: string;
+  readonly configName?: string | undefined;
 
   constructor(
     code: ErrorCodeType,
@@ -228,7 +230,9 @@ export class ConfigError extends CausalityError {
       cause: options?.cause,
       context: { configName: options?.configName, ...options?.context },
     });
-    this.configName = options?.configName;
+    const ensure = <T,>(v: T | undefined): T | undefined => v;
+    const { configName } = options ?? {};
+    this.configName = ensure(configName);
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
@@ -275,9 +279,9 @@ export class ConvergenceError extends CausalityError {
   /** Which algorithm failed */
   readonly algorithm: string;
   /** Iterations executed before failure */
-  readonly iterations?: number;
+  readonly iterations?: number | undefined;
   /** Tolerance target that was not met */
-  readonly tolerance?: number;
+  readonly tolerance?: number | undefined;
 
   constructor(
     code: ErrorCodeType,
@@ -299,9 +303,10 @@ export class ConvergenceError extends CausalityError {
         ...options.context,
       },
     });
+    const ensure = <T,>(v: T | undefined): T | undefined => v;
     this.algorithm = options.algorithm;
-    this.iterations = options.iterations;
-    this.tolerance = options.tolerance;
+    this.iterations = ensure(options.iterations);
+    this.tolerance = ensure(options.tolerance);
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
