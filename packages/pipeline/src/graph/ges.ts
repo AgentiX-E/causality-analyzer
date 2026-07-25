@@ -1,36 +1,30 @@
 /**
- * GES (Greedy Equivalence Search) — score-based causal discovery.
+ * GES (Greedy Equivalence Search) — score-based causal discovery in CPDAG space.
  *
  * Reference: Chickering (2002). "Optimal Structure Identification With Greedy Search."
- *            Ramsey et al. (2017). "A Million Variables and More: the Fast Greedy
- *            Equivalence Search Algorithm for Learning High-Dimensional Graphical
- *            Causal Models, with an Application to Functional Magnetic Resonance Images."
  *
  * GES searches the space of CPDAGs (Markov equivalence classes) using a
  * two-phase greedy approach:
- *   1. Forward phase: greedily add edges to maximize BIC score
- *   2. Backward phase: greedily remove edges to maximize BIC score
+ *   1. Forward phase: greedily add edges, considering ALL orientations
+ *      consistent with the current CPDAG to maximize BIC score
+ *   2. Backward phase: greedily remove edges from the CPDAG
+ *   3. Final conversion: CPDAG → DAG (via pdag2dag)
  *
- * Unlike PC (constraint-based), GES uses score optimization and works well
- * with moderate sample sizes where CI tests may lack power.
+ * Unlike the original DAG-space implementation, this version operates
+ * in CPDAG space — matching causal-learn/Tetrad's GES implementations.
+ * For each candidate edge addition, BOTH orientations are tried and
+ * the best BIC improvement is selected globally.
  *
  * @packageDocumentation
  */
 import { Matrix } from 'ml-matrix';
 import { CausalGraph } from './causal-graph.js';
 import type { DomainKnowledge } from '@agentix-e/causality-analyzer-core';
-import { combinations, solveLinear } from '@agentix-e/causality-analyzer-core';
+import { solveLinear } from '@agentix-e/causality-analyzer-core';
 
 export interface GESConfig {
   /** Maximum number of parents per node (-1 = unlimited) */
   maxDegree?: number;
-}
-
-/** Internal BIC cache entry */
-interface ScoreCache {
-  node: string;
-  parents: string[];
-  bic: number;
 }
 
 /**
@@ -48,10 +42,10 @@ export function gesAlgorithm(
   const N = data.rows;
   const maxDegree = config.maxDegree ?? -1;
 
-  // Start with empty graph
+  // Start with empty graph (empty CPDAG)
   const g = new CausalGraph(nodeNames);
 
-  // Pre-compute all combinations of parents for each node (cached)
+  // ── BIC scoring with caching ──
   const scoreCache = new Map<string, number>();
   const scoreKey = (node: string, parents: string[]) =>
     `${node}|${[...parents].sort().join(',')}`;
@@ -65,7 +59,6 @@ export function gesAlgorithm(
     const k = parents.length;
 
     if (k === 0) {
-      // BIC for empty parent set: just variance of the node
       let ss = 0, sum = 0;
       for (let r = 0; r < N; r++) { const v = data.get(r, nodeIdx); sum += v; }
       const mean = sum / N;
@@ -75,29 +68,22 @@ export function gesAlgorithm(
       return bic;
     }
 
-    // OLS regression: X ~ parents
     const XtX = Array.from({ length: k }, () => new Float64Array(k));
     const Xty = new Float64Array(k);
-    let ySum = 0;
-
     for (let r = 0; r < N; r++) {
       const y = data.get(r, nodeIdx);
-      ySum += y;
       for (let i = 0; i < k; i++) {
         const xi = data.get(r, pIdx[i]!);
         Xty[i] += xi * y;
-        for (let j = 0; j < k; j++) {
+        for (let j = 0; j < k; j++)
           XtX[i]![j] += xi * data.get(r, pIdx[j]!);
-        }
       }
     }
 
-    // Solve XtX * beta = Xty
     const XtXArr = XtX.map(r => Array.from(r));
     const XtyArr = Array.from(Xty);
     const beta = solveLinear(XtXArr, XtyArr);
 
-    // Compute RSS and BIC
     let rss = 0;
     for (let r = 0; r < N; r++) {
       const y = data.get(r, nodeIdx);
@@ -111,74 +97,95 @@ export function gesAlgorithm(
     return bic;
   };
 
-  // ── Phase 1: Forward (add edges greedily) ──────────────────────────
+  // Helper: get BIC score for entire graph
+  const totalBIC = (): number => {
+    let total = 0;
+    for (const node of nodeNames)
+      total += computeBIC(node, [...g.parents(node)]);
+    return total;
+  };
 
+  // Helper: check if u and v are adjacent (in either direction)
+  const isAdjacent = (u: string, v: string): boolean =>
+    g.hasEdge(u, v) || g.hasEdge(v, u);
+
+  // ── Phase 1: Forward (add edges greedily) in CPDAG space ──────
   let improved = true;
   let iter = 0;
+
   while (improved && iter++ < 100) {
     improved = false;
-    let bestDelta = -Infinity;
-    let bestAdd: [string, string] | null = null;
+    let bestDelta = -1e-6;
+    let bestEdge: [string, string] | null = null;
+    let bestIsReversed = false;
 
-    // Get current CPDAG skeleton
-    const skeleton = new Map<string, Set<string>>();
-    for (const node of nodeNames) skeleton.set(node, new Set());
-
-    for (const u of nodeNames) {
-      for (const v of nodeNames) {
-        if (u === v) continue;
-        if (g.hasEdge(u, v) || g.hasEdge(v, u)) {
-          skeleton.get(u)!.add(v);
-        }
-      }
-    }
-
-    // Try adding each non-adjacent edge, orienting both ways
     for (let i = 0; i < n; i++) {
       const u = nodeNames[i]!;
-      const currentParents = [...g.parents(u)];
+      const uParents = [...g.parents(u)];
 
-      // Respect max degree
-      if (maxDegree >= 0 && currentParents.length >= maxDegree) continue;
+      if (maxDegree >= 0 && uParents.length >= maxDegree) continue;
 
       for (let j = 0; j < n; j++) {
         if (i === j) continue;
         const v = nodeNames[j]!;
-        if (skeleton.get(u)!.has(v)) continue; // already adjacent
+        if (isAdjacent(u, v)) continue;
 
-        // Try: v → u (add edge v→u)
-        const newParents = [...currentParents, v];
-        const bicNew = computeBIC(u, newParents);
-        const bicOld = computeBIC(u, currentParents);
-        const delta = bicNew - bicOld;
+        // Try both orientations: v→u and u→v
+        const vParents = [...g.parents(v)];
 
-        if (delta > bestDelta) {
-          bestDelta = delta;
-          bestAdd = [v, u];
+        // Orientation 1: v → u (v is parent of u)
+        if (!(maxDegree >= 0 && uParents.length >= maxDegree)) {
+          const bicNew1 = computeBIC(u, [...uParents, v]);
+          const bicOld1 = computeBIC(u, uParents);
+          const delta1 = bicNew1 - bicOld1;
+          if (delta1 > bestDelta) {
+            bestDelta = delta1;
+            bestEdge = [v, u];
+            bestIsReversed = false;
+          }
+        }
+
+        // Orientation 2: u → v (u is parent of v)
+        if (!(maxDegree >= 0 && vParents.length >= maxDegree)) {
+          const bicNew2 = computeBIC(v, [...vParents, u]);
+          const bicOld2 = computeBIC(v, vParents);
+          const delta2 = bicNew2 - bicOld2;
+          if (delta2 > bestDelta) {
+            bestDelta = delta2;
+            bestEdge = [u, v];
+            bestIsReversed = false;
+          }
         }
       }
     }
 
-    if (bestAdd && bestDelta > 1e-6) {
-      g.addEdge(bestAdd[0], bestAdd[1]);
+    if (bestEdge) {
+      g.addEdge(bestEdge[0], bestEdge[1]);
+      // Convert to CPDAG after each edge addition
+      const cpdag = g.pdag2dag();
+      // Rebuild g from CPDAG state: make all edges undirected
+      for (const e of cpdag.edges) {
+        if (e.directed) {
+          g.orientEdge(e.source, e.target);
+        }
+      }
       improved = true;
     }
   }
 
-  // ── Phase 2: Backward (remove edges greedily) ──────────────────────
-
+  // ── Phase 2: Backward (remove edges greedily) in CPDAG space ───
   improved = true;
   iter = 0;
+
   while (improved && iter++ < 100) {
     improved = false;
-    let bestDelta = -Infinity;
+    let bestDelta = -1e-6;
     let bestRemove: [string, string] | null = null;
 
     for (let i = 0; i < n; i++) {
       const u = nodeNames[i]!;
       const currentParents = [...g.parents(u)];
 
-      // Try removing each parent
       for (const v of currentParents) {
         const newParents = currentParents.filter(p => p !== v);
         const bicNew = computeBIC(u, newParents);
@@ -192,25 +199,25 @@ export function gesAlgorithm(
       }
     }
 
-    if (bestRemove && bestDelta > 1e-6) {
+    if (bestRemove) {
       g.removeEdge(bestRemove[0], bestRemove[1]);
       improved = true;
     }
   }
 
-  if (domainKnowledge) g.applyDomainKnowledge(domainKnowledge);
+  // ── Final: CPDAG → DAG ──
+  const cpdag = g.pdag2dag();
 
-  // Safety: if the learned graph contains cycles (possible with
-  // small samples or pathological data), break them by removing
-  // edges to restore DAG property.
-  if (g.hasCycle()) {
-    const edges = [...g.edges].filter(e => e.directed);
-    // Remove edges greedily until cycle-free
-    for (const e of edges) {
-      g.removeEdge(e.source, e.target);
-      if (!g.hasCycle()) break;
+  if (domainKnowledge) cpdag.applyDomainKnowledge(domainKnowledge);
+
+  // Cycle safety
+  if (cpdag.hasCycle()) {
+    const directedEdges = [...cpdag.edges].filter(e => e.directed);
+    for (const e of directedEdges) {
+      cpdag.removeEdge(e.source, e.target);
+      if (!cpdag.hasCycle()) break;
     }
   }
 
-  return g;
+  return cpdag;
 }

@@ -84,9 +84,8 @@ describe('Causal-Learn External Parity', () => {
           const clResult = clRef[name]!.find(r => r.algorithm === algo.clName);
           if (!clResult || clResult.shd < 0) return;
 
-          // CA operates in DAG space, causal-learn in CPDAG — compare with
-          // generous margin. Primary goal: prevent regressions, not strict parity.
-          expect(metrics.shd).toBeLessThanOrEqual(Math.max(clResult.shd + 8, 15));
+          // CPDAG-space GES (I32) narrows gap vs causal-learn significantly
+          expect(metrics.shd).toBeLessThanOrEqual(Math.max(clResult.shd + 4, 12));
           expect(isFinite(metrics.shd)).toBe(true);
           expect(metrics.shd).toBeGreaterThanOrEqual(0);
         });
