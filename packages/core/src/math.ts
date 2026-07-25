@@ -226,9 +226,13 @@ export function fisherZTest(
 
   // Partial correlation via precision matrix
   const rho = partialCorrelationFromCov(cov, 0, 1);
-  if (Math.abs(rho) >= 1) return 0;
+  // Clip to ±(1-ε) to avoid log(0) or log(Infinity) in Fisher Z transform
+  const eps = Number.EPSILON;
+  const rhoClipped = Math.abs(rho) >= 1
+    ? (1 - eps) * (rho > 0 ? 1 : -1)
+    : rho;
 
-  const z = 0.5 * Math.log((1 + rho) / (1 - rho)) * Math.sqrt(n - k - 3);
+  const z = 0.5 * Math.log((1 + rhoClipped) / (1 - rhoClipped)) * Math.sqrt(n - k - 3);
   return 2 * (1 - normalCDF(Math.abs(z)));
 }
 

@@ -40,10 +40,10 @@ describe('GRaSP Algorithm', () => {
     const gesShd = computeSHD(gesDag, truth).shd;
 
     expect(graspDag.isDAG()).toBe(true);
-    // GRaSP covered tuck explores permutation space — different from GES edge ops
-    // SHD comparison is relaxed: GRaSP may find different structures
+    // GRaSP now uses standard BIC penalty (I43 fix: k·log(N), not k·lambda1·log(N))
+    // SHD gap should be much tighter vs GES in CPDAG space
     expect(graspDag.isDAG()).toBe(true);
-    expect(graspShd).toBeLessThanOrEqual(30);
+    expect(graspShd).toBeLessThanOrEqual(gesShd + 5);
   });
 
   it('respects lambda1 regularization (sparser with higher lambda)', () => {

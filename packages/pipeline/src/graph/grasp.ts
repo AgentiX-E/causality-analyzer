@@ -61,7 +61,7 @@ export function graspAlgorithm(
     if (parents.length === 0) {
       const mean = y.reduce((a, b) => a + b, 0) / N;
       const rss = y.reduce((s, v) => s + (v - mean) ** 2, 0);
-      const bic = N * Math.log(Math.max(1e-10, rss / N)) + lambda1 * Math.log(N);
+      const bic = N * Math.log(Math.max(1e-10, rss / N)) + Math.log(N);
       scoreCache.set(key, bic);
       return bic;
     }
@@ -79,7 +79,7 @@ export function graspAlgorithm(
       for (let j = 0; j < k; j++) pred += (coef[j] ?? 0) * (X[i]![j] ?? 0);
       rss += (y[i]! - pred) ** 2;
     }
-    const bic = N * Math.log(Math.max(1e-10, rss / N)) + k * lambda1 * Math.log(N);
+    const bic = N * Math.log(Math.max(1e-10, rss / N)) + k * Math.log(N);
     scoreCache.set(key, bic);
     return bic;
   };
