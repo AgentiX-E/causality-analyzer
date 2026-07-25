@@ -1,4 +1,153 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
-<title>Causality Analyzer — User Guide</title>
-<meta http-equiv="refresh" content="0;url=https://github.com/AgentiX-E/causality-analyzer">
-</head><body><p>See <a href="https://github.com/AgentiX-E/causality-analyzer">GitHub README</a> for documentation.</p></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Causality Analyzer — User Guide</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; line-height: 1.6; color: #1e293b; max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+    h1 { font-size: 2em; margin-bottom: 1em; border-bottom: 2px solid #2563eb; padding-bottom: 0.3em; }
+    h2 { font-size: 1.4em; margin: 2em 0 0.8em; color: #2563eb; }
+    h3 { font-size: 1.1em; margin: 1.2em 0 0.5em; }
+    pre { background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 8px; overflow-x: auto; margin: 12px 0; font-size: 0.9em; }
+    code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+    pre code { background: none; padding: 0; }
+    ul, ol { margin: 0.8em 0 0.8em 2em; }
+    li { margin: 0.3em 0; }
+    a { color: #2563eb; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+    th, td { border: 1px solid #e2e8f0; padding: 8px 12px; text-align: left; }
+    th { background: #f8fafc; font-weight: 600; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; font-weight: 600; }
+    .badge-ok { background: #dcfce7; color: #166534; }
+    .badge-warn { background: #fef9c3; color: #854d0e; }
+    .card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 12px 0; }
+  </style>
+</head>
+<body>
+
+<h1>Causality Analyzer — User Guide</h1>
+
+<h2>Quick Start</h2>
+<pre><code>npm install @agentix-e/causality-analyzer-core @agentix-e/causality-analyzer-pipeline</code></pre>
+
+<h2>Causal Discovery (17 algorithms)</h2>
+
+<h3>Constraint-Based</h3>
+<div class="card">
+<strong>PC Algorithm</strong> — Classic constraint-based CPDAG search.<br>
+<span class="badge badge-ok">Fisher Z</span> <span class="badge badge-ok">stable PC</span>
+<pre><code>import { pcAlgorithm } from '@agentix-e/causality-analyzer-pipeline';
+import { Matrix } from 'ml-matrix';
+
+const data = new Matrix([[1,2,3],[4,5,6],[7,8,9]]);
+const { graph, sepSet } = pcAlgorithm(data, ['X', 'Y', 'Z']);
+</code></pre>
+</div>
+
+<div class="card">
+<strong>FCI Algorithm</strong> — Handles latent confounders via PAG output (R1-R10).<br>
+<strong>GFCI</strong> — FGES + FCI hybrid. <strong>RFCI</strong> — Fast PDS-free variant.
+<pre><code>import { fciAlgorithm, gfciAlgorithm, rfciAlgorithm } from '@agentix-e/causality-analyzer-pipeline';
+const { graph, pagEdges } = gfciAlgorithm(data, ['X', 'Y', 'Z', 'U']);
+</code></pre>
+</div>
+
+<h3>Score-Based & Permutation</h3>
+<div class="card">
+<strong>GES</strong> — Greedy Equivalence Search (CPDAG space).<br>
+<strong>BOSS</strong> — Best Order Score Search (NeurIPS 2023, permutation space).<br>
+<strong>GRaSP</strong> — L1-regularized + covered tuck permutation search.
+<pre><code>import { gesAlgorithm, bossAlgorithm, graspAlgorithm } from '@agentix-e/causality-analyzer-pipeline';
+const dag = bossAlgorithm(data, ['A','B','C','D'], { numStarts: 3 });
+</code></pre>
+</div>
+
+<h3>Continuous Optimization</h3>
+<div class="card">
+<strong>NOTEARS</strong> — Trace-exponential DAG constraint + L-BFGS.<br>
+<strong>DAGMA</strong> — Log-determinant constraint (more stable than NOTEARS).
+<pre><code>import { notearsAlgorithm, dagmaAlgorithm } from '@agentix-e/causality-analyzer-pipeline';
+const { graph } = dagmaAlgorithm(data, ['X','Y','Z']);
+</code></pre>
+</div>
+
+<h3>Specialized</h3>
+<div class="card">
+<strong>LiNGAM</strong> — Non-Gaussian ICA-based.<br>
+<strong>FASK</strong> — Skewness-based orientation.<br>
+<strong>KCI</strong> — Kernel conditional independence test.<br>
+<strong>CD-NOD</strong> — Domain-shift causal discovery.<br>
+<strong>MVPC</strong> — Missing-value PC.<br>
+<strong>RCD</strong> — Reinforced BIC orientation.<br>
+<strong>TS-ICD</strong> — Time-series discovery.<br>
+<strong>Targeted Discovery</strong> — Find parents of specific nodes.
+</div>
+
+<h2>Root Cause Analysis</h2>
+<pre><code>import { CausalGraph, HeuristicPathRCA, CIRCAPipeline } from '@agentix-e/causality-analyzer-pipeline';
+
+const graph = new CausalGraph(['CPU', 'Memory', 'Latency']);
+graph.addEdge('Memory', 'CPU');
+graph.addEdge('CPU', 'Latency');
+
+const rca = new HeuristicPathRCA();
+rca.train(graph, new Set(['CPU', 'Latency']), data);
+const result = rca.findRootCauses(['CPU', 'Latency']);
+console.log(result.rootCauses[0].name);  // "Memory"
+</code></pre>
+
+<h2>Causal Inference</h2>
+<h3>Backdoor Adjustment (5 variants)</h3>
+<pre><code>import { findBackdoorAdjustmentSet, adjustBackdoor } from '@agentix-e/causality-analyzer-pipeline';
+
+// Choose variant: 'minimal' | 'maximal' | 'efficient' | 'exhaustive' | 'mincost'
+const adjSet = findBackdoorAdjustmentSet(graph, 'Treatment', 'Outcome', 'minimal');
+const { ate, se } = adjustBackdoor(graph, 'Treatment', 'Outcome', data, nodeIndex);
+</code></pre>
+
+<h3>Effect Estimation Methods</h3>
+<table>
+  <tr><th>Method</th><th>Function</th></tr>
+  <tr><td>Backdoor</td><td><code>adjustBackdoor</code></td></tr>
+  <tr><td>Frontdoor</td><td><code>estimateFrontdoor</code></td></tr>
+  <tr><td>IV / 2SLS</td><td><code>estimateIV</code></td></tr>
+  <tr><td>Propensity Score</td><td><code>estimatePSMatching</code> / <code>estimatePropensityScore</code></td></tr>
+  <tr><td>Doubly Robust</td><td><code>estimateDoublyRobust</code></td></tr>
+  <tr><td>CATE</td><td><code>estimateCATE</code></td></tr>
+</table>
+
+<h2>Sensitivity + Refutation</h2>
+<pre><code>import { eValueSensitivity, partialRSensitivity, robustnessValue } from '@agentix-e/causality-analyzer-pipeline';
+import { refuteRandomCommonCause, refuteDummyOutcome } from '@agentix-e/causality-analyzer-pipeline';
+
+const ev = eValueSensitivity(ate, outcomeStd);
+const refute = refuteRandomCommonCause(data, treatIdx, outcomeIdx, estimator);
+</code></pre>
+
+<h2>HTTP API Server</h2>
+<pre><code>npx causal-analyzer serve --port 3000
+# GET  /health /ready /live /metrics
+# POST /discover /analyze /estimate</code></pre>
+
+<h2>Docker Deployment</h2>
+<pre><code>docker compose up -d  # pipeline + PostgreSQL + Neo4j</code></pre>
+
+<h2>Algorithm Selection Guide</h2>
+<table>
+  <tr><th>Scenario</th><th>Recommended Algorithm</th></tr>
+  <tr><td>Fast discovery, no latents</td><td>PC (constraint) or GES (score)</td></tr>
+  <tr><td>Best accuracy, moderate size (&lt;30 nodes)</td><td>BOSS (permutation)</td></tr>
+  <tr><td>Latent confounders suspected</td><td>GFCI (PAG) or RFCI (fast PAG)</td></tr>
+  <tr><td>Non-Gaussian data</td><td>LiNGAM or FASK</td></tr>
+  <tr><td>Time-series data</td><td>TS-ICD</td></tr>
+  <tr><td>Streaming/online</td><td>OnlinePC</td></tr>
+  <tr><td>Missing values</td><td>MVPC</td></tr>
+  <tr><td>Continuous optimization</td><td>DAGMA (preferred) or NOTEARS</td></tr>
+  <tr><td>Large graphs (&gt;50 nodes)</td><td>RFCI or BOSS (permutation)</td></tr>
+</table>
+
+<p style="margin-top:3em;color:#94a3b8;font-size:0.85em">Causality Analyzer v2.0 · 17 discovery algorithms · 3 CI tests · 1016 tests · MIT License</p>
+
+</body>
+</html>
