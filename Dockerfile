@@ -39,6 +39,12 @@ COPY --from=builder --chown=ca:ca /app/packages/pipeline/dist packages/pipeline/
 COPY --from=builder --chown=ca:ca /app/pnpm-workspace.yaml ./
 COPY --from=builder --chown=ca:ca /app/pnpm-lock.yaml ./
 
+# Install production dependencies only
+RUN pnpm install --prod --frozen-lockfile
+
+# Copy entrypoint script
+COPY docker-entrypoint.js ./
+
 ENV NODE_ENV=production
 ENV PORT=3000
 
@@ -49,4 +55,4 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/health',r=>{process.exit(r.statusCode===200?0:1)})"
 
-ENTRYPOINT ["node", "-e", "require('@agentix-e/causality-analyzer-pipeline').CausalityServer && new (require('@agentix-e/causality-analyzer-pipeline').CausalityServer)().start(process.env.PORT||3000).then(()=>console.log('Server started on port',process.env.PORT||3000))"]
+ENTRYPOINT ["node", "docker-entrypoint.js"]

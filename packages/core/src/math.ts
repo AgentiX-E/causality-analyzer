@@ -269,7 +269,6 @@ export function fisherZTest(
 
   // Detect singular matrix (degenerate data) — warn but continue with clipped rho
   if (k > 1 && isMatrixSingular(cov)) {
-    // eslint-disable-next-line no-console
     console.warn('[fisherZTest] Near-singular correlation matrix detected — p-value may be unreliable');
   }
 
@@ -375,11 +374,10 @@ const MATRIX_PIVOT_THRESHOLD = 1e-12;
  * Augments A with identity I, then reduces [A|I] → [I|A⁻¹].
  * Partial pivoting for numerical stability.
  *
- * @returns A⁻¹ as number[][]; isSingular flag set if |pivot| < 1e-12 detected.
+ * @returns A⁻¹ as number[][]
  */
 export function invertMatrix(m: number[][]): number[][] {
   const n = m.length;
-  const isSingular = false;
   const aug = m.map((row, ri) => [
     ...row,
     ...Array.from({ length: n }, (_, ci) => (ri === ci ? 1 : 0)),
@@ -470,8 +468,8 @@ export function solveOLS(X: number[][], y: number[]): number[] {
       XtX[a]![b] = XtX[b]![a]!;
 
   // Convert to number[][] for solveLinear
-  const A = XtX.map(row => Array.from(row) as number[]);
-  const b = Array.from(Xty) as number[];
+  const A = XtX.map(row => Array.from(row));
+  const b = Array.from(Xty);
   return solveLinear(A, b);
 }
 

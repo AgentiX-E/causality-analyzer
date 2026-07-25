@@ -98,7 +98,7 @@ export function lbfgs(
     const ys = dot(y, s);
     if (ys <= 1e-15) {
       // Reset direction if curvature is near-zero
-      grad = gradNew as unknown as Float64Array;
+      grad = gradNew;
       for (let i = 0; i < n; i++) { dir[i] = -grad[i]!; x[i] = xNew[i]!; }
       continue;
     }

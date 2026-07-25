@@ -105,7 +105,7 @@ function execServe(args: CliArgs): void {
   const port = args.port ?? 3000;
   const server = new CausalityServer();
   server.start(port).then(() => {
-    console.log(`Causality Analyzer API v2.0.0 listening on http://localhost:${port}`);
+    console.log(`Causality Analyzer API v1.0.0 listening on http://localhost:${port}`);
     console.log(`Endpoints:`);
     console.log(`  GET  /health  — health check`);
     console.log(`  GET  /ready   — readiness probe`);

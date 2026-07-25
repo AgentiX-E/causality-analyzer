@@ -111,14 +111,7 @@ export function discretize(data: number[][], numBins: number = 3): {
     const values = discretized.map(r => r[col]!).sort((a, b) => a - b);
     const n = values.length;
 
-    for (let i = 0; i < n; i++) {
-      // Assign bin based on quantile
-      const bucket = Math.min(numBins - 1, Math.floor((i / n) * numBins));
-      // Find original row index and assign
-      // Actually we need to re-map. Let's use quantile cut-points.
-    }
-
-    // Simpler: equal-width binning
+    // Equal-width binning
     const min = values[0]!;
     const max = values[n - 1]!;
     const range = max - min || 1e-10;

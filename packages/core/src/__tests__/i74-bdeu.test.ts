@@ -46,7 +46,6 @@ describe('bdeuScore', () => {
   });
 
   it('handles undefined values in data gracefully', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const data = [[0, 0], [undefined as any, undefined as any], [1, 1]];
     const score = bdeuScore(data as number[][], 0, [1], [2, 2]);
     expect(isFinite(score)).toBe(true);
