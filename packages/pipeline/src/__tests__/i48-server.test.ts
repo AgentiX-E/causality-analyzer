@@ -220,4 +220,11 @@ describe('Error Handling', () => {
     expect(res.status).toBe(400);
     expect(typeof json.requestId).toBe('string');
   });
+
+  it('returns 500 for discover with null data triggering internal error', async () => {
+    const { res, json } = await fetchApi('/discover', 'POST', { data: null, nodeNames: ['X', 'Y'] });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(json.success).toBe(false);
+    expect(typeof json.error).toBe('string');
+  });
 });

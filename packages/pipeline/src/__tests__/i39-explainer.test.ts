@@ -162,4 +162,16 @@ describe('explainDetection', () => {
     expect(explanation).toContain('spectral_residual');
     expect(explanation).toContain('2 of 3');
   });
+
+  it('returns no-anomaly message when all labels are 0', () => {
+    const result = {
+      isAnomalous: true,  // anomaly flag is true but no individual metric flagged
+      labels: new Float64Array([0, 0, 0]),
+      scores: new Float64Array([0.1, 0.2, 0.3]),
+      timestamp: Date.now(),
+      metadata: {},
+    };
+    const explanation = explainDetection(result);
+    expect(explanation).toContain('No anomaly detected');
+  });
 });

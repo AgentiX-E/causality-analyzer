@@ -8,7 +8,7 @@ import { describe, it, expect } from 'vitest';
 import { Matrix } from 'ml-matrix';
 import { CausalGraph } from '../../src/graph/causal-graph.js';
 import {
-  asiaGraph, sachsGraph, mBiasGraph, butterflyGraph, alarmGraph,
+  asiaGraph, sachsGraph, mBiasGraph, butterflyGraph, alarmGraph, childGraph,
   generateLinearData, runBenchmark, computeSHD, formatBenchmarkTable,
   randomDAG,
 } from '../../src/benchmark.js';
@@ -128,5 +128,14 @@ describe('Random DAG', () => {
     const dag = randomDAG(8, 0.4, 55);
     expect(dag.isDAG()).toBe(true);
     expect(dag.edges.length).toBeGreaterThan(0);
+  });
+});
+
+describe('Child Graph', () => {
+  it('builds child graph with 20 nodes', () => {
+    const g = childGraph();
+    expect(g.nodes.length).toBe(20);
+    expect(g.edges.length).toBeGreaterThan(0);
+    expect(g.isDAG()).toBe(true);
   });
 });

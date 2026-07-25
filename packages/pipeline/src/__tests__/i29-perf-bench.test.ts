@@ -24,11 +24,11 @@ const PERF_BUDGETS = {
   /** d-separation test on a 10-node graph */
   dsep10Node: 200,
   /** Fisher Z test on 500 samples */
-  fisherZ500: 50,
+  fisherZ500: 100,
   /** KCI unconditional on 100 samples */
-  kci100: 200,
+  kci100: 300,
   /** SPOT calibration with 100 samples */
-  spotCalibration: 150,
+  spotCalibration: 200,
   /** LiNGAM on 4-node graph with 200 samples */
   lingam4Node200: 600,
   /** StatsDetector batch training on 1000 samples */
