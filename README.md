@@ -4,28 +4,28 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![CI](https://github.com/AgentiX-E/causality-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/AgentiX-E/causality-analyzer/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-96%25-brightgreen)](https://agentix-e.github.io/causality-analyzer/coverage/)
-[![Tests](https://img.shields.io/badge/tests-833%20passed-brightgreen)](.)
+[![Coverage](https://img.shields.io/badge/coverage-99%25_core_%7C_95%25_pipeline-brightgreen)](https://agentix-e.github.io/causality-analyzer/coverage/)
+[![Tests](https://img.shields.io/badge/tests-1122%20passed-brightgreen)](.)
 
 ## Why Causality Analyzer?
 
 | Feature | DoWhy (Python) | causal-js (TS) | Causality Analyzer |
 |---------|:---:|:---:|:---:|
-| Causal Discovery | ✗ | 10 algos | **10 algos** |
-| Causal Inference | ✓ | ✗ | **Backdoor/IV/PS/DR/Frontdoor** |
-| Root Cause Analysis | ✗ | ✗ | **4 RCA + CIRCA pipeline** |
-| do-Calculus | ✓ | ✗ | **ID algorithm + c-components** |
-| SCM + Counterfactuals | ✓ | ✗ | **ANM/PN + abduction framework** |
-| Bayesian Networks | ✗ | ✗ | **5 inference engines** |
-| Enterprise Security | ✗ | ✗ | **mTLS + AES-2510 + audit trail** |
-| Web Components | ✗ | ✗ | **Lit 3 + Canvas + uPlot** |
-| HTTP API + Docker | ✗ | ✗ | **7 REST endpoints + compose** |
-| Streaming | ✗ | ✗ | **Sliding window online RCA** |
+| Causal Discovery | ✗ | 10 algos | **10 algos** (PC/FCI/GES/LiNGAM/NOTEARS/Grow-Shrink/KCI/RCD/CD-NOD/MVPC/GRaSP/TS-ICD) |
+| Causal Inference | ✓ | ✗ | **Backdoor (5 variants)/IV/PS/DR/Frontdoor** |
+| Root Cause Analysis | ✗ | ✗ | **4 RCA + CIRCA pipeline + OnlinePC streaming** |
+| do-Calculus | ✓ | ✗ | **Full recursive ID algorithm + hedge criterion** |
+| SCM + Counterfactuals | ✓ | ✗ | **ANM/PN + auto-assign + abduction framework** |
+| Bayesian Networks | ✗ | ✗ | **5 inference engines + Dirichlet learning** |
+| Sensitivity + Refutation | ✓ | ✗ | **E-value + partial R² + 5 refuters (Bootstrap/Placebo/DataSubset/RandomCommonCause/DummyOutcome)** |
+| Enterprise Security | ✗ | ✗ | **mTLS + AES-256-GCM + audit trail (SHA-256)** |
+| Web Components | ✗ | ✗ | **Lit 3 + Canvas2D + uPlot + ARIA** |
+| HTTP API + Docker | ✗ | ✗ | **7 REST endpoints + compose (PostgreSQL + Neo4j)** |
+| Streaming | ✗ | ✗ | **Sliding window OnlinePC + drift detection** |
+| Uplift Modeling | ✗ | ✗ | **Qini curve + AUUC + uplift@k** |
 | Model Serialization | ✗ | ✗ | **CausalGraph + SCM JSON** |
-| Sensitivity Analysis | ✓ | ✗ | **E-value + partial R²** |
-| DoWhy Cross-validated | — | — | **Backdoor set ✓, ATE ✓** |
-| TypeScript Native | ✗ | ✓ | **Strict mode + DI + ISP** |
-| CI Coverage | Basic | None | **96% lines, 6 job pipeline** |
+| TypeScript Native | ✗ | ✓ | **Strict mode (99% core / 95% pipeline) + DI + ISP** |
+| CI Quality | Basic | None | **recommendedTypeChecked ESLint, 5 job pipeline, d-sep validated** |
 
 ## Quick Start
 
@@ -105,25 +105,27 @@ docker compose up -d  # pipeline + PostgreSQL + Neo4j
 
 ## Feature Map
 
-**Anomaly Detection**: Z-score, MAD, IQR, Spectral Residual (FFT), SPOT/DSPOT, Voting ensemble, BSTS decomposition
+**Causal Discovery**: PC (stable), FCI (R1-R10), GES (BIC), LiNGAM (non-Gaussian), NOTEARS (neural+L-BFGS), Grow-Shrink, KCI (kernel), RCD (hybrid BIC), CD-NOD (domain shifts), MVPC (missing values), GRaSP (L1-regularized), TS-ICD (time-series), targeted discovery, OnlinePC (streaming)
 
-**Causal Discovery**: PC (stable), FCI (PDS), GES (BIC), LiNGAM (non-Gaussian), NOTEARS (neural), Grow-Shrink, KCI test, targeted discovery
+**Root Cause Analysis**: HeuristicPathRCA, RandomWalkRCA, HTRCA, FPGrowthRCA, CIRCA pipeline, Shapley attribution, FusionAnalyzer (weighted/nested/voting)
 
-**Root Cause Analysis**: HeuristicPathRCA, RandomWalkRCA, HTRCA, FPGrowthRCA, CIRCA pipeline, Shapley attribution
+**Causal Inference**: Backdoor adjustment (5 variants: minimal/maximal/efficient/exhaustive/mincost), Frontdoor, IV/2SLS, Propensity Score (IRLS), PS Matching, Doubly Robust (O(n) performance), CATE, IPW, Mediation (Baron-Kenny)
 
-**Causal Inference**: Backdoor adjustment, Frontdoor, IV/2SLS, Propensity Score (IRLS), PS Matching, Doubly Robust, CATE, IPW, Mediation (Baron-Kenny)
+**Sensitivity + Refutation**: E-value (Cohen's d conversion), Partial R² (Cinelli & Hazlett 2020), Robustness value, Bootstrap, Placebo treatment, Data subset, Random Common Cause, Dummy Outcome refutation
 
-**Sensitivity**: E-value, Partial R², Robustness value, Bootstrap refutation, Placebo treatment, Data subset refutation
+**do-Calculus**: Full recursive ID Algorithm (Shpitser & Pearl 2006), c-component decomposition, hedge criterion, Pearl's 3 rules
 
-**do-Calculus**: 3 rules + ID Algorithm, c-component decomposition, hedge criterion
+**SCM + GCM**: Additive noise, PostNonlinear, auto-assign mechanisms, counterfactuals, Shapley RCA, mechanism change detection, graph falsification
 
-**SCM**: Additive noise, PostNonlinear, auto-assign, counterfactuals, Shapley RCA, mechanism change detection
+**Bayesian Networks**: Variable Elimination, Junction Tree, Loopy BP, Likelihood Weighting, Gibbs Sampling, online Dirichlet learning, brute-force oracle
 
-**Bayesian Networks**: Variable Elimination, Junction Tree, Loopy BP, Likelihood Weighting, Gibbs Sampling, online Dirichlet learning
+**Uplift Modeling**: Qini curve, AUUC (normalized), uplift@k, model comparison
 
-**Infrastructure**: Audit trail (SHA-2510), AES-256-GCM encryption, Prometheus metrics, Rate limiter, mTLS, L-BFGS/Adam optimizers
+**Infrastructure**: Audit trail (SHA-256), AES-256-GCM encryption, Prometheus metrics, Rate limiter, mTLS, L-BFGS/Adam optimizers, structured error hierarchy
 
-**Visualization**: Canvas2D causal DAG, uPlot time series, Lit 3 Web Components, screen-reader ARIA support
+**Streaming + Drift**: OnlinePC sliding-window discovery, Welford incremental covariance, stability scoring, graph drift detection (SHD-based)
+
+**Visualization**: Canvas2D causal DAG (directed edges + arrowheads), uPlot time series, Lit 3 Web Components, screen-reader ARIA support, keyboard navigation
 
 ## Packages
 
@@ -140,9 +142,9 @@ docker compose up -d  # pipeline + PostgreSQL + Neo4j
 ```bash
 pnpm install
 pnpm run --filter @agentix-e/causality-analyzer-core build
-pnpm -r test       # 833 tests
-pnpm -r typecheck  # strict TypeScript
-pnpm -r lint       # ESLint flat config
+pnpm -r test       # 1122 tests (194 core + 928 pipeline)
+pnpm -r typecheck  # strict TypeScript (noUncheckedIndexedAccess)
+pnpm -r lint       # ESLint recommendedTypeChecked
 ```
 
 ## References
@@ -150,11 +152,19 @@ pnpm -r lint       # ESLint flat config
 | Algorithm | Paper |
 |-----------|-------|
 | PC | Spirtes, Glymour & Scheines (2000). *Causation, Prediction, and Search* |
-| FCI | Zhang (2008). *On the completeness of orientation rules* |
+| FCI | Zhang (2008). *On the completeness of orientation rules for causal discovery* |
 | NOTEARS | Zheng et al. (NeurIPS 2018). *DAGs with NOTEARS* |
-| ID Algorithm | Shpitser & Pearl (20010). *Identification of Joint Interventional Distributions* |
+| ID Algorithm | Shpitser & Pearl (2006). *Identification of Joint Interventional Distributions* |
 | CIRCA | Li et al. (KDD 2022). *Causal Inference-Based Root Cause Analysis* |
-| SPOT | Siffer et al. (KDD 2017). *Anomaly Detection in Streams* |
+| SPOT | Siffer et al. (KDD 2017). *Anomaly Detection in Streams with Extreme Value Theory* |
+| GES | Chickering (2002). *Optimal Structure Identification With Greedy Search* |
+| LiNGAM | Shimizu et al. (JMLR 2006). *A Linear Non-Gaussian Acyclic Model* |
+| GRaSP | Lam et al. (UAI 2022). *Greedy Relaxations of the Sparsity Penalty* |
+| TS-ICD | Rohekar et al. (ICML 2023). *Time-Series Iterative Causal Discovery* |
+| MVPC | Tu et al. (2019). *Causal Discovery in the Presence of Missing Data* |
+| RCD | Ma et al. (2022). *Reinforced Causal Discovery* |
+| CD-NOD | Zhang et al. (2017). *Causal Discovery from Nonstationary Data* |
+| E-value | VanderWeele & Ding (2017). *Sensitivity Analysis in Observational Research* |
 | DoWhy | [py-why/dowhy](https://github.com/py-why/dowhy) |
 | causal-js | [Kanaries/causal-js](https://github.com/Kanaries/causal-js) |
 | Intel Causal Lab | [IntelLabs/causality-lab](https://github.com/IntelLabs/causality-lab) |
