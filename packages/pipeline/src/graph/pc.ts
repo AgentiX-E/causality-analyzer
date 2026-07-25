@@ -6,8 +6,7 @@
  */
 import { Matrix } from 'ml-matrix';
 import type { DomainKnowledge } from '@agentix-e/causality-analyzer-core';
-import { erf, normalCDF } from '@agentix-e/causality-analyzer-core';
-import { combinations } from "@agentix-e/causality-analyzer-core";
+import { partialCorrelationFromCov, invertMatrix, combinations, fisherZTest as coreFisherZ, _resetFisherZCache } from '@agentix-e/causality-analyzer-core';
 import { CausalGraph } from './causal-graph.js';
 
 export interface PCConfig {
@@ -17,68 +16,25 @@ export interface PCConfig {
 }
 
 /**
- * Fisher's Z conditional independence test.
- * Returns p-value for the null hypothesis X ⟂ Y | Z.
+ * Fisher's Z conditional independence test — thin Matrix wrapper over core.
+ *
+ * Delegates to @agentix-e/causality-analyzer-core's fisherZTest
+ * after converting ml-matrix data to number[][].
  */
 export function fisherZTest(
   data: Matrix, i: number, j: number, condSet: number[],
 ): number {
   const n = data.rows;
   const indices = [i, j, ...condSet];
-  const k = condSet.length;
-  const sub = data.subMatrixColumn(indices);
-
-  // Compute correlation matrix
-  const means = new Array(indices.length).fill(0);
-  for (let c = 0; c < indices.length; c++) {
-    let sum = 0; for (let r = 0; r < n; r++) sum += sub.get(r, c);
-    means[c] = sum / n;
+  const rows: number[][] = [];
+  for (let r = 0; r < n; r++) {
+    const row: number[] = [];
+    for (const idx of indices) row.push(data.get(r, idx));
+    rows.push(row);
   }
-  const cov = new Array(indices.length).fill(0).map(() => new Array(indices.length).fill(0));
-  for (let a = 0; a < indices.length; a++) {
-    for (let b = a; b < indices.length; b++) {
-      let sum = 0;
-      for (let r = 0; r < n; r++) sum += (sub.get(r, a) - means[a]!) * (sub.get(r, b) - means[b]!);
-      cov[a]![b] = sum / (n - 1);
-      cov[b]![a] = cov[a]![b]!;
-    }
-  }
-
-  // Partial correlation via precision matrix inversion
-  const rho = partialCorrelation(cov, 0, 1);
-  if (Math.abs(rho) >= 1) return 0;
-
-  const z = 0.5 * Math.log((1 + rho) / (1 - rho)) * Math.sqrt(n - k - 3);
-  return 2 * (1 - normalCDF(Math.abs(z)));
-}
-
-/** Compute partial correlation via precision matrix inversion */
-function partialCorrelation(cov: number[][], i: number, j: number): number {
-  const m = cov.length;
-  if (m === 2) return cov[i]![j]! / Math.sqrt(cov[i]![i]! * cov[j]![j]!);
-  const prec = invertMatrix(cov);
-  const r = -prec[i]![j]! / Math.sqrt(prec[i]![i]! * prec[j]![j]!);
-  return Math.max(-1, Math.min(1, r));
-}
-
-/** Specialized Gauss-Jordan matrix inversion (full elimination, not back-substitution) */
-function invertMatrix(m: number[][]): number[][] {
-  const n = m.length;
-  const aug = m.map((row, ri) => [...row, ...Array.from({length: n}, (_, ci) => ri === ci ? 1 : 0)]);
-  for (let col = 0; col < n; col++) {
-    let pivot = col;
-    for (let row = col + 1; row < n; row++) if (Math.abs(aug[row]![col]!) > Math.abs(aug[pivot]![col]!)) pivot = row;
-    [aug[col], aug[pivot]] = [aug[pivot]!, aug[col]!];
-    const pv = aug[col]![col]!;
-    if (Math.abs(pv) < 1e-12) continue;
-    for (let j = col; j < 2 * n; j++) aug[col]![j]! /= pv;
-    for (let row = 0; row < n; row++) {
-      if (row === col) continue;
-      const factor = aug[row]![col]!;
-      for (let j = col; j < 2 * n; j++) aug[row]![j]! -= factor * aug[col]![j]!;
-    }
-  }
-  return aug.map(row => row.slice(n));
+  // Remap: core indices are now 0,1,...|S|+1
+  _resetFisherZCache();
+  return coreFisherZ(rows, 0, 1, condSet.map((_, k) => k + 2));
 }
 
 /**
@@ -219,5 +175,3 @@ export function pcAlgorithm(
 
   return { graph: dag, sepSet };
 }
-
-/** Generate all combinations of size k from an array */
