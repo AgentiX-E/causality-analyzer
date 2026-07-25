@@ -38,3 +38,5 @@ export { discoverClusters } from './latent-clusters.js';
 export type { ClusterResult } from './latent-clusters.js';
 export { golemAlgorithm } from './golem.js';
 export type { GOLEMConfig } from './golem.js';
+export { icaLiNGAM } from './ica-lingam.js';
+export type { ICALiNGAMConfig } from './ica-lingam.js';
