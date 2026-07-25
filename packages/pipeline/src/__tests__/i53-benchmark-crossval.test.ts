@@ -8,8 +8,9 @@ import { describe, it, expect } from 'vitest';
 import { Matrix } from 'ml-matrix';
 import { CausalGraph } from '../../src/graph/causal-graph.js';
 import {
-  asiaGraph, sachsGraph, mBiasGraph, butterflyGraph,
+  asiaGraph, sachsGraph, mBiasGraph, butterflyGraph, alarmGraph,
   generateLinearData, runBenchmark, computeSHD, formatBenchmarkTable,
+  randomDAG,
 } from '../../src/benchmark.js';
 import { pcAlgorithm } from '../../src/graph/pc.js';
 import { gesAlgorithm } from '../../src/graph/ges.js';
@@ -89,5 +90,43 @@ describe('Benchmark Report', () => {
     const results = [runBenchmark('Chain', g, data, ['X', 'Y'])];
     expect(results.length).toBe(1);
     expect(results[0]!.algorithms.length).toBeGreaterThan(0);
+  });
+
+  it('formatBenchmarkTable produces valid markdown', () => {
+    const g = new CausalGraph(['X', 'Y']);
+    g.addEdge('X', 'Y');
+    const data = Array.from({ length: 50 }, (_, i) => [i, i * 0.5 + Math.random()]);
+    const results = [runBenchmark('Test', g, data, ['X', 'Y'])];
+    const table = formatBenchmarkTable(results);
+    expect(table).toContain('|');
+    expect(table).toContain('Algorithm');
+  });
+});
+
+describe('Alarm Graph', () => {
+  it('builds alarm graph with 37 nodes', () => {
+    const g = alarmGraph();
+    expect(g.nodes.length).toBe(37);
+    expect(g.edges.length).toBeGreaterThan(0);
+  });
+});
+
+describe('Random DAG', () => {
+  it('generates DAG with specified nodes and density', () => {
+    const dag = randomDAG(10, 0.2, 42);
+    expect(dag.nodes.length).toBe(10);
+    expect(dag.isDAG()).toBe(true);
+  });
+
+  it('generates sparse DAG', () => {
+    const dag = randomDAG(20, 0.05, 99);
+    expect(dag.nodes.length).toBe(20);
+    expect(dag.isDAG()).toBe(true);
+  });
+
+  it('generates dense DAG', () => {
+    const dag = randomDAG(8, 0.4, 55);
+    expect(dag.isDAG()).toBe(true);
+    expect(dag.edges.length).toBeGreaterThan(0);
   });
 });

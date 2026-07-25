@@ -65,7 +65,7 @@ export class HealthChecker {
     return {
       status: hasError ? 'unhealthy' : hasWarning ? 'degraded' : 'healthy',
       uptime: process.uptime() * 1000,
-      version: '2.0.0',
+      version: '1.0.0',
       checks: { ...this.checks },
     };
   }
