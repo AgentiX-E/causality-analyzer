@@ -42,3 +42,5 @@ export { icaLiNGAM } from './ica-lingam.js';
 export type { ICALiNGAMConfig } from './ica-lingam.js';
 export { pcmciAlgorithm } from './pcmci.js';
 export type { PCMCIEdge, PCMCIResult, PCMCIconfig } from './pcmci.js';
+export { varLingam } from './var-lingam.js';
+export type { VARLiNGAMConfig, VARLiNGAMResult } from './var-lingam.js';
