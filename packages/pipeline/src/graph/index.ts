@@ -31,3 +31,5 @@ export { faskAlgorithm } from './fask.js';
 export type { FASKConfig } from './fask.js';
 export { dagmaAlgorithm } from './dagma.js';
 export type { DAGMAConfig } from './dagma.js';
+export { ccdAlgorithm } from './ccd.js';
+export type { CCDConfig } from './ccd.js';
