@@ -194,7 +194,17 @@ export function combinations<T>(arr: T[], k: number): T[][] {
 // ── Fisher Z P-Value Cache (LRU) ─────────────────────────────────
 
 const FISHER_Z_CACHE = new Map<string, number>();
-const FISHER_Z_CACHE_MAX = 50000;
+let FISHER_Z_CACHE_MAX = 50000;
+
+/** FOR TESTING: configure Fisher Z cache max size. */
+export function _setFisherZCacheMax(max: number): void {
+  FISHER_Z_CACHE_MAX = max;
+}
+
+/** FOR TESTING: reset the Fisher Z cache. */
+export function _resetFisherZCache(): void {
+  FISHER_Z_CACHE.clear();
+}
 
 function fisherZCacheKey(i: number, j: number, condSet: number[]): string {
   const sorted = [Math.min(i, j), Math.max(i, j), ...condSet.sort((a, b) => a - b)];

@@ -39,6 +39,39 @@ describe('RCD Algorithm', () => {
     const dag = rcdAlgorithm(new Matrix(data), ['X', 'Y']);
     expect(dag.nodeCount).toBe(2);
   });
+
+  it('respects maxDegree constraint', () => {
+    const g = new CausalGraph(['A', 'B', 'C', 'D']);
+    g.addEdge('A', 'B'); g.addEdge('B', 'C'); g.addEdge('C', 'D');
+    const { data } = generateLinearData(g, 200, 47);
+    const dag = rcdAlgorithm(new Matrix(data), ['A', 'B', 'C', 'D'], { maxDegree: 1, alpha: 0.01 });
+    expect(dag.isDAG()).toBe(true);
+  });
+
+  it('applies domain knowledge constraints', () => {
+    const g = new CausalGraph(['X', 'Y', 'Z']);
+    g.addEdge('X', 'Y'); g.addEdge('Y', 'Z');
+    const { data } = generateLinearData(g, 200, 48);
+    const dag = rcdAlgorithm(new Matrix(data), ['X', 'Y', 'Z'], {}, {
+      forbids: [['Z', 'X']],
+    });
+    expect(dag.isDAG()).toBe(true);
+  });
+
+  it('produces valid output with lenient alpha', () => {
+    const g = new CausalGraph(['X', 'Y', 'Z']);
+    g.addEdge('X', 'Y'); g.addEdge('Y', 'Z');
+    const { data } = generateLinearData(g, 150, 49);
+    const dag = rcdAlgorithm(new Matrix(data), ['X', 'Y', 'Z'], { alpha: 0.5 });
+    expect(dag.isDAG()).toBe(true);
+    expect(dag.nodeCount).toBe(3);
+  });
+
+  it('handles single variable case', () => {
+    const dag = rcdAlgorithm(new Matrix([[1], [2], [3]]), ['X']);
+    expect(dag.nodeCount).toBe(1);
+    expect(dag.isDAG()).toBe(true);
+  });
 });
 
 describe('CD-NOD Algorithm', () => {

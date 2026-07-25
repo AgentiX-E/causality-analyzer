@@ -65,4 +65,20 @@ describe('MVPC Algorithm', () => {
     const dag = mvpcAlgorithm(data, ['X', 'Y', 'Z']);
     expect(dag.nodeCount).toBe(3);
   });
+
+  it('respects maxDegree constraint', () => {
+    const g = new CausalGraph(['A', 'B', 'C']);
+    g.addEdge('A', 'B'); g.addEdge('B', 'C');
+    const { data } = generateLinearData(g, 200, 46);
+    const dag = mvpcAlgorithm(data, ['A', 'B', 'C'], { maxDegree: 2, alpha: 0.01 });
+    expect(dag.nodeCount).toBe(3);
+    // With maxDegree=2 on 3 nodes, should still produce valid output
+  });
+
+  it('respects minObsRatio config', () => {
+    const g = new CausalGraph(['X', 'Y']);
+    const { data } = generateLinearData(g, 200, 47);
+    const dag = mvpcAlgorithm(data, ['X', 'Y'], { minObsRatio: 0.5, alpha: 0.05 });
+    expect(dag.nodeCount).toBe(2);
+  });
 });

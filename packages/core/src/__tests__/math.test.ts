@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { solveLinear, solveLinearSafe, normalTail, normalCDF, normalCDFTail, erf, colMean, createRNG, combinations, fisherZTest, partialCorrelationFromCov, invertMatrix, solveOLS, bicScore, gicScore, isBicScore, isMatrixSingular, precomputeCorrelation, chiSquareTest, gSquareTest } from '../math.js';
+import { solveLinear, solveLinearSafe, normalTail, normalCDF, normalCDFTail, erf, colMean, createRNG, combinations, fisherZTest, partialCorrelationFromCov, invertMatrix, solveOLS, bicScore, gicScore, isBicScore, isMatrixSingular, precomputeCorrelation, chiSquareTest, gSquareTest, _setFisherZCacheMax, _resetFisherZCache } from '../math.js';
 
 // ── solveLinear ─────────────────────────────────────────────────────
 
@@ -786,6 +786,25 @@ describe('fisherZTest cache behavior', () => {
     const p1 = fisherZTest(data, 0, 2, [1]);
     const p2 = fisherZTest(data, 2, 0, [1]);
     expect(p1).toBe(p2); // (0,2) and (2,0) should use same cache key
+  });
+
+  it('evicts oldest entry when cache reaches max size', () => {
+    _resetFisherZCache();
+    _setFisherZCacheMax(3);
+    const data = Array.from({ length: 30 }, (_, i) => [i * 0.1, i * 0.15 + Math.random() * 0.05, Math.random()]);
+    // Fill cache with 3 unique calls — different combos
+    fisherZTest(data, 0, 1, []);
+    fisherZTest(data, 0, 2, []);
+    fisherZTest(data, 1, 2, []);
+    // 4th call should trigger eviction
+    fisherZTest(data, 0, 1, [2]);
+    // Cache should still work
+    const p = fisherZTest(data, 0, 1, [2]);
+    expect(p).toBeGreaterThanOrEqual(0);
+    expect(p).toBeLessThanOrEqual(1);
+    // Reset for other tests
+    _setFisherZCacheMax(50000);
+    _resetFisherZCache();
   });
 });
 

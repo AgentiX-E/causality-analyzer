@@ -212,4 +212,16 @@ describe('L-BFGS max iterations and line-search failure', () => {
     expect(result.iterations).toBeGreaterThanOrEqual(0);
     // May converge immediately if gradient is within tolerance, which is fine
   });
+
+  it('handles line-search failure with NaN-returning function', () => {
+    // Function returns NaN for any x ≠ 0, forcing line search to fail
+    const f = (x: Float64Array): [number, Float64Array] => {
+      const absX = Math.abs(x[0]!);
+      if (absX > 1e-6) return [NaN, new Float64Array([2 * x[0]!])];
+      return [x[0]! * x[0]!, new Float64Array([2 * x[0]!])];
+    };
+    const result = lbfgs(f, new Float64Array([1e-3]), { maxIter: 5, gtol: 1e-20 });
+    // Should terminate (not infinite loop) — may converge or hit NaN due to line search failure
+    expect(result.iterations).toBeLessThanOrEqual(5);
+  });
 });
