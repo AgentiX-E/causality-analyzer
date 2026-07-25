@@ -17,7 +17,11 @@
 import { Matrix } from 'ml-matrix';
 import { CausalGraph } from './causal-graph.js';
 import type { DomainKnowledge } from '@agentix-e/causality-analyzer-core';
-import { erf, normalCDF, combinations } from '@agentix-e/causality-analyzer-core';
+import {
+  normalCDF,
+  combinations,
+  fisherZTest,
+} from '@agentix-e/causality-analyzer-core';
 
 export interface CDNODConfig {
   alpha?: number;
@@ -42,9 +46,7 @@ export function cdnodAlgorithm(
   const changingEdges = new Map<string, boolean>();
 
   // Phase 1: Skeleton detection (PC-style)
-  // Start with a complete undirected graph — edges will be removed when
-  // variables are conditionally independent (p > alpha means fail to reject
-  // the null hypothesis of independence).
+  // Start with a complete undirected graph
   for (let i = 0; i < n; i++)
     for (let j = i + 1; j < n; j++)
       g.undirectedEdge(nodeNames[i]!, nodeNames[j]!);
@@ -52,7 +54,7 @@ export function cdnodAlgorithm(
   // Remove edges where variables are unconditionally independent
   for (let i = 0; i < n; i++)
     for (let j = i + 1; j < n; j++)
-      if (fisherZ(data, i, j, [], alpha) > alpha)
+      if (matrixFisherZ(data, i, j, []) > alpha)
         g.removeEdge(nodeNames[i]!, nodeNames[j]!);
 
   let depth = 1;
@@ -70,10 +72,10 @@ export function cdnodAlgorithm(
         const subsets = combinations(neighbors, depth);
         for (const S of subsets) {
           const sIdx = S.map(s => nodeNames.indexOf(s));
-          if (fisherZ(data, i, j, sIdx, alpha) > alpha) {
+          if (matrixFisherZ(data, i, j, sIdx) > alpha) {
             g.removeEdge(nodeNames[i]!, nodeNames[j]!);
             g.removeEdge(nodeNames[j]!, nodeNames[i]!);
-            sepSet.set(`${Math.min(i,j)}-${Math.max(i,j)}`, new Set(S));
+            sepSet.set(`${Math.min(i, j)}-${Math.max(i, j)}`, new Set(S));
             changed = true; break;
           }
         }
@@ -89,7 +91,7 @@ export function cdnodAlgorithm(
       for (let k = 0; k < n; k++) {
         if (k === i || k === j) continue;
         if (!g.hasEdge(nodeNames[i]!, nodeNames[k]!) || !g.hasEdge(nodeNames[j]!, nodeNames[k]!)) continue;
-        const key = `${Math.min(i,j)}-${Math.max(i,j)}`;
+        const key = `${Math.min(i, j)}-${Math.max(i, j)}`;
         const sep = sepSet.get(key);
         if (!sep || !sep.has(nodeNames[k]!)) {
           g.toUndirected(nodeNames[i]!, nodeNames[k]!);
@@ -100,13 +102,11 @@ export function cdnodAlgorithm(
   }
 
   // Phase 3: Non-stationarity detection
-  // For each undirected edge, test if conditioning on domain changes independence
   if (domains.length === N) {
     for (let i = 0; i < n; i++) {
       for (let j = i + 1; j < n; j++) {
         if (!g.hasEdge(nodeNames[i]!, nodeNames[j]!) || !g.hasEdge(nodeNames[j]!, nodeNames[i]!)) continue;
 
-        // Test: are i and j independent within each domain?
         let domainChange = false;
         const uniqueDomains = [...new Set(domains)];
         for (const d of uniqueDomains) {
@@ -115,15 +115,13 @@ export function cdnodAlgorithm(
 
           if (dRows.length < 10) continue;
 
-          // Extract domain-specific data
           const subData = new Matrix(dRows.length, data.columns);
           for (let ri = 0; ri < dRows.length; ri++)
             for (let c = 0; c < data.columns; c++)
               subData.set(ri, c, data.get(dRows[ri]!, c));
 
-          const pDomain = fisherZ(subData, i, j, [], alpha);
+          const pDomain = matrixFisherZ(subData, i, j, []);
           if (pDomain < alpha) {
-            // Within-domain dependence exists — check if it changes across domains
             domainChange = true; break;
           }
         }
@@ -143,54 +141,18 @@ export function cdnodAlgorithm(
   return { graph: dag, changingEdges };
 }
 
-function fisherZ(data: Matrix, i: number, j: number, condSet: number[], _alpha?: number): number {
-  const indices = [i, j, ...condSet];
-  const K = condSet.length;
-  const N = data.rows;
-  const sub = data.subMatrixColumn(indices);
+// ── Adapter: ml-matrix → number[][] for core fisherZTest ───────────
 
-  const means = new Array(indices.length).fill(0);
-  for (let c = 0; c < indices.length; c++) {
-    let sum = 0; for (let r = 0; r < N; r++) sum += sub.get(r, c);
-    means[c] = sum / N;
+function matrixTo2D(data: Matrix): number[][] {
+  const rows: number[][] = [];
+  for (let r = 0; r < data.rows; r++) {
+    const row: number[] = [];
+    for (let c = 0; c < data.columns; c++) row.push(data.get(r, c));
+    rows.push(row);
   }
-
-  const cov = Array.from({length: indices.length}, () => new Array(indices.length).fill(0));
-  for (let a = 0; a < indices.length; a++)
-    for (let b = a; b < indices.length; b++) {
-      let sum = 0;
-      for (let r = 0; r < N; r++) sum += (sub.get(r, a) - means[a]!) * (sub.get(r, b) - means[b]!);
-      cov[a]![b] = sum / (N - 1); cov[b]![a] = cov[a]![b]!;
-    }
-
-  const rho = partialCorr(cov, 0, 1);
-  if (Math.abs(rho) >= 1) return 0;
-  const z = 0.5 * Math.log((1 + rho) / (1 - rho)) * Math.sqrt(N - K - 3);
-  return 2 * (1 - normalCDF(Math.abs(z)));
+  return rows;
 }
 
-function partialCorr(cov: number[][], i: number, j: number): number {
-  const m = cov.length;
-  if (m === 2) return cov[i]![j]! / Math.sqrt(cov[i]![i]! * cov[j]![j]!);
-  const prec = invert(cov);
-  const r = -prec[i]![j]! / Math.sqrt(prec[i]![i]! * prec[j]![j]!);
-  return Math.max(-1, Math.min(1, r));
-}
-
-function invert(m: number[][]): number[][] {
-  const n = m.length;
-  const aug = m.map((r, ri) => [...r, ...Array.from({length: n}, (_, ci) => ri === ci ? 1 : 0)]);
-  for (let c = 0; c < n; c++) {
-    let pivot = c;
-    for (let r = c + 1; r < n; r++) if (Math.abs(aug[r]![c]!) > Math.abs(aug[pivot]![c]!)) pivot = r;
-    [aug[c], aug[pivot]] = [aug[pivot]!, aug[c]!];
-    if (Math.abs(aug[c]![c]!) < 1e-12) continue;
-    for (let j = c; j < 2 * n; j++) aug[c]![j]! /= aug[c]![c]!;
-    for (let r = 0; r < n; r++) {
-      if (r === c) continue;
-      const f = aug[r]![c]!;
-      for (let j = c; j < 2 * n; j++) aug[r]![j]! -= f * aug[c]![j]!;
-    }
-  }
-  return aug.map(r => r.slice(n));
+function matrixFisherZ(data: Matrix, i: number, j: number, condSet: number[]): number {
+  return fisherZTest(matrixTo2D(data), i, j, condSet);
 }

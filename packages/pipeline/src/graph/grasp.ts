@@ -14,7 +14,7 @@
 import { Matrix } from 'ml-matrix';
 import { CausalGraph } from './causal-graph.js';
 import type { DomainKnowledge } from '@agentix-e/causality-analyzer-core';
-import { combinations } from '@agentix-e/causality-analyzer-core';
+import { combinations, solveOLS } from '@agentix-e/causality-analyzer-core';
 
 export interface GRaSPConfig {
   /** Maximum parents per node (-1 = unlimited) */
@@ -77,7 +77,7 @@ export function graspAlgorithm(
     }
 
     // OLS
-    const coef = solveOLSMat(X, nodeVec, k);
+    const coef = solveOLS(X, nodeVec);
     const yHat = nodeVec.map((_, i) =>
       coef.reduce((s, c, j) => s + c * (X[i]?.[j] ?? 0), 0),
     );
@@ -167,23 +167,3 @@ export function graspAlgorithm(
   return g;
 }
 
-// ── OLS Solver ──────────────────────────────────────────────────────
-
-function solveOLSMat(A: number[][], b: number[], k: number): number[] {
-  const aug = A.map((row, i) => [...row, b[i] ?? 0]);
-  for (let col = 0; col < k; col++) {
-    let pivot = col;
-    for (let row = col + 1; row < k; row++)
-      if (Math.abs(aug[row]![col]!) > Math.abs(aug[pivot]![col]!)) pivot = row;
-    [aug[col], aug[pivot]] = [aug[pivot]!, aug[col]!];
-    const pv = aug[col]![col]!;
-    if (Math.abs(pv) < 1e-12) continue;
-    for (let j = col; j <= k; j++) aug[col]![j]! /= pv;
-    for (let row = 0; row < k; row++) {
-      if (row === col) continue;
-      const factor = aug[row]![col]!;
-      for (let j = col; j <= k; j++) aug[row]![j]! -= factor * aug[col]![j]!;
-    }
-  }
-  return aug.map(row => row[k]!);
-}

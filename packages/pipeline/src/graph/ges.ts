@@ -19,7 +19,7 @@
 import { Matrix } from 'ml-matrix';
 import { CausalGraph } from './causal-graph.js';
 import type { DomainKnowledge } from '@agentix-e/causality-analyzer-core';
-import { combinations } from '@agentix-e/causality-analyzer-core';
+import { combinations, solveLinear } from '@agentix-e/causality-analyzer-core';
 
 export interface GESConfig {
   /** Maximum number of parents per node (-1 = unlimited) */
@@ -95,7 +95,7 @@ export function gesAlgorithm(
     // Solve XtX * beta = Xty
     const XtXArr = XtX.map(r => Array.from(r));
     const XtyArr = Array.from(Xty);
-    const beta = solveOLS(XtXArr, XtyArr, k);
+    const beta = solveLinear(XtXArr, XtyArr);
 
     // Compute RSS and BIC
     let rss = 0;
@@ -213,31 +213,4 @@ export function gesAlgorithm(
   }
 
   return g;
-}
-
-// ── OLS Solver ────────────────────────────────────────────────────────
-
-function solveOLS(A: number[][], b: number[], k: number): number[] {
-  // Gaussian elimination with partial pivoting
-  const aug = A.map((row, i) => [...row, b[i] ?? 0]);
-
-  for (let col = 0; col < k; col++) {
-    let pivot = col;
-    for (let row = col + 1; row < k; row++) {
-      if (Math.abs(aug[row]![col]!) > Math.abs(aug[pivot]![col]!)) pivot = row;
-    }
-    [aug[col], aug[pivot]] = [aug[pivot]!, aug[col]!];
-
-    const pv = aug[col]![col]!;
-    if (Math.abs(pv) < 1e-12) continue;
-
-    for (let j = col; j <= k; j++) aug[col]![j]! /= pv;
-    for (let row = 0; row < k; row++) {
-      if (row === col) continue;
-      const factor = aug[row]![col]!;
-      for (let j = col; j <= k; j++) aug[row]![j]! -= factor * aug[col]![j]!;
-    }
-  }
-
-  return aug.map(row => row[k]!);
 }

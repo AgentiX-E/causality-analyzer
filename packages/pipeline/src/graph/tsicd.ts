@@ -23,7 +23,7 @@
 import { Matrix } from 'ml-matrix';
 import { CausalGraph } from './causal-graph.js';
 import type { DomainKnowledge } from '@agentix-e/causality-analyzer-core';
-import { normalCDF, combinations } from '@agentix-e/causality-analyzer-core';
+import { normalCDF, combinations, solveOLS } from '@agentix-e/causality-analyzer-core';
 
 export interface TSConfig {
   alpha?: number;
@@ -304,23 +304,7 @@ function bicNodeScore(data: Matrix, target: number, parents: number[], N: number
     X.push(row);
   }
   const k = parents.length + 1;
-  const coef = solveOLS2D(X, y, k);
+  const coef = solveOLS(X, y);
   const sse = y.reduce((s, v, i) => s + (v - coef.reduce((sc, c, j) => sc + c * (X[i]?.[j] ?? 0), 0)) ** 2, 0);
   return N * Math.log(Math.max(1e-10, sse / N)) + k * Math.log(N);
-}
-
-function solveOLS2D(A: number[][], b: number[], k: number): number[] {
-  const aug = A.map((r, i) => [...r, b[i] ?? 0]);
-  for (let c = 0; c < k; c++) {
-    let pivot = c;
-    for (let r = c + 1; r < k; r++) if (Math.abs(aug[r]![c]!) > Math.abs(aug[pivot]![c]!)) pivot = r;
-    [aug[c], aug[pivot]] = [aug[pivot]!, aug[c]!];
-    if (Math.abs(aug[c]![c]!) < 1e-12) continue;
-    for (let j = c; j <= k; j++) aug[c]![j]! /= aug[c]![c]!;
-    for (let r = 0; r < k; r++) {
-      if (r === c) continue;
-      for (let j = c; j <= k; j++) aug[r]![j]! -= aug[r]![c]! * aug[c]![j]!;
-    }
-  }
-  return aug.map(r => r[k]!);
 }
