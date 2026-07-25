@@ -25,3 +25,5 @@ export { gfciAlgorithm } from './gfci.js';
 export type { GFCIConfig } from './gfci.js';
 export { rfciAlgorithm } from './rfci.js';
 export type { RFCIConfig } from './rfci.js';
+export { stabilitySelection, starsSelection } from './stability-selection.js';
+export type { StabilityResult, StARSResult } from './stability-selection.js';
