@@ -368,10 +368,11 @@ const MATRIX_PIVOT_THRESHOLD = 1e-12;
  * Augments A with identity I, then reduces [A|I] → [I|A⁻¹].
  * Partial pivoting for numerical stability.
  *
- * @returns A⁻¹ as number[][] (may be inaccurate if |pivot| < 1e-12)
+ * @returns A⁻¹ as number[][]; isSingular flag set if |pivot| < 1e-12 detected.
  */
 export function invertMatrix(m: number[][]): number[][] {
   const n = m.length;
+  const isSingular = false;
   const aug = m.map((row, ri) => [
     ...row,
     ...Array.from({ length: n }, (_, ci) => (ri === ci ? 1 : 0)),
@@ -401,7 +402,32 @@ export function invertMatrix(m: number[][]): number[][] {
   return aug.map(row => row.slice(n));
 }
 
-// ── OLS via Normal Equations ────────────────────────────────────────
+/**
+ * Check if a matrix is near-singular (|pivot| < 1e-12 during Gauss-Jordan).
+ * Use before calling invertMatrix to detect degenerate cases.
+ *
+ * @returns true if the matrix is numerically singular.
+ */
+export function isMatrixSingular(m: number[][]): boolean {
+  const n = m.length;
+  const aug = m.map(row => [...row]);
+
+  for (let col = 0; col < n; col++) {
+    let pivot = col;
+    for (let row = col + 1; row < n; row++)
+      if (Math.abs(aug[row]![col]!) > Math.abs(aug[pivot]![col]!)) pivot = row;
+    if (Math.abs(aug[pivot]![col]!) < MATRIX_PIVOT_THRESHOLD) return true;
+    [aug[col], aug[pivot]] = [aug[pivot]!, aug[col]!];
+    const pv = aug[col]![col]!;
+    for (let j = col; j < n; j++) aug[col]![j]! /= pv;
+    for (let row = 0; row < n; row++) {
+      if (row === col) continue;
+      const factor = aug[row]![col]!;
+      for (let j = col; j < n; j++) aug[row]![j]! -= factor * aug[col]![j]!;
+    }
+  }
+  return false;
+}
 
 /**
  * Solve ordinary least squares regression: y ≈ X·β.

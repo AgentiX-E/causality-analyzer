@@ -2,12 +2,12 @@
  * Causal Inference Engine.
  *
  * Implements the five-step causal analysis framework:
- * 0. Ingest — data preparation
- * 1. Model  — causal graph specification
- * 2. Identify — estimand identification (backdoor, IV, frontdoor)
- * 3. Estimate — effect estimation (linear regression, propensity score)
- * 4. Refute  — sensitivity and robustness checks
- * 5. Act     — action suggestion for AIOps
+ * 0. Ingest �? data preparation
+ * 1. Model  �? causal graph specification
+ * 2. Identify �? estimand identification (backdoor, IV, frontdoor)
+ * 3. Estimate �? effect estimation (linear regression, propensity score)
+ * 4. Refute  �? sensitivity and robustness checks
+ * 5. Act     �? action suggestion for AIOps
  */
 import { CausalGraph } from '../graph/causal-graph.js';
 import type { IdentifiedEstimand, CausalEstimate, CausalEdge } from '@agentix-e/causality-analyzer-core';
@@ -61,7 +61,7 @@ export function estimateLinearRegression(
   const allPred = [...covariateIndices, treatmentIdx];
   const k = allPred.length;
 
-  // OLS: y = β₀ + Σ βᵢ * xᵢ
+  // OLS: y = β₀ + Σ β�? * x�?
   const X = allPred.map(i => data.map(r => r[i] ?? 0));
   const y = data.map(r => r[outcomeIdx] ?? 0);
 
@@ -252,5 +252,22 @@ export class CausalAnalysis {
     const est = this.estimate(estimand);
     if (!est) return null;
     return { estimand, estimate: est, refutations: this.refute(est.ate) };
+  }
+
+  do(treatmentValue: number): number | null {
+    if (!this.graph) return null;
+    const treatment = [...this.nodeMap.entries()].find(([, i]) => i === this.treatmentIdx)?.[0];
+    const outcome = [...this.nodeMap.entries()].find(([, i]) => i === this.outcomeIdx)?.[0];
+    if (!treatment || !outcome) return null;
+    const estimand = this.identify();
+    if (!estimand) return null;
+    const backdoor = estimand.backdoorVariables['backdoor'] ?? [];
+    const covIndices = backdoor.map(v => this.nodeMap.get(v)).filter((i): i is number => i !== undefined);
+    const result = estimateLinearRegression(this.data, this.treatmentIdx, this.outcomeIdx, covIndices);
+    const controlMean = this.data
+      .filter(r => (r[this.treatmentIdx] ?? 0) <= 0.5)
+      .reduce((s, r) => s + (r[this.outcomeIdx] ?? 0), 0) /
+      Math.max(1, this.data.filter(r => (r[this.treatmentIdx] ?? 0) <= 0.5).length);
+    return controlMean + result.ate * treatmentValue;
   }
 }
