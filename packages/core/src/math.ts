@@ -266,6 +266,13 @@ export function fisherZTest(
 
   // Partial correlation via precision matrix
   const rho = partialCorrelationFromCov(cov, 0, 1);
+
+  // Detect singular matrix (degenerate data) — warn but continue with clipped rho
+  if (k > 1 && isMatrixSingular(cov)) {
+    // eslint-disable-next-line no-console
+    console.warn('[fisherZTest] Near-singular correlation matrix detected — p-value may be unreliable');
+  }
+
   // Clip to ±(1-ε) to avoid log(0) or log(Infinity) in Fisher Z transform
   const eps = Number.EPSILON;
   const rhoClipped = Math.abs(rho) >= 1
