@@ -29,3 +29,5 @@ export { stabilitySelection, starsSelection } from './stability-selection.js';
 export type { StabilityResult, StARSResult } from './stability-selection.js';
 export { faskAlgorithm } from './fask.js';
 export type { FASKConfig } from './fask.js';
+export { dagmaAlgorithm } from './dagma.js';
+export type { DAGMAConfig } from './dagma.js';
