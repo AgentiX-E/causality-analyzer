@@ -40,3 +40,5 @@ export { golemAlgorithm } from './golem.js';
 export type { GOLEMConfig } from './golem.js';
 export { icaLiNGAM } from './ica-lingam.js';
 export type { ICALiNGAMConfig } from './ica-lingam.js';
+export { pcmciAlgorithm } from './pcmci.js';
+export type { PCMCIEdge, PCMCIResult, PCMCIconfig } from './pcmci.js';
