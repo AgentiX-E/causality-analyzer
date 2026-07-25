@@ -16,6 +16,8 @@ import { gesAlgorithm } from './graph/ges.js';
 import { fciAlgorithm } from './graph/advanced-discovery.js';
 import { directLiNGAM } from './graph/lingam.js';
 import { notearsAlgorithm } from './graph/notears.js';
+import { bossAlgorithm } from './graph/boss.js';
+import { gfciAlgorithm } from './graph/gfci.js';
 import { createRNG } from '@agentix-e/causality-analyzer-core';
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -109,6 +111,61 @@ export function randomDAG(nodes: number, density: number, seed: number): CausalG
   return g;
 }
 
+/**
+ * Alarm network — medical diagnostic Bayesian network (Beinlich et al. 1989).
+ * 37 nodes, 46 edges. Standard causal discovery benchmark.
+ */
+export function alarmGraph(): CausalGraph {
+  const g = new CausalGraph([
+    'HISTORY','CVP','PCWP','HYPOVOLEMIA','LVEDVOLUME','LVFAILURE',
+    'STROKEVOLUME','ERRLOWOUTPUT','HRBP','HREKG','ERRCAUTER','HRSAT',
+    'INSUFFANESTH','ANAPHYLAXIS','TPR','EXPCO2','KINKEDTUBE','MINVOL',
+    'FIO2','PVSAT','SAO2','PAP','PULMEMBOLUS','SHUNT','INTUBATION',
+    'PRESS','VENTLUNG','MINVOLSET','VENTMACH','DISCONNECT',
+    'VENTTUBE','VENTALV','ARTCO2','CATECHOL','HR','CO','BP',
+  ]);
+  const edges: [string, string][] = [
+    ['HISTORY','LVFAILURE'],['CVP','LVEDVOLUME'],['PCWP','LVEDVOLUME'],
+    ['LVEDVOLUME','STROKEVOLUME'],['HYPOVOLEMIA','LVEDVOLUME'],
+    ['LVFAILURE','STROKEVOLUME'],['LVFAILURE','PCWP'],['LVFAILURE','CVP'],
+    ['LVFAILURE','HRSAT'],['STROKEVOLUME','HR'],['STROKEVOLUME','CO'],
+    ['STROKEVOLUME','BP'],['ERRLOWOUTPUT','HR'],['HRBP','HR'],
+    ['HREKG','HR'],['ERRCAUTER','HRSAT'],['HRSAT','HR'],
+    ['INSUFFANESTH','TPR'],['ANAPHYLAXIS','TPR'],['EXPCO2','ARTCO2'],
+    ['KINKEDTUBE','VENTTUBE'],['MINVOL','VENTALV'],['FIO2','PVSAT'],
+    ['PVSAT','SAO2'],['SAO2','SHUNT'],['PAP','PULMEMBOLUS'],
+    ['PULMEMBOLUS','SHUNT'],['SHUNT','SAO2'],['INTUBATION','VENTTUBE'],
+    ['PRESS','KINKEDTUBE'],['VENTLUNG','MINVOL'],['INTUBATION','VENTLUNG'],
+    ['MINVOLSET','VENTLUNG'],['VENTMACH','VENTTUBE'],['DISCONNECT','VENTTUBE'],
+    ['VENTTUBE','VENTALV'],['VENTALV','ARTCO2'],['ARTCO2','EXPCO2'],
+    ['CATECHOL','HR'],['CATECHOL','BP'],['HR','CO'],['CO','BP'],['TPR','BP'],
+  ];
+  for (const [s, t] of edges) g.addEdge(s, t);
+  return g;
+}
+
+export function childGraph(): CausalGraph {
+  const g = new CausalGraph([
+    'BirthAsphyxia','Disease','Sick','DuctFlow','CardiacMixing',
+    'LungParench','LungFlow','LVH','Age','Grunting','HypDistrib',
+    'HypoxiaInO2','CO2','ChestXray','GruntingReport','LVHreport',
+    'LowerBodyO2','RUQO2','CO2Report','XrayReport',
+  ]);
+  const edges: [string, string][] = [
+    ['Disease','LungParench'],['Disease','Sick'],['Disease','HypDistrib'],
+    ['Disease','DuctFlow'],['BirthAsphyxia','Disease'],['BirthAsphyxia','HypDistrib'],
+    ['Sick','Grunting'],['Sick','HypoxiaInO2'],['Sick','CO2'],
+    ['DuctFlow','CardiacMixing'],['CardiacMixing','HypoxiaInO2'],
+    ['CardiacMixing','LVH'],['LungParench','LungFlow'],
+    ['LungFlow','ChestXray'],['LungFlow','Grunting'],['LungFlow','HypoxiaInO2'],
+    ['LVH','LVHreport'],['Age','Grunting'],['Grunting','GruntingReport'],
+    ['HypDistrib','LowerBodyO2'],['HypoxiaInO2','LowerBodyO2'],
+    ['HypoxiaInO2','RUQO2'],['CO2','CO2Report'],['ChestXray','XrayReport'],
+  ];
+  for (const [s, t] of edges) g.addEdge(s, t);
+  return g;
+}
+
 // ── Data Generation ──────────────────────────────────────────────────
 
 export function generateLinearData(graph: CausalGraph, n: number, seed: number, noise: number = 0.1): { data: number[][]; nodeNames: string[] } {
@@ -167,9 +224,11 @@ export function runBenchmark(
   const algorithms: Array<{ name: string; fn: (d: Matrix, nodes: string[]) => CausalGraph }> = [
     { name: 'PC', fn: (d, n) => (pcAlgorithm as any)(d, n).graph },
     { name: 'GES', fn: (d, n) => gesAlgorithm(d as any, n) },
+    { name: 'BOSS', fn: (d, n) => bossAlgorithm(d as any, n, { numStarts: 2, maxIter: 20 }) },
     { name: 'NOTEARS', fn: (_d, n) => notearsAlgorithm([...Array(_d.rows)].map((_, i) => [...Array(_d.columns)].map((_, j) => _d.get(i, j))), n, { lambda1: 0.1, maxOuterIter: 10, wThreshold: 0.2 }).graph },
     { name: 'LiNGAM', fn: (d, n) => (directLiNGAM as any)(d, n).graph },
     { name: 'FCI', fn: (d, n) => (fciAlgorithm as any)(d, n).graph },
+    { name: 'GFCI', fn: (d, n) => (gfciAlgorithm as any)(d, n).graph },
   ];
 
   const results: AlgorithmResult[] = [];
