@@ -36,3 +36,5 @@ export type { CCDConfig } from './ccd.js';
 export { imagesAlgorithm } from './images.js';
 export { discoverClusters } from './latent-clusters.js';
 export type { ClusterResult } from './latent-clusters.js';
+export { golemAlgorithm } from './golem.js';
+export type { GOLEMConfig } from './golem.js';
