@@ -58,7 +58,7 @@ export class CaCausalGraph extends LitElement {
   override render() {
     const nodeList = this.data?.nodes.map((n: { id: string; label?: string }) => n.label ?? n.id).join(', ') ?? '';
     return html`
-      <canvas @click=${this._onClick}></canvas>
+      <canvas @click=${(e: MouseEvent) => this._onClick(e)}></canvas>
       <span class="sr-only" aria-live="polite">${nodeList}</span>
     `;
   }
