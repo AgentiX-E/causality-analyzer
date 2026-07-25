@@ -78,4 +78,21 @@ describe('MetricsRegistry', () => {
     expect(m.exportCounters().length).toBe(0);
     expect(m.exportHistograms().length).toBe(0);
   });
+
+  it('forwards to structured logger when provided', () => {
+    const logs: Array<{ level: string; message: string }> = [];
+    const mockLogger = {
+      info: (msg: string) => { logs.push({ level: 'info', message: msg }); },
+      error: (msg: string) => { logs.push({ level: 'error', message: msg }); },
+      warn: () => {},
+      debug: () => {},
+    };
+    const l = new AuditLogger(mockLogger);
+    l.log('test.event', 100, true, { key: 'val' });
+    expect(logs.length).toBe(1);
+    expect(logs[0]!.level).toBe('info');
+    l.log('test.error', 50, false, {}, 'failure');
+    expect(logs.length).toBe(2);
+    expect(logs[1]!.level).toBe('error');
+  });
 });
