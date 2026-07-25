@@ -356,3 +356,105 @@ export function bicScore(rss: number, n: number, k: number): number {
   if (n <= 0) return Infinity;
   return n * Math.log(Math.max(1e-10, rss / n)) + k * Math.log(Math.max(2, n));
 }
+
+// ── Chi-Square Independence Test ────────────────────────────────────
+
+/**
+ * Chi-Square test of independence for discrete data.
+ *
+ * Tests whether two categorical variables are independent.
+ * Returns p-value. Use with observed frequencies (contingency table).
+ *
+ * Formula: χ² = Σ (O_ij - E_ij)² / E_ij, df = (r-1)(c-1)
+ * where E_ij = (row_i_sum × col_j_sum) / total
+ *
+ * @param observed — 2D contingency table of observed frequencies
+ * @returns p-value for the null hypothesis of independence
+ */
+export function chiSquareTest(observed: number[][]): number {
+  const rows = observed.length;
+  const cols = observed[0]?.length ?? 0;
+  if (rows < 2 || cols < 2) return 1;
+
+  const rowSums = new Array(rows).fill(0);
+  const colSums = new Array(cols).fill(0);
+  let total = 0;
+
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      const v = observed[i]?.[j] ?? 0;
+      rowSums[i] += v;
+      colSums[j] += v;
+      total += v;
+    }
+  }
+
+  if (total === 0) return 1;
+
+  let chi2 = 0;
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      const expected = (rowSums[i]! * colSums[j]!) / total;
+      if (expected > 0) {
+        const diff = (observed[i]?.[j] ?? 0) - expected;
+        chi2 += (diff * diff) / expected;
+      }
+    }
+  }
+
+  const df = (rows - 1) * (cols - 1);
+  return chiSquarePValue(chi2, df);
+}
+
+/** Approximate Chi-Square p-value using the regularized incomplete gamma function. */
+function chiSquarePValue(chi2: number, df: number): number {
+  if (df <= 0 || chi2 < 0) return 1;
+  // Wilson-Hilferty approximation for df > 0
+  const z = (Math.pow(chi2 / df, 1 / 3) - (1 - 2 / (9 * df))) / Math.sqrt(2 / (9 * df));
+  return 2 * (1 - normalCDF(Math.abs(z)));
+}
+
+// ── G-Square (Log-Likelihood Ratio) Test ────────────────────────────
+
+/**
+ * G-Square (log-likelihood ratio) test of independence.
+ *
+ * Alternative to Chi-Square, preferred for small samples.
+ * G² = 2 * Σ O_ij * ln(O_ij / E_ij)
+ *
+ * @param observed — 2D contingency table
+ * @returns p-value
+ */
+export function gSquareTest(observed: number[][]): number {
+  const rows = observed.length;
+  const cols = observed[0]?.length ?? 0;
+  if (rows < 2 || cols < 2) return 1;
+
+  const rowSums = new Array(rows).fill(0);
+  const colSums = new Array(cols).fill(0);
+  let total = 0;
+
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      const v = observed[i]?.[j] ?? 0;
+      rowSums[i] += v;
+      colSums[j] += v;
+      total += v;
+    }
+  }
+
+  if (total === 0) return 1;
+
+  let g2 = 0;
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      const o = observed[i]?.[j] ?? 0;
+      if (o === 0) continue;
+      const expected = (rowSums[i]! * colSums[j]!) / total;
+      if (expected > 0) g2 += 2 * o * Math.log(o / expected);
+    }
+  }
+
+  const df = (rows - 1) * (cols - 1);
+  return chiSquarePValue(g2, df);
+}

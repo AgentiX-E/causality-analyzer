@@ -23,3 +23,5 @@ export { bossAlgorithm } from './boss.js';
 export type { BOSSConfig } from './boss.js';
 export { gfciAlgorithm } from './gfci.js';
 export type { GFCIConfig } from './gfci.js';
+export { rfciAlgorithm } from './rfci.js';
+export type { RFCIConfig } from './rfci.js';
