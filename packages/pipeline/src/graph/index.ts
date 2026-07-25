@@ -19,3 +19,7 @@ export { mvpcAlgorithm } from './mvpc.js';
 export type { MVPCConfig } from './mvpc.js';
 export { tsIcdAlgorithm } from './tsicd.js';
 export type { TSConfig, TimeSeriesEdge, TSResult } from './tsicd.js';
+export { bossAlgorithm } from './boss.js';
+export type { BOSSConfig } from './boss.js';
+export { gfciAlgorithm } from './gfci.js';
+export type { GFCIConfig } from './gfci.js';
