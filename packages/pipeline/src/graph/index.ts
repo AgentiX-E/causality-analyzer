@@ -33,3 +33,6 @@ export { dagmaAlgorithm } from './dagma.js';
 export type { DAGMAConfig } from './dagma.js';
 export { ccdAlgorithm } from './ccd.js';
 export type { CCDConfig } from './ccd.js';
+export { imagesAlgorithm } from './images.js';
+export { discoverClusters } from './latent-clusters.js';
+export type { ClusterResult } from './latent-clusters.js';
