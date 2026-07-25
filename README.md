@@ -1,11 +1,11 @@
-# Causality Analyzer v2.0
+# Causality Analyzer v1.0.0
 
 > The most complete causal AI library for TypeScript — modular packages for anomaly detection, causal discovery, root cause analysis, effect estimation, counterfactual reasoning, and visualization. Enterprise-grade security, CI-verified quality, DoWhy cross-validated correctness.
 
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![CI](https://github.com/AgentiX-E/causality-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/AgentiX-E/causality-analyzer/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/badge/coverage-99%25_core_%7C_95%25_pipeline-brightgreen)](https://agentix-e.github.io/causality-analyzer/coverage/)
-[![Tests](https://img.shields.io/badge/tests-1122%20passed-brightgreen)](.)
+[![Tests](https://img.shields.io/badge/tests-1230%20passed-brightgreen)](.)
 
 ## Why Causality Analyzer?
 
@@ -131,16 +131,6 @@ docker compose up -d  # pipeline + PostgreSQL + Neo4j
 
 **Visualization**: Canvas2D causal DAG (directed edges + arrowheads), uPlot time series, Lit 3 Web Components, screen-reader ARIA support, keyboard navigation
 
-**Bayesian Networks**: Variable Elimination, Junction Tree, Loopy BP, Likelihood Weighting, Gibbs Sampling, online Dirichlet learning, brute-force oracle
-
-**Uplift Modeling**: Qini curve, AUUC (normalized), uplift@k, model comparison
-
-**Infrastructure**: Audit trail (SHA-256), AES-256-GCM encryption, Prometheus metrics, Rate limiter, mTLS, L-BFGS/Adam optimizers, structured error hierarchy
-
-**Streaming + Drift**: OnlinePC sliding-window discovery, Welford incremental covariance, stability scoring, graph drift detection (SHD-based)
-
-**Visualization**: Canvas2D causal DAG (directed edges + arrowheads), uPlot time series, Lit 3 Web Components, screen-reader ARIA support, keyboard navigation
-
 ## Packages
 
 | Package | Description |
@@ -156,8 +146,8 @@ docker compose up -d  # pipeline + PostgreSQL + Neo4j
 ```bash
 pnpm install
 pnpm run --filter @agentix-e/causality-analyzer-core build
-pnpm -r test       # 1183 tests (194 core + 989 pipeline)
-pnpm -r typecheck  # strict TypeScript (noUncheckedIndexedAccess)
+pnpm -r test       # 1278 tests (254 core + 1024 pipeline)
+pnpm -r typecheck  # strict TypeScript (exactOptionalPropertyTypes, noUncheckedIndexedAccess)
 pnpm -r lint       # ESLint recommendedTypeChecked
 ```
 

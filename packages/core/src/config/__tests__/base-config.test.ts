@@ -33,7 +33,18 @@ class ConfigWithoutSchema extends BaseConfig {
     this.value = 42;
   }
   protected override getSchema() {
-    return z.object({ value: z.number() }) as any;
+    return null as unknown as never;
+  }
+}
+
+class ConfigWithZodSchema extends BaseConfig {
+  readonly value: number;
+  constructor() {
+    super();
+    this.value = 42;
+  }
+  protected override getSchema() {
+    return z.object({ value: z.number() }) as never;
   }
 }
 
@@ -81,8 +92,14 @@ describe('BaseConfig', () => {
       expect(result.valid).toBe(false);
     });
 
-    it('should return valid for config without schema', () => {
+    it('should return valid for config with null schema', () => {
       const config = new ConfigWithoutSchema();
+      const result = config.validate();
+      expect(result.valid).toBe(true);
+    });
+
+    it('should validate with real zod schema', () => {
+      const config = new ConfigWithZodSchema();
       const result = config.validate();
       expect(result.valid).toBe(true);
     });

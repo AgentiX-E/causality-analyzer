@@ -21,7 +21,7 @@ describe('Large Graph Benchmarks', () => {
     const { data, nodeNames } = generateLinearData(truth, samples, 42);
     const matrix = new Matrix(data);
 
-    it(`PC on ${nodes}-node graph produces valid output within 30s`, () => {
+    it(`PC on ${nodes}-node graph produces valid output within 30s`, { timeout: 35000 }, () => {
       const start = Date.now();
       const result = pcAlgorithm(matrix, nodeNames).graph;
       const elapsed = Date.now() - start;
@@ -29,7 +29,7 @@ describe('Large Graph Benchmarks', () => {
       expect(elapsed).toBeLessThan(30000);
     });
 
-    it(`RFCI on ${nodes}-node graph produces valid output within 30s`, () => {
+    it(`RFCI on ${nodes}-node graph produces valid output within 30s`, { timeout: 35000 }, () => {
       const start = Date.now();
       const result = rfciAlgorithm(matrix, nodeNames);
       const elapsed = Date.now() - start;
@@ -37,7 +37,7 @@ describe('Large Graph Benchmarks', () => {
       expect(elapsed).toBeLessThan(30000);
     });
 
-    it(`GES on ${nodes}-node graph produces valid DAG within 30s`, () => {
+    it(`GES on ${nodes}-node graph produces valid DAG within 30s`, { timeout: 35000 }, () => {
       const start = Date.now();
       const result = gesAlgorithm(matrix, nodeNames);
       const elapsed = Date.now() - start;

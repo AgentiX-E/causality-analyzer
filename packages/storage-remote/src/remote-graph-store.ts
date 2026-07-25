@@ -188,7 +188,9 @@ export class RemoteGraphStore implements IGraphStore {
     writeFileSync(certfile, mtls.cert, { mode: 0o600 });
     writeFileSync(keyfile, mtls.key, { mode: 0o600 });
     this.log.debug('mtls temp files written', { certfile, keyfile });
-    return { certfile, keyfile, password: mtls.passphrase };
+    const result: { certfile: string; keyfile: string; password?: string } = { certfile, keyfile };
+    if (mtls.passphrase !== undefined) result.password = mtls.passphrase;
+    return result;
   }
 
   /** Build the appropriate neo4j AuthToken from config. */

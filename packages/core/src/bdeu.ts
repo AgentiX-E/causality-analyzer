@@ -55,7 +55,7 @@ export function bdeuScore(
   const counts = new Map<string, number[]>();
   for (let i = 0; i < n; i++) {
     const parentKey = parentIndices.map(p => data[i]![p] ?? 0).join(',');
-    if (!counts.has(parentKey)) counts.set(parentKey, new Array(ri).fill(0));
+    if (!counts.has(parentKey)) counts.set(parentKey, new Array<number>(ri));
     const row = counts.get(parentKey)!;
     const val = data[i]![targetIdx] ?? 0;
     const idx = Math.min(val, ri - 1);

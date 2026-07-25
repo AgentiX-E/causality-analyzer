@@ -55,6 +55,24 @@ describe('CausalityError (base)', () => {
     expect(json.cause).toBe('');
   });
 
+  it('toJSON handles string cause', () => {
+    const e = new CausalityError(ErrorCode.INTERNAL, 'with string', { cause: 'plain string cause' });
+    const json = e.toJSON();
+    expect(json.cause).toBe('plain string cause');
+  });
+
+  it('toJSON handles numeric cause', () => {
+    const e = new CausalityError(ErrorCode.INTERNAL, 'with number', { cause: 42 });
+    const json = e.toJSON();
+    expect(json.cause).toBe('42');
+  });
+
+  it('toJSON handles boolean cause', () => {
+    const e = new CausalityError(ErrorCode.INTERNAL, 'with bool', { cause: true });
+    const json = e.toJSON();
+    expect(json.cause).toBe('true');
+  });
+
   it('instanceof checks work across hierarchy', () => {
     const se = new StoreError(ErrorCode.CONNECTION_FAILED, 'db down', {
       store: 'PG', operation: 'connect',

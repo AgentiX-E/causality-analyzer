@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { solveLinear, solveLinearSafe, normalTail, normalCDF, normalCDFTail, erf, colMean, createRNG, combinations, fisherZTest, partialCorrelationFromCov, invertMatrix, solveOLS, bicScore, gicScore, isBicScore, isMatrixSingular } from '../math.js';
+import { solveLinear, solveLinearSafe, normalTail, normalCDF, normalCDFTail, erf, colMean, createRNG, combinations, fisherZTest, partialCorrelationFromCov, invertMatrix, solveOLS, bicScore, gicScore, isBicScore, isMatrixSingular, precomputeCorrelation, chiSquareTest, gSquareTest } from '../math.js';
 
 // ── solveLinear ─────────────────────────────────────────────────────
 
@@ -520,5 +520,342 @@ describe('isMatrixSingular', () => {
 
   it('returns true for zero matrix', () => {
     expect(isMatrixSingular([[0, 0], [0, 0]])).toBe(true);
+  });
+});
+
+// ── precomputeCorrelation ────────────────────────────────────────────
+
+describe('precomputeCorrelation', () => {
+  it('returns empty array for empty data', () => {
+    const result = precomputeCorrelation([]);
+    expect(result).toEqual([]);
+  });
+
+  it('returns empty array for zero-column data', () => {
+    const result = precomputeCorrelation([[]] as number[][]);
+    expect(result).toEqual([]);
+  });
+
+  it('computes correlation for single-column data', () => {
+    const data = [[1], [2], [3]];
+    const corr = precomputeCorrelation(data);
+    expect(corr).toHaveLength(1);
+    expect(corr[0]![0]).toBe(1); // self-correlation
+  });
+
+  it('computes correlation for independent variables', () => {
+    const data = Array.from({ length: 50 }, () => [Math.random(), Math.random()]);
+    const corr = precomputeCorrelation(data);
+    expect(corr).toHaveLength(2);
+    // Diagonal should be 1
+    expect(corr[0]![0]).toBe(1);
+    expect(corr[1]![1]).toBe(1);
+    // Off-diagonal should be symmetric
+    expect(corr[0]![1]).toBe(corr[1]![0]);
+  });
+
+  it('computes near-perfect correlation for linear data', () => {
+    const data: number[][] = [];
+    for (let i = 0; i < 100; i++) {
+      data.push([i, i * 2 + 1]);
+    }
+    const corr = precomputeCorrelation(data);
+    expect(corr[0]![1]).toBeGreaterThan(0.99);
+  });
+
+  it('handles constant columns (zero std)', () => {
+    const data = [[5, 1], [5, 2], [5, 3]];
+    const corr = precomputeCorrelation(data);
+    // Constant column has zero std, correlation should be 0 when denom is 0
+    expect(corr[0]![1]).toBe(0);
+  });
+
+  it('returns 1 on diagonal', () => {
+    const data = [[1, 2], [3, 4], [5, 6]];
+    const corr = precomputeCorrelation(data);
+    for (let i = 0; i < 2; i++) {
+      expect(corr[i]![i]).toBe(1);
+    }
+  });
+});
+
+// ── Fisher Z with precomputed correlation matrix ───────────────────
+
+describe('fisherZTest with corrMatrix', () => {
+  it('uses precomputed correlation matrix correctly', () => {
+    const data = Array.from({ length: 50 }, (_, i) => [i, i * 0.8 + (Math.random() - 0.5), Math.random()]);
+    const corrMatrix = precomputeCorrelation(data);
+    const pWithout = fisherZTest(data, 0, 1, []);
+    const pWith = fisherZTest(data, 0, 1, [], corrMatrix);
+    expect(pWith).toBeGreaterThanOrEqual(0);
+    expect(pWith).toBeLessThanOrEqual(1);
+    // Both should produce p-values in valid range
+    expect(pWithout).toBeGreaterThanOrEqual(0);
+    expect(pWithout).toBeLessThanOrEqual(1);
+  });
+
+  it('handles conditioning set with corrMatrix', () => {
+    const data: number[][] = [];
+    for (let i = 0; i < 100; i++) {
+      const x = Math.random();
+      data.push([x, x * 0.5 + (Math.random() - 0.5) * 0.3, x * 0.3 + Math.random() * 0.7]);
+    }
+    const corrMatrix = precomputeCorrelation(data);
+    const p = fisherZTest(data, 0, 1, [2], corrMatrix);
+    expect(p).toBeGreaterThanOrEqual(0);
+    expect(p).toBeLessThanOrEqual(1);
+  });
+
+  it('handles near-singular conditioning with corrMatrix', () => {
+    const data: number[][] = [];
+    for (let i = 0; i < 100; i++) {
+      const x = Math.random();
+      data.push([x, x + 1e-14, x * 0.9 + (Math.random() - 0.5) * 0.1, Math.random()]);
+    }
+    const corrMatrix = precomputeCorrelation(data);
+    // Two nearly identical variables in conditioning set may cause near-singularity
+    const p = fisherZTest(data, 0, 3, [1, 2], corrMatrix);
+    expect(p).toBeGreaterThanOrEqual(0);
+    expect(p).toBeLessThanOrEqual(1);
+  });
+});
+
+// ── chiSquareTest ───────────────────────────────────────────────────
+
+describe('chiSquareTest', () => {
+  it('returns 1 for small contingency tables', () => {
+    expect(chiSquareTest([[1]])).toBe(1);
+    expect(chiSquareTest([[1, 2]])).toBe(1);
+  });
+
+  it('returns valid p-value for independent categories', () => {
+    // Uniform distribution = independence
+    const observed = [
+      [25, 25],
+      [25, 25],
+    ];
+    const p = chiSquareTest(observed);
+    expect(p).toBeGreaterThanOrEqual(0);
+    expect(p).toBeLessThanOrEqual(1);
+  });
+
+  it('returns small p-value for clearly dependent categories', () => {
+    // Strong association — 90% on diagonal
+    const observed = [
+      [45, 5],
+      [5, 45],
+    ];
+    const p = chiSquareTest(observed);
+    expect(p).toBeGreaterThanOrEqual(0);
+    expect(p).toBeLessThanOrEqual(1);
+    // Strong association should give very small p-value
+    expect(p).toBeLessThan(0.01);
+  });
+
+  it('handles zero totals gracefully', () => {
+    const observed = [[0, 0], [0, 0]];
+    expect(chiSquareTest(observed)).toBe(1);
+  });
+
+  it('handles 3×3 table', () => {
+    const observed = [
+      [30, 20, 10],
+      [15, 25, 20],
+      [5, 15, 30],
+    ];
+    const p = chiSquareTest(observed);
+    expect(p).toBeGreaterThanOrEqual(0);
+    expect(p).toBeLessThanOrEqual(1);
+  });
+
+  it('handles sparse table with zeros', () => {
+    const observed = [
+      [10, 0, 5],
+      [0, 20, 0],
+      [5, 0, 10],
+    ];
+    const p = chiSquareTest(observed);
+    expect(p).toBeGreaterThanOrEqual(0);
+    expect(p).toBeLessThanOrEqual(1);
+  });
+
+  it('is consistent: larger sample sizes give similar p-value for same proportions', () => {
+    const small = [[10, 15], [15, 10]];
+    const large = [[20, 30], [30, 20]];
+    const pSmall = chiSquareTest(small);
+    const pLarge = chiSquareTest(large);
+    expect(pSmall).toBeGreaterThanOrEqual(0);
+    expect(pLarge).toBeGreaterThanOrEqual(0);
+  });
+
+  it('independent data yields higher p-value than dependent data', () => {
+    const independent = [[25, 25], [25, 25]];
+    const dependent = [[45, 5], [5, 45]];
+    const pIndep = chiSquareTest(independent);
+    const pDep = chiSquareTest(dependent);
+    // Independence should give less significant result
+    expect(pIndep).toBeGreaterThan(pDep);
+  });
+});
+
+// ── gSquareTest ─────────────────────────────────────────────────────
+
+describe('gSquareTest', () => {
+  it('returns 1 for small contingency tables', () => {
+    expect(gSquareTest([[1]])).toBe(1);
+    expect(gSquareTest([[1, 2]])).toBe(1);
+  });
+
+  it('returns valid p-value for independent categories', () => {
+    const observed = [
+      [25, 25],
+      [25, 25],
+    ];
+    const p = gSquareTest(observed);
+    expect(p).toBeGreaterThanOrEqual(0);
+    expect(p).toBeLessThanOrEqual(1);
+  });
+
+  it('returns small p-value for clearly dependent categories', () => {
+    const observed = [
+      [45, 5],
+      [5, 45],
+    ];
+    const p = gSquareTest(observed);
+    expect(p).toBeGreaterThanOrEqual(0);
+    expect(p).toBeLessThanOrEqual(1);
+    expect(p).toBeLessThan(0.01);
+  });
+
+  it('handles zero totals gracefully', () => {
+    expect(gSquareTest([[0, 0], [0, 0]])).toBe(1);
+  });
+
+  it('handles 3×3 table', () => {
+    const observed = [
+      [30, 20, 10],
+      [15, 25, 20],
+      [5, 15, 30],
+    ];
+    const p = gSquareTest(observed);
+    expect(p).toBeGreaterThanOrEqual(0);
+    expect(p).toBeLessThanOrEqual(1);
+  });
+
+  it('handles table with zeros in cells', () => {
+    const observed = [
+      [10, 0, 5],
+      [0, 20, 0],
+      [5, 0, 15],
+    ];
+    const p = gSquareTest(observed);
+    expect(p).toBeGreaterThanOrEqual(0);
+    expect(p).toBeLessThanOrEqual(1);
+  });
+
+  it('is approximately consistent with chiSquareTest', () => {
+    const observed = [[30, 20, 10], [15, 25, 20], [5, 15, 30]];
+    const g = gSquareTest(observed);
+    const chi = chiSquareTest(observed);
+    // G and Chi should be in similar range
+    expect(Math.abs(g - chi)).toBeLessThan(0.3);
+  });
+
+  it('independent data yields higher p-value than dependent data', () => {
+    const independent = [[25, 25], [25, 25]];
+    const dependent = [[45, 5], [5, 45]];
+    const pIndep = gSquareTest(independent);
+    const pDep = gSquareTest(dependent);
+    // Independence should give less significant result
+    expect(pIndep).toBeGreaterThan(pDep);
+  });
+});
+
+// ── Fisher Z cache eviction ─────────────────────────────────────────
+
+describe('fisherZTest cache behavior', () => {
+  it('caches repeated calls and returns same result', () => {
+    const data = Array.from({ length: 30 }, () => [Math.random(), Math.random()]);
+    const p1 = fisherZTest(data, 0, 1, []);
+    const p2 = fisherZTest(data, 0, 1, []);
+    expect(p1).toBe(p2); // Cached result should be identical
+  });
+
+  it('handles asymmetric i,j caching (cache key sorts)', () => {
+    const data = Array.from({ length: 30 }, () => [Math.random(), Math.random(), Math.random()]);
+    const p1 = fisherZTest(data, 0, 2, [1]);
+    const p2 = fisherZTest(data, 2, 0, [1]);
+    expect(p1).toBe(p2); // (0,2) and (2,0) should use same cache key
+  });
+});
+
+// ── fisherZTest near-singular correlation ──────────────────────────
+
+describe('fisherZTest singular matrix detection', () => {
+  it('handles near-singular correlation matrix (k > 1)', () => {
+    // Create data where two conditioning variables are nearly collinear
+    const data: number[][] = [];
+    for (let i = 0; i < 50; i++) {
+      const x1 = Math.random();
+      const x2 = x1 + (Math.random() - 0.5) * 1e-14; // nearly identical
+      const x3 = Math.random();
+      // Add a target and a test variable
+      data.push([x1, x2, x3, Math.random()]);
+    }
+    const corrMatrix = precomputeCorrelation(data);
+    // Test with conditioning set containing the nearly-collinear variables
+    const p = fisherZTest(data, 0, 3, [1, 2], corrMatrix);
+    expect(p).toBeGreaterThanOrEqual(0);
+    expect(p).toBeLessThanOrEqual(1);
+  });
+});
+
+// ── Additional invertMatrix edge cases ──────────────────────────────
+
+describe('invertMatrix regression', () => {
+  it('handles 1×1 matrix', () => {
+    const inv = invertMatrix([[5]]);
+    expect(inv[0]![0]).toBeCloseTo(0.2, 6);
+  });
+
+  it('handles singular 3×3 matrix gracefully', () => {
+    // Matrix where row2 = row1 + row0 (linearly dependent)
+    const A = [[1, 2, 3], [4, 5, 6], [5, 7, 9]];
+    const inv = invertMatrix(A);
+    // Should not throw
+    expect(inv).toHaveLength(3);
+    expect(inv[0]!).toHaveLength(3);
+  });
+
+  it('preserves matrix dimensions', () => {
+    const A = [[2, 1, 3], [1, 3, 2], [3, 2, 1]];
+    const inv = invertMatrix(A);
+    expect(inv).toHaveLength(3);
+    expect(inv[0]!).toHaveLength(3);
+  });
+});
+
+// ── solveOLS edge case with zero-column X ───────────────────────────
+
+describe('solveOLS zero-k edge case', () => {
+  it('handles X with zero columns gracefully', () => {
+    const X = [[] as number[], [] as number[]];
+    const y = [1, 2];
+    const beta = solveOLS(X as number[][], y);
+    expect(beta).toEqual([]);
+  });
+
+  it('handles empty X rows', () => {
+    const beta = solveOLS([], []);
+    expect(beta).toEqual([]);
+  });
+});
+
+// ── bicScore edge: very small n ─────────────────────────────────────
+
+describe('bicScore very small n', () => {
+  it('returns finite value for n=2', () => {
+    const bic = bicScore(1, 2, 1);
+    expect(isFinite(bic)).toBe(true);
   });
 });

@@ -44,11 +44,43 @@ describe('bdeuScore', () => {
     const s2 = bdeuScore(data, 1, [0], [2, 2], 2.0);
     expect(s1).not.toBe(s2);
   });
+
+  it('handles undefined values in data gracefully', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data = [[0, 0], [undefined as any, undefined as any], [1, 1]];
+    const score = bdeuScore(data as number[][], 0, [1], [2, 2]);
+    expect(isFinite(score)).toBe(true);
+  });
+
+  it('handles sparse domain (value > domain size)', () => {
+    const data = [[0, 5], [1, 3], [2, 1]];
+    const score = bdeuScore(data, 0, [1], [2, 3]);
+    expect(isFinite(score)).toBe(true);
+  });
+
+  it('handles missing domain size (fallback to 2)', () => {
+    const data = [[0, 0], [1, 1]];
+    // domainSizes is shorter than the variable indices — triggers ?? 2 fallback
+    const score = bdeuScore(data, 1, [0], [2]);
+    expect(isFinite(score)).toBe(true);
+  });
+
+  it('handles multiple parents with missing domain sizes', () => {
+    const data = [[0, 0, 0], [1, 1, 1]];
+    const score = bdeuScore(data, 2, [0, 1], [2]);
+    expect(isFinite(score)).toBe(true);
+  });
 });
 
 describe('discretize', () => {
   it('handles empty data', () => {
     expect(discretize([]).discretized).toEqual([]);
+  });
+
+  it('handles zero-column data', () => {
+    const result = discretize([[]] as number[][]);
+    expect(result.discretized).toEqual([]);
+    expect(result.domainSizes).toEqual([]);
   });
 
   it('discretizes 1D data into bins', () => {
@@ -68,5 +100,15 @@ describe('discretize', () => {
     const result = discretize(data, 2);
     expect(result.discretized.length).toBe(3);
     expect(result.domainSizes).toEqual([2, 2]);
+  });
+
+  it('handles constant columns (zero range)', () => {
+    const data = [[5, 1], [5, 2], [5, 3]];
+    const result = discretize(data, 3);
+    expect(result.discretized).toHaveLength(3);
+    // Constant column should map all to bin 0
+    for (const row of result.discretized) {
+      expect(row[0]).toBe(0);
+    }
   });
 });
