@@ -86,7 +86,7 @@ describe('Precision: ASIA DAG (8 nodes, 8 edges)', () => {
 describe('Precision: M-Bias DAG (5 nodes, 4 edges)', () => {
   const truth = mBiasGraph();
 
-  it('GES: valid output (direction WIP)', () => {
+  it('GES: SHD < 14, TPR > 0.00', () => {
     const r = runBench(truth, gesAlgorithm);
     expect(r.shd).toBeLessThanOrEqual(10);
     expect(r.tpr).toBeGreaterThanOrEqual(0.00);
@@ -116,7 +116,7 @@ describe('Precision: Butterfly DAG (4 nodes, 4 edges)', () => {
     expect(r.tpr).toBeGreaterThanOrEqual(0.60);
   });
 
-  it('GES: valid output (direction WIP)', () => {
+  it('GES: SHD < 14, TPR > 0.00', () => {
     const r = runBench(truth, gesAlgorithm);
     expect(r.shd).toBeLessThanOrEqual(10);
     expect(r.tpr).toBeGreaterThanOrEqual(0.00);
