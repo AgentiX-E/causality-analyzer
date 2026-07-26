@@ -2,7 +2,7 @@
  * BDeu + Discretization Tests.
  */
 import { describe, it, expect } from 'vitest';
-import { logGamma, bdeuScore, discretize } from '../bdeu.js';
+import { logGamma, bdeuScore, discretizeBDeu } from '../bdeu.js';
 
 describe('logGamma', () => {
   it('returns 0 for x <= 0', () => {
@@ -71,20 +71,20 @@ describe('bdeuScore', () => {
   });
 });
 
-describe('discretize', () => {
+describe('discretizeBDeu', () => {
   it('handles empty data', () => {
-    expect(discretize([]).discretized).toEqual([]);
+    expect(discretizeBDeu([]).discretized).toEqual([]);
   });
 
   it('handles zero-column data', () => {
-    const result = discretize([[]] as number[][]);
+    const result = discretizeBDeu([[]] as number[][]);
     expect(result.discretized).toEqual([]);
     expect(result.domainSizes).toEqual([]);
   });
 
   it('discretizes 1D data into bins', () => {
     const data = [[0.1], [0.5], [0.9], [1.5], [2.0], [2.5], [3.0]];
-    const result = discretize(data, 3);
+    const result = discretizeBDeu(data, 3);
     expect(result.discretized.length).toBe(7);
     expect(result.domainSizes).toEqual([3]);
     // All values should be 0, 1, or 2
@@ -96,14 +96,14 @@ describe('discretize', () => {
 
   it('discretizes 2D data', () => {
     const data = [[0.1, 5.0], [1.0, 6.0], [2.0, 7.0]];
-    const result = discretize(data, 2);
+    const result = discretizeBDeu(data, 2);
     expect(result.discretized.length).toBe(3);
     expect(result.domainSizes).toEqual([2, 2]);
   });
 
   it('handles constant columns (zero range)', () => {
     const data = [[5, 1], [5, 2], [5, 3]];
-    const result = discretize(data, 3);
+    const result = discretizeBDeu(data, 3);
     expect(result.discretized).toHaveLength(3);
     // Constant column should map all to bin 0
     for (const row of result.discretized) {

@@ -19,7 +19,6 @@
  *
  * @packageDocumentation
  */
-import type { DomainKnowledge } from '@agentix-e/causality-analyzer-core';
 import { fisherZTest } from '@agentix-e/causality-analyzer-core';
 
 export interface PCMCIEdge {

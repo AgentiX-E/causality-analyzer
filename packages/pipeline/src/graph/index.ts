@@ -52,3 +52,5 @@ export { timinoAlgorithm } from './timino.js';
 export type { TiMINoResult } from './timino.js';
 export { ginDetect } from './gin.js';
 export type { GINResult } from './gin.js';
+export { OnlinePC, type OnlinePCConfig, type StreamingGraphState, type GraphChangeEvent } from './streaming-discovery.js';
+export { detectCausalDrift, detectDriftFromGraphs, type DriftDetectionResult } from './drift-detection.js';

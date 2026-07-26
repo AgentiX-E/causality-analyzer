@@ -97,7 +97,7 @@ export function bdeuScore(
  * @param numBins — number of discrete bins per variable (default 3)
  * @returns discretized data and domain sizes
  */
-export function discretize(data: number[][], numBins: number = 3): {
+export function discretizeBDeu(data: number[][], numBins: number = 3): {
   discretized: number[][];
   domainSizes: number[];
 } {

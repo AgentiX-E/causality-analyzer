@@ -9,9 +9,30 @@ export type { SPOTConfig, DSPOTConfig } from './detect/spot.js';
 export { VotingDetector } from './detect/voting-detector.js';
 export type { VotingStrategy, VotingDetectorConfig } from './detect/voting-detector.js';
 
-// Graph
-export { CausalGraph, pcAlgorithm, fisherZTest } from './graph/index.js';
-export type { PCConfig } from './graph/index.js';
+// Graph — all 32 causal discovery algorithms
+export {
+  CausalGraph, pcAlgorithm, fisherZTest, pcMaxAlgorithm,
+  gesAlgorithm, fciAlgorithm, gfciAlgorithm, rfciAlgorithm,
+  directLiNGAM, icaLiNGAM, notearsAlgorithm, golemAlgorithm,
+  dagmaAlgorithm, graspAlgorithm, bossAlgorithm,
+  rcdAlgorithm, cdnodAlgorithm, mvpcAlgorithm,
+  tsIcdAlgorithm, varLingam, pcmciAlgorithm, tsFciAlgorithm,
+  timinoAlgorithm, ginDetect, faskAlgorithm, ccdAlgorithm,
+  imagesAlgorithm, discoverClusters,
+  stabilitySelection, starsSelection, exactSearch, kciTest,
+  growShrink, targetedDiscovery, OnlinePC, detectCausalDrift, detectDriftFromGraphs,
+} from './graph/index.js';
+export type {
+  PCConfig, GESConfig, TSConfig, TimeSeriesEdge, TSResult,
+  KCIConfig, NOTEARSConfig, GRaSPConfig, RCDConfig,
+  CDNODConfig, MVPCConfig, BOSSConfig, GFCIConfig,
+  RFCIConfig, StabilityResult, StARSResult, FASKConfig,
+  DAGMAConfig, CCDConfig, ClusterResult, GOLEMConfig,
+  ICALiNGAMConfig, PCMCIEdge, PCMCIResult, PCMCIconfig,
+  VARLiNGAMConfig, VARLiNGAMResult, TsFCIResult, TsFCIConfig,
+  TiMINoResult, GINResult, OnlinePCConfig, StreamingGraphState, GraphChangeEvent,
+  DriftDetectionResult,
+} from './graph/index.js';
 
 // Analyze (RCA)
 export { HeuristicPathRCA, RandomWalkRCA, HTRCA, FPGrowthRCA } from './analyze/index.js';
@@ -34,7 +55,14 @@ export {
 } from './infer/index.js';
 
 // GCM
-export { StructuralCausalModel, cateToRCA } from './gcm/index.js';
+export {
+  StructuralCausalModel, cateToRCA,
+  evaluateMechanismR2, evaluateMSE,
+  shapleyAttribute, bootstrapRCA,
+  detectMechanismChanges, distributionChangeRobust, changeAttributionCI,
+  resitTest,
+} from './gcm/index.js';
+export type { RESITResult, RESITConfig, MechanismChangeResult } from './gcm/index.js';
 
 // Visualization
 export {
@@ -100,5 +128,5 @@ export { HealthChecker } from './health.js';
 export type { HealthStatus, HealthCheckResult } from './health.js';
 
 // ── Benchmark ────────────────────────────────────────────────
-export { runBenchmark, computeSHD, formatBenchmarkTable, asiaGraph, sachsGraph, mBiasGraph, butterflyGraph, randomDAG, generateLinearData } from './benchmark.js';
+export { runBenchmark, computeSHD, formatBenchmarkTable, asiaGraph, sachsGraph, mBiasGraph, butterflyGraph, childGraph, alarmGraph, randomDAG, generateLinearData } from './benchmark.js';
 export type { BenchmarkResult, AlgorithmResult } from './benchmark.js';

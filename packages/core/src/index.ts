@@ -88,7 +88,7 @@ export type { ErrorCodeType } from './errors.js';
 
 // ── Math ─────────────────────────────────────────────────────────
 export { solveLinear, solveLinearSafe, normalTail, normalCDFTail, normalCDF, erf, colMean, createRNG, combinations, fisherZTest, precomputeCorrelation, isMatrixSingular, partialCorrelationFromCov, invertMatrix, solveOLS, bicScore, gicScore, isBicScore, chiSquareTest, gSquareTest, _resetFisherZCache, _setFisherZCacheMax } from './math.js';
-export { logGamma, bdeuScore, discretize } from './bdeu.js';
+export { logGamma, bdeuScore, discretizeBDeu } from './bdeu.js';
 
 // ── Visualization Types ───────────────────────────────────────────
 export type {
