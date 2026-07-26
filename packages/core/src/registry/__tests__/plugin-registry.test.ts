@@ -173,4 +173,10 @@ describe('PluginRegistry', () => {
       expect(PluginRegistry.hasGraph('shared_name')).toBe(true);
     });
   });
+
+  describe('unregister edge cases', () => {
+    it('returns false for unregistered name', () => {
+      expect(PluginRegistry.unregister('nonexistent', PluginCategory.DETECTOR)).toBe(false);
+    });
+  });
 });

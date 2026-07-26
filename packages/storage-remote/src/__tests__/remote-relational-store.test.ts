@@ -269,3 +269,37 @@ describe('AbortSignal support', () => {
     await store.close();
   });
 });
+
+describe('buildPgClientOpts', () => {
+  it('returns empty object with no config', () => {
+    const opts = buildPgClientOpts({});
+    expect(Object.keys(opts).length).toBe(0);
+  });
+
+  it('includes connectionString when provided', () => {
+    const opts = buildPgClientOpts({ connectionString: 'postgres://localhost/test' });
+    expect(opts.connectionString).toBe('postgres://localhost/test');
+  });
+
+  it('builds mTLS ssl options', () => {
+    const mtls: MtlsConfig = { cert: 'cert-pem', key: 'key-pem' };
+    const opts = buildPgClientOpts({ mtls });
+    expect(opts.ssl).toBeDefined();
+    const ssl = opts.ssl as Record<string, unknown>;
+    expect(ssl.cert).toBe('cert-pem');
+    expect(ssl.key).toBe('key-pem');
+  });
+
+  it('merges mtls with explicit ssl config', () => {
+    const mtls: MtlsConfig = { cert: 'cert', key: 'key', ca: 'ca-pem' };
+    const opts = buildPgClientOpts({ mtls, ssl: { rejectUnauthorized: false } });
+    const ssl = opts.ssl as Record<string, unknown>;
+    expect(ssl.cert).toBe('cert');
+    expect(ssl.rejectUnauthorized).toBe(false);
+  });
+
+  it('passes through raw ssl when no mtls', () => {
+    const opts = buildPgClientOpts({ ssl: { rejectUnauthorized: false } });
+    expect(opts.ssl).toEqual({ rejectUnauthorized: false });
+  });
+});

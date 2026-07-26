@@ -245,3 +245,22 @@ describe('ColumnarTable', () => {
       expect(Number.isNaN(table.column('b')[1])).toBe(true);
     });
   });
+
+  describe('serialization', () => {
+    it('toJSON returns plain object with column arrays', () => {
+      const rows = [{ a: 1, b: 2 }, { a: 3, b: 4 }] as Array<{ a: number; b: number }>;
+      const table = ColumnarTable.fromRows(rows);
+      const json = table.toJSON();
+      expect(json.a).toEqual([1, 3]);
+      expect(json.b).toEqual([2, 4]);
+    });
+
+    it('toRows round-trips data', () => {
+      const rows = [{ x: 10, y: 20 }, { x: 30, y: 40 }] as Array<{ x: number; y: number }>;
+      const table = ColumnarTable.fromRows(rows);
+      const result = table.toRows();
+      expect(result.length).toBe(2);
+      expect(result[0]!.x).toBe(10);
+      expect(result[0]!.y).toBe(20);
+    });
+  });

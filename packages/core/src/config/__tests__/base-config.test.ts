@@ -162,6 +162,15 @@ describe('BaseConfig', () => {
       const json2 = config.toJSON();
       expect(json2.alpha).toBe(0.1); // original unchanged
     });
+
+    it('toJSON filters out function-valued properties', () => {
+      const config = new TestConfig({ alpha: 0.5 });
+      // Manually add a function property to exercise the typeof check
+      (config as Record<string, unknown>).callback = () => {};
+      const json = config.toJSON();
+      expect(json.alpha).toBe(0.5);
+      expect(json.callback).toBeUndefined();
+    });
     it('toJSON filters out function-valued properties', () => {
       const config = new TestConfig({ alpha: 0.5 });
       const json = config.toJSON();
