@@ -1,4 +1,4 @@
-# Causality Analyzer v1.1.0
+# Causality Analyzer
 
 > The most complete causal AI library for TypeScript — 6 modular packages for anomaly detection, causal discovery, root cause analysis, effect estimation, counterfactual reasoning, and visualization. Enterprise-grade security, CI-verified quality, browser + Node.js + PostgreSQL + Neo4j storage.
 
@@ -134,7 +134,7 @@ docker compose up -d  # pipeline + PostgreSQL + Neo4j
 
 ## Packages
 
-| Package | v1.1.0 | Description |
+| Package | npm | Description |
 |---------|--------|-------------|
 | `core` | [![npm](https://img.shields.io/npm/v/@agentix-e/causality-analyzer-core)](https://npmjs.com/@agentix-e/causality-analyzer-core) | Types, interfaces, math, ColumnarTable, graph-similarity, OTel |
 | `pipeline` | [![npm](https://img.shields.io/npm/v/@agentix-e/causality-analyzer-pipeline)](https://npmjs.com/@agentix-e/causality-analyzer-pipeline) | 32 algorithms, RCA, inference, GCM, HTTP API (mTLS+OpenAPI) |
