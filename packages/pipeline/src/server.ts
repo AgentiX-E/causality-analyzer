@@ -1,22 +1,26 @@
 /**
- * Causality Analyzer HTTP/REST Server.
+ * Causality Analyzer HTTP/REST Server — v1 API.
  *
  * Provides a lightweight, production-ready HTTP API for causal analysis.
  * Uses built-in Node.js `http` module — zero additional dependencies.
  *
- * Endpoints:
- *   GET  /health     — health check (liveness + readiness)
- *   GET  /metrics    — Prometheus-compatible metrics
- *   POST /analyze    — run causal analysis pipeline
- *   POST /discover   — run causal discovery
- *   POST /estimate   — run effect estimation
+ * Endpoints (all under /v1/):
+ *   GET  /health         — combined health + liveness + readiness
+ *   GET  /ready          — readiness probe
+ *   GET  /live           — liveness probe
+ *   GET  /metrics        — Prometheus-compatible metrics
+ *   POST /v1/discover    — run causal discovery
+ *   POST /v1/analyze     — run causal analysis pipeline
+ *   POST /v1/estimate    — run effect estimation
+ *   GET  /v1/openapi.json — OpenAPI 3.1 specification
+ *
+ * Authentication:
+ *   Bearer Token via Authorization header when CAUSALITY_API_TOKEN is configured.
+ *   Health/live/ready/metrics endpoints are always public.
  *
  * @packageDocumentation
  */
 import { createServer, type IncomingMessage, type ServerResponse, type Server } from 'node:http';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
 import { Matrix } from 'ml-matrix';
 import { CausalGraph } from './graph/causal-graph.js';
 import { pcAlgorithm } from './graph/pc.js';
@@ -28,7 +32,7 @@ import { HealthChecker, type HealthStatus } from './health.js';
 import { RateLimiter } from './rate-limiter.js';
 import { ConsoleLogger, type Logger } from '@agentix-e/causality-analyzer-core';
 
-// ─��� Types ────────────────────────────────────────────────────────────
+// ── Types ────────────────────────────────────────────────────────────
 
 interface ApiResponse {
   success: boolean;
@@ -56,6 +60,15 @@ interface EstimateRequest {
   data: number[][];
 }
 
+// ── Auth ─────────────────────────────────────────────────────────────
+
+function extractBearerToken(req: IncomingMessage): string | null {
+  const header = req.headers['authorization'];
+  if (!header) return null;
+  const match = /^[Bb]earer\s+(.+)$/.exec(header);
+  return match ? match[1] ?? null : null;
+}
+
 // ── Server ───────────────────────────────────────────────────────────
 
 export class CausalityServer {
@@ -67,6 +80,8 @@ export class CausalityServer {
   private maxBodySize: number;
   private logger: Logger;
   private serverTimeout: number;
+  private apiToken: string | null;
+  private port: number = 3000;
 
   constructor(opts?: {
     maxBodySize?: number;
@@ -74,18 +89,22 @@ export class CausalityServer {
     rateLimitWindowMs?: number;
     logger?: Logger;
     timeout?: number;
+    /** Bearer token for API authentication. Set via CAUSALITY_API_TOKEN env var. */
+    apiToken?: string;
   }) {
     this.healthChecker = new HealthChecker();
-    this.maxBodySize = opts?.maxBodySize ?? 10 * 1024 * 1024; // 10MB default
+    this.maxBodySize = opts?.maxBodySize ?? 10 * 1024 * 1024;
     this.rateLimiter = new RateLimiter({
       maxRequests: opts?.rateLimitMax ?? 100,
       windowMs: opts?.rateLimitWindowMs ?? 60000,
     });
     this.logger = opts?.logger ?? new ConsoleLogger();
     this.serverTimeout = opts?.timeout ?? 30000;
+    this.apiToken = opts?.apiToken ?? null;
   }
 
   start(port: number = 3000, host: string = '0.0.0.0'): Promise<void> {
+    this.port = port;
     return new Promise((resolve, reject) => {
       this.server = createServer((req, res) => this.handleRequest(req, res));
       this.server.timeout = this.serverTimeout;
@@ -117,7 +136,7 @@ export class CausalityServer {
     const clientIp = req.socket.remoteAddress ?? 'unknown';
     const limitResult = this.rateLimiter.check(clientIp);
     if (!limitResult.allowed) {
-      res.setHeader('Retry-After', Math.ceil(limitResult.resetInMs / 1000));
+      res.setHeader('Retry-After', `${Math.ceil(limitResult.resetInMs / 1000)}`);
       this.sendJson(res, 429, { success: false, error: 'Too many requests', requestId });
       return;
     }
@@ -126,7 +145,7 @@ export class CausalityServer {
       // CORS headers
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
       res.setHeader('Access-Control-Max-Age', '86400');
 
       if (req.method === 'OPTIONS') {
@@ -136,18 +155,35 @@ export class CausalityServer {
       }
 
       const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+      const method = req.method ?? 'GET';
 
-      switch (`${req.method} ${url.pathname}`) {
-        case 'GET /health': return this.handleHealth(res, requestId);
-        case 'GET /ready': return this.handleReady(res, requestId);
-        case 'GET /live': return this.handleLiveness(res, requestId);
-        case 'GET /metrics': return this.handleMetrics(res, requestId);
-        case 'POST /discover': return this.handleDiscover(req, res, requestId);
-        case 'POST /analyze': return this.handleAnalyze(req, res, requestId);
-        case 'POST /estimate': return this.handleEstimate(req, res, requestId);
-        default:
-          this.sendJson(res, 404, { success: false, error: 'Not found', requestId });
+      // ── Route matching ──────────────────────────────────────────
+      // Public endpoints (no auth required)
+      if (method === 'GET' && url.pathname === '/health') return this.handleHealth(res, requestId);
+      if (method === 'GET' && url.pathname === '/ready') return this.handleReady(res, requestId);
+      if (method === 'GET' && url.pathname === '/live') return this.handleLiveness(res, requestId);
+      if (method === 'GET' && url.pathname === '/metrics') return this.handleMetrics(res, requestId);
+
+      // OpenAPI spec (public)
+      if (method === 'GET' && url.pathname === '/v1/openapi.json') return this.handleOpenApi(res, requestId);
+
+      // ── Auth check for v1 business endpoints ────────────────────
+      if (this.apiToken) {
+        const token = extractBearerToken(req);
+        if (token !== this.apiToken) {
+          res.setHeader('WWW-Authenticate', 'Bearer');
+          this.sendJson(res, 401, { success: false, error: 'Unauthorized — provide valid Bearer token', requestId });
+          return;
+        }
       }
+
+      // ── v1 API endpoints ────────────────────────────────────────
+      if (method === 'POST' && url.pathname === '/v1/discover') return this.handleDiscover(req, res, requestId);
+      if (method === 'POST' && url.pathname === '/v1/analyze') return this.handleAnalyze(req, res, requestId);
+      if (method === 'POST' && url.pathname === '/v1/estimate') return this.handleEstimate(req, res, requestId);
+
+      // 404
+      this.sendJson(res, 404, { success: false, error: 'Not found', requestId });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Internal server error';
       if (message === 'Payload Too Large') {
@@ -163,15 +199,15 @@ export class CausalityServer {
   // ── Health Endpoints ──────────────────────────────────────────────
 
   private handleHealth(res: ServerResponse, requestId: string): void {
+    const heapMB = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
     const status: HealthStatus = {
       status: 'healthy',
       uptime: Date.now() - this.startTime,
       version: '1.0.0',
       checks: {
-        memory: {
-          status: 'ok',
-          detail: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`,
-        },
+        memory: { status: 'ok', detail: `${heapMB}MB` },
+        ready: { status: this.healthChecker.isReady() ? 'ok' : 'error', detail: '' },
+        alive: { status: this.healthChecker.isAlive() ? 'ok' : 'error', detail: '' },
       },
     };
     this.sendJson(res, 200, { success: true, data: status, requestId });
@@ -197,9 +233,219 @@ export class CausalityServer {
     });
   }
 
+  // ── OpenAPI Spec ──────────────────────────────────────────────────
+
+  private handleOpenApi(res: ServerResponse, _requestId: string): void {
+    const spec = {
+      openapi: '3.1.0',
+      info: {
+        title: 'Causality Analyzer API',
+        version: '1.0.0',
+        description: 'Enterprise-grade causal AI REST API — discovery, root cause analysis, and effect estimation.',
+        license: { name: 'MIT' },
+      },
+      servers: [{ url: `http://localhost:${this.port}/v1`, description: 'Local development' }],
+      paths: {
+        '/discover': {
+          post: {
+            operationId: 'discoverGraph',
+            summary: 'Run causal discovery',
+            description: 'Runs PC algorithm on the provided data to discover causal relationships.',
+            tags: ['Causal Discovery'],
+            security: this.apiToken ? [{ bearerAuth: [] }] : [],
+            requestBody: {
+              required: true,
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/DiscoverRequest' } } },
+            },
+            responses: {
+              '200': { description: 'Causal graph discovered', content: { 'application/json': { schema: { $ref: '#/components/schemas/DiscoverResponse' } } } },
+              '400': { $ref: '#/components/responses/BadRequest' },
+              '401': { $ref: '#/components/responses/Unauthorized' },
+              '429': { $ref: '#/components/responses/RateLimited' },
+            },
+          },
+        },
+        '/analyze': {
+          post: {
+            operationId: 'analyzeRootCauses',
+            summary: 'Run root cause analysis',
+            description: 'Identifies root causes of anomalies using causal graph + HeuristicPathRCA.',
+            tags: ['Root Cause Analysis'],
+            security: this.apiToken ? [{ bearerAuth: [] }] : [],
+            requestBody: {
+              required: true,
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/AnalyzeRequest' } } },
+            },
+            responses: {
+              '200': { description: 'Root causes identified', content: { 'application/json': { schema: { $ref: '#/components/schemas/AnalyzeResponse' } } } },
+              '400': { $ref: '#/components/responses/BadRequest' },
+              '401': { $ref: '#/components/responses/Unauthorized' },
+              '429': { $ref: '#/components/responses/RateLimited' },
+            },
+          },
+        },
+        '/estimate': {
+          post: {
+            operationId: 'estimateEffect',
+            summary: 'Run effect estimation',
+            description: 'Estimates Average Treatment Effect using backdoor adjustment with proper d-separation criteria.',
+            tags: ['Causal Inference'],
+            security: this.apiToken ? [{ bearerAuth: [] }] : [],
+            requestBody: {
+              required: true,
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/EstimateRequest' } } },
+            },
+            responses: {
+              '200': { description: 'Effect estimated', content: { 'application/json': { schema: { $ref: '#/components/schemas/EstimateResponse' } } } },
+              '400': { $ref: '#/components/responses/BadRequest' },
+              '401': { $ref: '#/components/responses/Unauthorized' },
+              '429': { $ref: '#/components/responses/RateLimited' },
+            },
+          },
+        },
+      },
+      components: {
+        securitySchemes: this.apiToken ? {
+          bearerAuth: { type: 'http', scheme: 'bearer', description: 'API token from CAUSALITY_API_TOKEN environment variable' },
+        } : {},
+        schemas: {
+          DiscoverRequest: {
+            type: 'object',
+            required: ['data', 'nodeNames'],
+            properties: {
+              data: { type: 'array', items: { type: 'array', items: { type: 'number' } }, description: 'n×d data matrix' },
+              nodeNames: { type: 'array', items: { type: 'string' }, description: 'Variable names' },
+              alpha: { type: 'number', description: 'Significance threshold', default: 0.05 },
+            },
+          },
+          DiscoverResponse: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'object',
+                properties: {
+                  edges: { type: 'array', items: { $ref: '#/components/schemas/CausalEdge' } },
+                  adjustmentSets: { type: 'object', additionalProperties: { type: 'array', items: { type: 'string' } } },
+                },
+              },
+              requestId: { type: 'string' },
+            },
+          },
+          AnalyzeRequest: {
+            type: 'object',
+            required: ['graph', 'data', 'anomalousNodes'],
+            properties: {
+              graph: { $ref: '#/components/schemas/GraphInput' },
+              data: { type: 'array', items: { type: 'array', items: { type: 'number' } } },
+              anomalousNodes: { type: 'array', items: { type: 'string' } },
+            },
+          },
+          AnalyzeResponse: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'object',
+                properties: {
+                  rootCauses: { type: 'array', items: { $ref: '#/components/schemas/RootCauseEntry' } },
+                  paths: { type: 'array', items: { $ref: '#/components/schemas/RootCausePath' } },
+                  adjustmentInfo: { type: 'object' },
+                },
+              },
+              requestId: { type: 'string' },
+            },
+          },
+          EstimateRequest: {
+            type: 'object',
+            required: ['graph', 'treatment', 'outcome', 'data'],
+            properties: {
+              graph: { $ref: '#/components/schemas/GraphInput' },
+              treatment: { type: 'string' },
+              outcome: { type: 'string' },
+              data: { type: 'array', items: { type: 'array', items: { type: 'number' } } },
+            },
+          },
+          EstimateResponse: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'object',
+                properties: {
+                  ate: { type: 'number', description: 'Average Treatment Effect' },
+                  se: { type: 'number', description: 'Standard Error' },
+                  ci95: { type: 'array', items: { type: 'number' }, description: '95% confidence interval [lower, upper]' },
+                  adjustmentSet: { type: 'array', items: { type: 'string' } },
+                  isSignificant: { type: 'boolean', description: 'Whether |ATE/SE| > 1.96' },
+                },
+              },
+              requestId: { type: 'string' },
+            },
+          },
+          GraphInput: {
+            type: 'object',
+            required: ['nodes', 'edges'],
+            properties: {
+              nodes: { type: 'array', items: { type: 'string' } },
+              edges: { type: 'array', items: { type: 'object', properties: { source: { type: 'string' }, target: { type: 'string' } } } },
+            },
+          },
+          CausalEdge: {
+            type: 'object',
+            properties: {
+              source: { type: 'string' },
+              target: { type: 'string' },
+              weight: { type: 'number' },
+              directed: { type: 'boolean' },
+            },
+          },
+          RootCauseEntry: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              score: { type: 'number' },
+              evidence: { type: 'array', items: { type: 'object' } },
+            },
+          },
+          RootCausePath: {
+            type: 'object',
+            properties: {
+              nodes: { type: 'array', items: { type: 'string' } },
+              score: { type: 'number' },
+              direction: { type: 'string', enum: ['forward', 'backward'] },
+            },
+          },
+          ErrorResponse: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean', enum: [false] },
+              error: { type: 'string' },
+              requestId: { type: 'string' },
+            },
+          },
+        },
+        responses: {
+          BadRequest: { description: 'Bad request', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          Unauthorized: { description: 'Unauthorized', headers: { 'WWW-Authenticate': { schema: { type: 'string' } } }, content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          RateLimited: { description: 'Too many requests', headers: { 'Retry-After': { schema: { type: 'integer' } } }, content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+        },
+      },
+      tags: [
+        { name: 'Causal Discovery', description: 'Discover causal relationships from observational data' },
+        { name: 'Root Cause Analysis', description: 'Identify root causes of anomalies using causal graphs' },
+        { name: 'Causal Inference', description: 'Estimate treatment effects with backdoor adjustment' },
+      ],
+    };
+
+    res.setHeader('Content-Type', 'application/json');
+    res.writeHead(200);
+    res.end(JSON.stringify(spec, null, 2));
+  }
+
   // ── Metrics ───────────────────────────────────────────────────────
 
-  private handleMetrics(res: ServerResponse, requestId: string): void {
+  private handleMetrics(res: ServerResponse, _requestId: string): void {
     const metrics = [
       '# HELP ca_requests_total Total HTTP requests',
       '# TYPE ca_requests_total counter',
@@ -346,7 +592,7 @@ export class CausalityServer {
       });
       req.on('end', () => {
         try { resolve(JSON.parse(raw || '{}') as T); }
-        catch { reject(new Error("Bad Request: invalid JSON")); }
+        catch { reject(new Error('Bad Request: invalid JSON')); }
       });
       req.on('error', err => reject(err));
     });
@@ -356,3 +602,6 @@ export class CausalityServer {
     return new Matrix(data);
   }
 }
+
+/** @deprecated Import CausalityServer from 'server.js'. */
+export { CausalityServer as Server };

@@ -74,9 +74,9 @@ describe('CORS', () => {
   });
 });
 
-describe('POST /discover — Causal Discovery', () => {
+describe('POST /v1/discover — Causal Discovery', () => {
   it('returns edges for simple causal graph', async () => {
-    const { res, json } = await fetchApi('/discover', 'POST', {
+    const { res, json } = await fetchApi('/v1/discover', 'POST', {
       data: [
         [1, 2, 3],
         [1.1, 2.1, 2.9],
@@ -94,21 +94,21 @@ describe('POST /discover — Causal Discovery', () => {
   });
 
   it('returns 400 when data is missing', async () => {
-    const { res, json } = await fetchApi('/discover', 'POST', {});
+    const { res, json } = await fetchApi('/v1/discover', 'POST', {});
     expect(res.status).toBe(400);
     expect(json.success).toBe(false);
   });
 
   it('returns 400 when nodeNames is missing', async () => {
-    const { res, json } = await fetchApi('/discover', 'POST', { data: [[1, 2]] });
+    const { res, json } = await fetchApi('/v1/discover', 'POST', { data: [[1, 2]] });
     expect(res.status).toBe(400);
     expect(json.success).toBe(false);
   });
 });
 
-describe('POST /analyze — Root Cause Analysis', () => {
+describe('POST /v1/analyze — Root Cause Analysis', () => {
   it('returns root causes for simple anomalous graph', async () => {
-    const { res, json } = await fetchApi('/analyze', 'POST', {
+    const { res, json } = await fetchApi('/v1/analyze', 'POST', {
       graph: {
         nodes: ['Memory', 'CPU', 'Latency'],
         edges: [
@@ -133,15 +133,15 @@ describe('POST /analyze — Root Cause Analysis', () => {
   });
 
   it('returns 400 when graph is missing', async () => {
-    const { res, json } = await fetchApi('/analyze', 'POST', { data: [[1]], anomalousNodes: ['A'] });
+    const { res, json } = await fetchApi('/v1/analyze', 'POST', { data: [[1]], anomalousNodes: ['A'] });
     expect(res.status).toBe(400);
     expect(json.success).toBe(false);
   });
 });
 
-describe('POST /estimate — Effect Estimation', () => {
+describe('POST /v1/estimate — Effect Estimation', () => {
   it('returns causal effect for simple treatment-outcome', async () => {
-    const { res, json } = await fetchApi('/estimate', 'POST', {
+    const { res, json } = await fetchApi('/v1/estimate', 'POST', {
       graph: {
         nodes: ['Treatment', 'Outcome'],
         edges: [{ source: 'Treatment', target: 'Outcome' }],
@@ -167,7 +167,7 @@ describe('POST /estimate — Effect Estimation', () => {
   });
 
   it('returns 400 when treatment is missing', async () => {
-    const { res, json } = await fetchApi('/estimate', 'POST', {
+    const { res, json } = await fetchApi('/v1/estimate', 'POST', {
       graph: { nodes: ['X', 'Y'], edges: [{ source: 'X', target: 'Y' }] },
       outcome: 'Y',
       data: [[1, 2]],
@@ -177,7 +177,7 @@ describe('POST /estimate — Effect Estimation', () => {
   });
 
   it('returns 400 when treatment/outcome not in graph nodes', async () => {
-    const { res, json } = await fetchApi('/estimate', 'POST', {
+    const { res, json } = await fetchApi('/v1/estimate', 'POST', {
       graph: { nodes: ['A', 'B'], edges: [{ source: 'A', target: 'B' }] },
       treatment: 'X',
       outcome: 'Y',
@@ -216,13 +216,13 @@ describe('Error Handling', () => {
   }, 10000);
 
   it('includes requestId in error responses', async () => {
-    const { res, json } = await fetchApi('/discover', 'POST', {});
+    const { res, json } = await fetchApi('/v1/discover', 'POST', {});
     expect(res.status).toBe(400);
     expect(typeof json.requestId).toBe('string');
   });
 
   it('returns 500 for discover with null data triggering internal error', async () => {
-    const { res, json } = await fetchApi('/discover', 'POST', { data: null, nodeNames: ['X', 'Y'] });
+    const { res, json } = await fetchApi('/v1/v1/discover', 'POST', { data: null, nodeNames: ['X', 'Y'] });
     expect(res.status).toBeGreaterThanOrEqual(400);
     expect(json.success).toBe(false);
     expect(typeof json.error).toBe('string');

@@ -8,6 +8,9 @@
  *   causal-analyzer serve --port 3000
  *   causal-analyzer version
  *
+ * Environment variables:
+ *   CAUSALITY_API_TOKEN — if set, all /v1/* endpoints require Bearer token auth.
+ *
  * @packageDocumentation
  */
 import { readFileSync } from 'fs';
@@ -30,9 +33,9 @@ function parseArgs(argv: string[]): { cmd: string; args: CliArgs } {
   let i = 1;
   while (i < argv.length) {
     const a = argv[i];
-    if (a === '--nodes' && i + 1 < argv.length) { args.nodes = argv[++i].split(','); }
-    else if (a === '--slis' && i + 1 < argv.length) { args.slis = argv[++i].split(','); }
-    else if (a === '--port' && i + 1 < argv.length) { args.port = parseInt(argv[++i], 10); }
+    if (a === '--nodes' && i + 1 < argv.length) { args.nodes = argv[++i]!.split(','); }
+    else if (a === '--slis' && i + 1 < argv.length) { args.slis = argv[++i]!.split(','); }
+    else if (a === '--port' && i + 1 < argv.length) { args.port = parseInt(argv[++i]!, 10); }
     else if (!a.startsWith('--')) { args.file = a; }
     i++;
   }
@@ -47,8 +50,11 @@ function main(): void {
 Commands:
   discover <file.json> --nodes A,B,C    PC causal discovery
   analyze  <file.json> --slis CPU,Lat   CIRCA root cause analysis
-  serve    --port 3000                  REST API server (health only)
+  serve    --port 3000                  REST API server (with Auth)
   version                              Show version
+
+Environment:
+  CAUSALITY_API_TOKEN    Bearer token for API authentication (optional)
 `);
     process.exit(0);
   }
@@ -68,7 +74,7 @@ function execDiscover(args: CliArgs): void {
     console.error('Usage: causal-analyzer discover <file.json> --nodes A,B,C');
     process.exit(1);
   }
-  const raw: unknown = JSON.parse(readFileSync(args.file, 'utf-8'));
+  const raw: unknown = JSON.parse(readFileSync(args.file!, 'utf-8'));
   const rawObj = raw as Record<string, unknown>;
   const data = new Matrix((rawObj.data ?? rawObj) as ArrayLike<ArrayLike<number>>);
   const result = pcAlgorithm(data, args.nodes, { alpha: 0.05, stable: true });
@@ -84,7 +90,7 @@ function execAnalyze(args: CliArgs): void {
     console.error('Usage: causal-analyzer analyze <file.json> --slis CPU,Latency');
     process.exit(1);
   }
-  const raw: unknown = JSON.parse(readFileSync(args.file, 'utf-8'));
+  const raw: unknown = JSON.parse(readFileSync(args.file!, 'utf-8'));
   const rawObj = raw as Record<string, unknown>;
   const data = rawObj.data as Record<string, unknown> ?? rawObj;
   const graphData = (rawObj.graph as Record<string, unknown>) ?? { nodes: [] as string[], edges: [] as Array<{ from: string; to: string }> };
@@ -108,17 +114,22 @@ function execAnalyze(args: CliArgs): void {
 
 function execServe(args: CliArgs): void {
   const port = args.port ?? 3000;
-  const server = new CausalityServer();
+  const apiToken = process.env['CAUSALITY_API_TOKEN'] ?? undefined;
+  const serverOpts: { apiToken?: string } = {};
+  if (apiToken) serverOpts.apiToken = apiToken;
+  const server = new CausalityServer(serverOpts);
   server.start(port).then(() => {
-    console.log(`Causality Analyzer API v1.0.0 listening on http://localhost:${port}`);
+    const authNote = apiToken ? ' (auth enabled)' : ' (no auth)';
+    console.log(`Causality Analyzer API v1.0.0 listening on http://localhost:${port}${authNote}`);
     console.log(`Endpoints:`);
-    console.log(`  GET  /health  — health check`);
-    console.log(`  GET  /ready   — readiness probe`);
-    console.log(`  GET  /live    — liveness probe`);
-    console.log(`  GET  /metrics — Prometheus metrics`);
-    console.log(`  POST /discover  — causal discovery`);
-    console.log(`  POST /analyze   — root cause analysis`);
-    console.log(`  POST /estimate  — effect estimation`);
+    console.log(`  GET  /health       — combined health check`);
+    console.log(`  GET  /ready        — readiness probe`);
+    console.log(`  GET  /live         — liveness probe`);
+    console.log(`  GET  /metrics      — Prometheus metrics`);
+    console.log(`  GET  /v1/openapi.json — OpenAPI 3.1 spec`);
+    console.log(`  POST /v1/discover  — causal discovery`);
+    console.log(`  POST /v1/analyze   — root cause analysis`);
+    console.log(`  POST /v1/estimate  — effect estimation`);
   });
 }
 
