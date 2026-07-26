@@ -12,7 +12,7 @@
     "prepare-pages": "node scripts/prepare-pages.cjs"
   },
   "devDependencies": {
-    "@playwright/test": "^1.61.1",
+    "@playwright/test": "^1.62.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^26.1.1",
     "@types/pg": "^8.20.0",
