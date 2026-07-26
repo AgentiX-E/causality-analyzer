@@ -75,7 +75,8 @@ export function sachsGraph(): CausalGraph {
   g.addEdge('Plcg', 'PIP2');
   g.addEdge('Plcg', 'PIP3');
   g.addEdge('PIP3', 'PIP2');
-  g.addEdge('PIP2', 'PKC');
+  // Note: PIP2→PKC removed — canonical Sachs network (Sachs et al., Science 2005)
+  // has PKC→Plcg→PIP3→PIP2 without a cycle back to PKC.
   g.addEdge('Akt', 'Erk');
   return g;
 }
