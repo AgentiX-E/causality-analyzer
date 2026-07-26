@@ -2,7 +2,7 @@
 
 > Foundation layer — types, interfaces, universal data primitives, and shared math.
 
-[![npm](https://img.shields.io/badge/version-0.1.0-blue)](https://www.npmjs.com/package/@agentix-e/causality-analyzer-core)
+[![npm](https://img.shields.io/npm/v/@agentix-e/causality-analyzer-core?label=npm)](https://npmjs.com/package/@agentix-e/causality-analyzer-core)
 
 ## Overview
 

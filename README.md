@@ -1,11 +1,12 @@
-# Causality Analyzer v1.0.0
+# Causality Analyzer v1.1.0
 
-> The most complete causal AI library for TypeScript — modular packages for anomaly detection, causal discovery, root cause analysis, effect estimation, counterfactual reasoning, and visualization. Enterprise-grade security, CI-verified quality, DoWhy cross-validated correctness.
+> The most complete causal AI library for TypeScript — 6 modular packages for anomaly detection, causal discovery, root cause analysis, effect estimation, counterfactual reasoning, and visualization. Enterprise-grade security, CI-verified quality, browser + Node.js + PostgreSQL + Neo4j storage.
 
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![CI](https://github.com/AgentiX-E/causality-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/AgentiX-E/causality-analyzer/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-99.8%25_core_%7C_95.3%25_pipeline-brightgreen)](https://agentix-e.github.io/causality-analyzer/coverage/)
-[![Tests](https://img.shields.io/badge/tests-1182%20passed-brightgreen)](.)
+[![Coverage](https://img.shields.io/badge/coverage-core_99.8%25_pipeline_94.1%25-brightgreen)](.)
+[![Tests](https://img.shields.io/badge/tests-1746_passed-brightgreen)](.)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue)](https://github.com/AgentiX-E/causality-analyzer)
 
 ## Why Causality Analyzer?
 
@@ -18,14 +19,14 @@
 | SCM + Counterfactuals | ✓ | ✗ | **ANM/PN + auto-assign + abduction framework** |
 | Bayesian Networks | ✗ | ✗ | **5 inference engines + Dirichlet learning** |
 | Sensitivity + Refutation | ✓ | ✗ | **E-value + partial R² + 5 refuters (Bootstrap/Placebo/DataSubset/RandomCommonCause/DummyOutcome)** |
-| Enterprise Security | ✗ | ✗ | **mTLS + AES-256-GCM + audit trail (SHA-256)** |
-| Web Components | ✗ | ✗ | **Lit 3 + Canvas2D + uPlot + ARIA** |
-| HTTP API + Docker | ✗ | ✗ | **7 REST endpoints + compose (PostgreSQL + Neo4j)** |
+| Enterprise Security | ✗ | ✗ | **mTLS + Bearer Token + AES-256-GCM + audit trail** |
+| Web Components | ✗ | ✗ | **Lit 3 + Canvas2D + ARIA** |
+| HTTP API + Docker | ✗ | ✗ | **11 endpoints (OpenAPI 3.1) + compose (PostgreSQL + Neo4j)** |
+| Browser Storage | ✗ | ✗ | **WASM SQLite + OPFS (offline persistence)** |
 | Streaming | ✗ | ✗ | **Sliding window OnlinePC + drift detection** |
-| Uplift Modeling | ✗ | ✗ | **Qini curve + AUUC + uplift@k** |
-| Model Serialization | ✗ | ✗ | **CausalGraph + SCM JSON** |
-| TypeScript Native | ✗ | ✓ | **Strict mode (99% core / 95% pipeline) + DI + ISP** |
-| CI Quality | Basic | None | **recommendedTypeChecked ESLint, 5 job pipeline, d-sep validated** |
+| Model Serialization | ✗ | ✗ | **CausalGraph + SCM + FFNMechanism JSON** |
+| Graph Similarity | ✗ | ✗ | **Causal structural fingerprint + Cosine** |
+| CI Quality | Basic | None | **Lint(6 pkgs) + Build(6) + Test(1746) + Playwright E2E + Neo4j** |
 
 ## Quick Start
 
@@ -133,22 +134,22 @@ docker compose up -d  # pipeline + PostgreSQL + Neo4j
 
 ## Packages
 
-| Package | Description |
-|---------|-------------|
-| `@agentix-e/causality-analyzer-core` | Types, interfaces, math, ColumnarTable, plugin registry, L-BFGS/Adam optimizers |
-| `@agentix-e/causality-analyzer-pipeline` | Detection, discovery, RCA, inference, GCM, visualization data, HTTP server |
-| `@agentix-e/causality-analyzer-storage-embed` | SQLite + OverGraph embedded stores |
-| `@agentix-e/causality-analyzer-storage-remote` | PostgreSQL + Neo4j with mTLS |
-| `@agentix-e/causality-analyzer-visual` | Lit 3 Web Components for causal graphs + time series |
+| Package | v1.1.0 | Description |
+|---------|--------|-------------|
+| `core` | [![npm](https://img.shields.io/npm/v/@agentix-e/causality-analyzer-core)](https://npmjs.com/@agentix-e/causality-analyzer-core) | Types, interfaces, math, ColumnarTable, graph-similarity, OTel |
+| `pipeline` | [![npm](https://img.shields.io/npm/v/@agentix-e/causality-analyzer-pipeline)](https://npmjs.com/@agentix-e/causality-analyzer-pipeline) | 32 algorithms, RCA, inference, GCM, HTTP API (mTLS+OpenAPI) |
+| `storage-embed` | [![npm](https://img.shields.io/npm/v/@agentix-e/causality-analyzer-storage-embed)](https://npmjs.com/@agentix-e/causality-analyzer-storage-embed) | Node.js: node:sqlite + OverGraph |
+| `storage-browser` | [![npm](https://img.shields.io/npm/v/@agentix-e/causality-analyzer-storage-browser)](https://npmjs.com/@agentix-e/causality-analyzer-storage-browser) | Browser: WASM SQLite + OPFS |
+| `storage-remote` | [![npm](https://img.shields.io/npm/v/@agentix-e/causality-analyzer-storage-remote)](https://npmjs.com/@agentix-e/causality-analyzer-storage-remote) | PostgreSQL + Neo4j (mTLS) |
+| `visual` | [![npm](https://img.shields.io/npm/v/@agentix-e/causality-analyzer-visual)](https://npmjs.com/@agentix-e/causality-analyzer-visual) | Lit 3 Web Components + Canvas2D |
 
 ## Development
 
 ```bash
 pnpm install
 pnpm run --filter @agentix-e/causality-analyzer-core build
-pnpm -r test       # 1278 tests (254 core + 1024 pipeline)
-pnpm -r typecheck  # strict TypeScript (exactOptionalPropertyTypes, noUncheckedIndexedAccess)
-pnpm -r lint       # ESLint recommendedTypeChecked
+pnpm -r test       # 1746 tests (292 core + 1233 pipeline + 33 embed + 20 browser + 52 remote + 112 visual)
+pnpm -r lint       # ESLint, 6 packages, 0 errors
 ```
 
 ## References

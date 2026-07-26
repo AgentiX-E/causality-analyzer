@@ -794,11 +794,159 @@ const placebo = refutePlaceboTreatment(data, 0, 1, 50, HARDCODED_SEED);
 
 ### "Do I need PostgreSQL and Neo4j?"
 
-No. For development and single-node production:
-- Use `EmbedRelationalStore` (SQLite)
-- Use `EmbedGraphStore` (OverGraph)
+No. Causality Analyzer supports **four storage backends** — choose based on your deployment:
 
-Remote stores are for enterprise deployments that need replication, failover, or existing PostgreSQL/Neo4j infrastructure.
+| Backend | Package | When to Use |
+|---------|---------|-------------|
+| **node:sqlite** | `storage-embed` | Node.js CLI/script, single-node server |
+| **WASM SQLite + OPFS** | `storage-browser` | Browser app, offline PWA, client-side analysis |
+| **PostgreSQL** | `storage-remote` | Enterprise server, replication, existing PG infra |
+| **Neo4j** | `storage-remote` | Large graphs (>1000 nodes), graph queries |
+
+Storage backends are **interchangeable** — all implement `IRelationalStore` and `IGraphStore`. Switch by changing one import.
+
+### "Can I run this in a browser?"
+
+**Yes.** `storage-browser` uses WASM SQLite with OPFS for full offline persistence:
+
+```typescript
+// Runs entirely in the browser — no server needed
+import { WorkerSqlitePort, WasmRelationalStore } from '@agentix-e/causality-analyzer-storage-browser';
+const port = new WorkerSqlitePort(new URL('./worker.js', import.meta.url));
+const store = new WasmRelationalStore(port);
+// Data survives page reloads via OPFS
+```
+
+### "How do I secure the HTTP API?"
+
+Two authentication layers, combinable:
+
+1. **Bearer Token** — set `CAUSALITY_API_TOKEN` env var
+2. **mTLS** — set `CAUSALITY_TLS_CERT` + `CAUSALITY_TLS_KEY` env vars
+
+```bash
+# Option 1: Bearer
+CAUSALITY_API_TOKEN=$(openssl rand -hex 32) causal-analyzer serve
+
+# Option 2: mTLS
+CAUSALITY_TLS_CERT="..." CAUSALITY_TLS_KEY="..." causal-analyzer serve
+
+# Option 3: Both
+CAUSALITY_API_TOKEN=xxx CAUSALITY_TLS_CERT=... CAUSALITY_TLS_KEY=... causal-analyzer serve
+```
+
+See [Production Deployment Guide →](./production-deployment.md) for full details.
+
+---
+
+## Usage Scenarios — Complete Reference
+
+### Scenario 1: CLI Incident Response
+
+```bash
+# Discover causal structure from metrics
+causal-analyzer discover metrics.json --nodes CPU,Memory,Latency,Disk,Network
+
+# Find root cause of CPU + Latency spike
+causal-analyzer analyze anomaly.json --slis CPU,Latency
+```
+
+### Scenario 2: Node.js REST API Server
+
+```typescript
+import { CausalityServer } from '@agentix-e/causality-analyzer-pipeline';
+const server = new CausalityServer({ apiToken: process.env.CAUSALITY_API_TOKEN });
+await server.start(3000);
+// POST /v1/discover, POST /v1/analyze, POST /v1/estimate
+// GET /v1/openapi.json, GET /health, GET /metrics
+```
+
+### Scenario 3: Browser SPA (Offline-First)
+
+```typescript
+// Progressive Web App with local causality analysis
+import { WorkerSqlitePort, WasmRelationalStore, WasmGraphStore } from '@agentix-e/causality-analyzer-storage-browser';
+import { pcAlgorithm, HeuristicPathRCA } from '@agentix-e/causality-analyzer-pipeline';
+
+const port = new WorkerSqlitePort(new URL('./sqlite-worker.js', import.meta.url));
+const relStore = new WasmRelationalStore(port);
+const graphStore = new WasmGraphStore(port);
+
+// Upload CSV → discover graph → find root causes → all offline
+```
+
+### Scenario 4: Docker Compose Production
+
+```yaml
+# docker-compose.yml
+services:
+  pipeline:
+    image: causality-analyzer:latest
+    environment:
+      - CAUSALITY_API_TOKEN=${TOKEN}
+      - DATABASE_URL=postgres://causality:password@postgres:5432/causality
+      - NEO4J_BOLT_URI=bolt://neo4j:7687
+    ports: ['3000:3000']
+  postgres: ...
+  neo4j: ...
+```
+
+### Scenario 5: Jupyter Notebook (TypeScript Kernel)
+
+```typescript
+import { pcAlgorithm, gesAlgorithm } from '@agentix-e/causality-analyzer-pipeline';
+import { DirectSqlitePort, WasmRelationalStore } from '@agentix-e/causality-analyzer-storage-browser';
+
+// Explore causal relationships interactively
+const data = new Matrix(csvData);
+const { graph } = pcAlgorithm(data, columns, { alpha: 0.01 });
+const result = gesAlgorithm(data, columns);
+```
+
+### Scenario 6: CI/CD Pipeline Integration
+
+```yaml
+# .github/workflows/analyze.yml
+- run: |
+    npx causal-analyzer discover perf-data.json --nodes $(cat nodes.txt)
+    npx causal-analyzer analyze anomaly.json --slis p95_latency
+```
+
+### Scenario 7: Edge / IoT Device
+
+```typescript
+// Raspberry Pi, Edge gateway: embedded SQLite, no external deps
+import { EmbedRelationalStore, EmbedGraphStore } from '@agentix-e/causality-analyzer-storage-embed';
+const store = new EmbedRelationalStore({ dbPath: '/data/causality.db' });
+```
+
+### Scenario 8: Grafana Plugin / Dashboard
+
+```html
+<!-- Web Component in Grafana panel -->
+<ca-causal-graph data='{"nodes":[...],"edges":[...]}'></ca-causal-graph>
+<ca-root-cause-ranking data='{"rootCauses":[...]}'></ca-root-cause-ranking>
+```
+
+### Scenario 9: Multi-Tenant SaaS
+
+```typescript
+// One PostgreSQL schema per tenant, Neo4j database per tenant
+const store = new RemoteRelationalStore({
+  connectionString: `postgres://${tenant}:${tenant}@host/${tenant}_db`,
+  mtls: { cert, key, ca },
+});
+```
+
+### Scenario 10: Offline Data Science Desktop App
+
+```typescript
+// Electron app with local SQLite + optional remote sync
+import { EmbedRelationalStore } from '@agentix-e/causality-analyzer-storage-embed';
+const local = new EmbedRelationalStore({ dbPath: path.join(appData, 'causality.db') });
+// Periodically sync to PostgreSQL
+const remote = new RemoteRelationalStore({ connectionString: process.env.SYNC_DB });
+```
 
 ---
 

@@ -2,7 +2,7 @@
 
 > Embedded storage for relational metrics and causal graphs — zero-configuration persistence.
 
-[![npm](https://img.shields.io/badge/version-0.1.0-blue)](https://www.npmjs.com/package/@agentix-e/causality-analyzer-storage-embed)
+[![npm](https://img.shields.io/npm/v/@agentix-e/causality-analyzer-storage-embed?label=npm)](https://npmjs.com/package/@agentix-e/causality-analyzer-storage-embed)
 
 ## Overview
 

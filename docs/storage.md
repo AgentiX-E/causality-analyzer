@@ -2,15 +2,17 @@
 
 ## Choosing a Backend
 
-| Criteria | Embedded | Remote |
-|----------|----------|--------|
-| **Setup** | Zero config | PostgreSQL + Neo4j servers |
-| **Persistence** | File-based (SQLite, OverGraph) | Server-managed |
-| **Performance** | Single-process, in-memory possible | Connection-pooled, UNWIND batched |
-| **Replication/Backup** | Manual file copy | Native PostgreSQL + Neo4j |
-| **Testing** | Direct instantiation | Instance injection (pg-mem, BoltMock) |
-| **mTLS** | N/A | Full support (Bolt + PG-wire) |
-| **Best For** | Development, single-node, CI | Production, multi-node, enterprise |
+| Criteria | Embedded (Node) | Browser | Remote |
+|----------|:---:|:---:|:---:|
+| **Package** | storage-embed | storage-browser | storage-remote |
+| **Setup** | Zero config | Worker + OPFS | PostgreSQL + Neo4j |
+| **Persistence** | File (node:sqlite) | OPFS (survives reload) | Server-managed |
+| **Offline** | ✅ | ✅ | ❌ |
+| **Browser** | ❌ | ✅ | ❌ |
+| **mTLS** | N/A | N/A | ✅ |
+| **Best For** | CLI, server, CI | PWA, SPA, desktop | Enterprise, multi-node |
+
+All three implement `IRelationalStore` + `IGraphStore`. Pipeline code identical across backends.
 
 ---
 
@@ -50,6 +52,39 @@ const id = await store.saveGraph(graph, metadata);
 const latest = await store.loadGraph(id);
 const v2 = await store.loadGraphVersion(id, 2);
 ```
+
+---
+
+## Browser Storage (WASM SQLite + OPFS)
+
+### Architecture
+
+```
+Main Thread              Web Worker
+WasmRelationalStore ───▶ sqlite-worker.ts
+WasmGraphStore      ◀─── OPFS + WASM SQLite
+```
+
+The `SqlitePort` abstraction (`DirectSqlitePort` for vitest, `WorkerSqlitePort` for browser) makes the same `WasmRelationalStore`/`WasmGraphStore` code run identically in both environments.
+
+### WasmRelationalStore
+
+Identical SQL schema to storage-embed. Supports all `IRelationalStore` operations including SAVEPOINT/ROLLBACK.
+
+### WasmGraphStore
+
+Stores causal graphs in `graph_nodes` + `graph_edges` SQLite tables. Supports versioning and causal fingerprint-based similarity search.
+
+### Browser Support
+
+| Browser | Min Version |
+|---------|------------|
+| Chrome | 102+ |
+| Edge | 102+ |
+| Firefox | 111+ |
+| Safari | 15.2+ |
+
+Requires HTTPS or localhost (OPFS = secure context only).
 
 ---
 
