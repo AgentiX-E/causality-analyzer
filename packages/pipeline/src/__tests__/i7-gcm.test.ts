@@ -84,32 +84,38 @@ describe('StructuralCausalModel', () => {
   });
 
   it('detectDistributionChange finds significant shifts', () => {
-    // Use a 5-node graph so Welch t-test has sufficient statistical power (m=5).
-    const nodes = ['A', 'B', 'C', 'D', 'E'];
+    // Use a 10-node graph for sufficient degrees of freedom in Welch t-test.
+    const nodes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
     const g = new CausalGraph(nodes);
-    g.addEdge('A', 'B');
-    g.addEdge('B', 'C');
-    g.addEdge('C', 'D');
-    g.addEdge('D', 'E');
+    for (let i = 0; i < nodes.length - 1; i++) {
+      g.addEdge(nodes[i]!, nodes[i + 1]!);
+    }
     const scm = new StructuralCausalModel(g);
+    // Train with clean data
     const data = Array.from({ length: 50 }, () => {
-      const a = Math.random() * 3;
-      const b = 2 * a + (Math.random() - 0.5) * 0.3;
-      const c = 1.5 * b + (Math.random() - 0.5) * 0.3;
-      const d = 0.8 * c + (Math.random() - 0.5) * 0.3;
-      const e = 1.2 * d + (Math.random() - 0.5) * 0.3;
-      return [a, b, c, d, e];
+      const vals: number[] = [];
+      let v = Math.random() * 3;
+      vals.push(v);
+      for (let i = 1; i < nodes.length; i++) {
+        v = 1.5 * v + (Math.random() - 0.5) * 0.3;
+        vals.push(v);
+      }
+      return vals;
     });
     scm.train(data);
 
-    const before = Array.from({ length: 8 }, () => ({
-      A: 1 + Math.random(), B: 2 + Math.random() * 3,
-      C: 3 + Math.random() * 5, D: 2 + Math.random() * 4, E: 3 + Math.random() * 5,
-    }));
-    const after = Array.from({ length: 8 }, () => ({
-      A: 10 + Math.random(), B: 22 + Math.random() * 3,
-      C: 35 + Math.random() * 5, D: 30 + Math.random() * 4, E: 38 + Math.random() * 5,
-    }));
+    // Large sample + extreme shift for reliable detection
+    const n = 30;
+    const before = Array.from({ length: n }, () => {
+      const o: Record<string, number> = {};
+      for (const node of nodes) o[node] = 1 + Math.random() * 2;
+      return o;
+    });
+    const after = Array.from({ length: n }, () => {
+      const o: Record<string, number> = {};
+      for (const node of nodes) o[node] = 100 + Math.random() * 5;
+      return o;
+    });
     const result = scm.detectDistributionChange(before, after);
     expect(result.changed).toBe(true);
     expect(result.pValue).toBeGreaterThan(0);

@@ -210,14 +210,19 @@ export function gesAlgorithm(
           const delta = bicNew - bicOld;
           if (delta > bestDelta) { bestDelta = delta; bestRemove = [v, u]; }
         } else {
-          // Undirected edge: check both directions
-          const bicNew1 = computeBIC(u, []);
-          const bicOld1 = computeBIC(u, [v]);
+          // Undirected edge u—v: treat v as a potential parent of u OR
+          // u as potential parent of v.  Score with full existing parent sets.
+          const vParents = [...g.parents(v)];
+
+          // Direction 1: v→u (v as parent of u)
+          const bicNew1 = computeBIC(u, currentParents);            // remove v
+          const bicOld1 = computeBIC(u, [...currentParents, v]);    // add v as parent
           const delta1 = bicNew1 - bicOld1;
           if (delta1 > bestDelta) { bestDelta = delta1; bestRemove = [v, u]; }
 
-          const bicNew2 = computeBIC(v, []);
-          const bicOld2 = computeBIC(v, [u]);
+          // Direction 2: u→v (u as parent of v)
+          const bicNew2 = computeBIC(v, vParents);                // remove u
+          const bicOld2 = computeBIC(v, [...vParents, u]);        // add u as parent
           const delta2 = bicNew2 - bicOld2;
           if (delta2 > bestDelta) { bestDelta = delta2; bestRemove = [u, v]; }
         }
