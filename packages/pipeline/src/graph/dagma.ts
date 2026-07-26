@@ -30,12 +30,12 @@ export interface DAGMAConfig {
 }
 
 const DEFAULTS: DAGMAConfig = {
-  lambda1: 0.1,
+  lambda1: 0.001,
   rho: 1.0,
   rhoFactor: 10,
   maxOuterIter: 15,
   tol: 1e-8,
-  wThreshold: 0.3,
+  wThreshold: 0.1,
 };
 
 export function dagmaAlgorithm(

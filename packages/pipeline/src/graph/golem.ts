@@ -27,7 +27,7 @@ const DEFAULTS: GOLEMConfig = {
   lr: 0.01,
   maxIter: 5000,
   tol: 1e-6,
-  wThreshold: 0.3,
+  wThreshold: 0.1,
   optimizer: 'adam',
 };
 

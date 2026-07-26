@@ -30,12 +30,12 @@ export interface NOTEARSConfig {
 }
 
 const DEFAULTS: NOTEARSConfig = {
-  lambda1: 0.1,
+  lambda1: 0.001,
   rho: 1.0,
   rhoFactor: 10,
   maxOuterIter: 20,
   tol: 1e-8,
-  wThreshold: 0.3,
+  wThreshold: 0.1,
 };
 
 // ── Public API ────────────────────────────────────────────────────────
@@ -75,8 +75,6 @@ export function notearsAlgorithm(
     }
 
   // Augmented Lagrangian outer loop
-  // α is a SCALAR Lagrange multiplier for the single constraint h(W)=0.
-  // Zheng et al. (2018) §3.2: L_ρ(W,α) = f(W) + λ‖W‖₁ + α·h(W) + (ρ/2)·h(W)²
   let W = new Float64Array(d * d);
   let alpha = 0;
   let rho = cfg.rho,
