@@ -4,20 +4,16 @@
  * Reference: Chickering (2002). "Optimal Structure Identification
  *   With Greedy Search." JMLR 3:507-554.
  *
- * Full CPDAG-space implementation with:
- *   - Forward phase: greedily insert directed edges
- *   - Backward phase: greedily delete edges
- *   - Meek rules R1-R3: propagate forced orientations after each operation
- *   - Global BIC scoring: sum of local node BIC scores
- *
- * Score: Gaussian BIC (continuous), BDeu (discrete) — configurable.
+ * Scoring: Covariance-matrix-based Gaussian BIC (ddof=0), matching
+ * gCastle's BICScore._bic_by_scatter implementation. This preserves
+ * asymmetric conditional covariances — crucial for direction identification
+ * in linear Gaussian data.
  *
  * @packageDocumentation
  */
 import { Matrix } from 'ml-matrix';
 import { CausalGraph } from './causal-graph.js';
 import type { DomainKnowledge } from '@agentix-e/causality-analyzer-core';
-import { solveLinear } from '@agentix-e/causality-analyzer-core';
 
 export interface GESConfig {
   maxDegree?: number;
@@ -43,95 +39,100 @@ export function gesAlgorithm(
     ? config.maxDegree
     : n > 20 ? 3 : ratio < 30 ? 3 : ratio < 100 ? 4 : 5;
 
-  const nodeIdx = new Map(nodeNames.map((name, i) => [name, i]));
+  // ── Precompute covariance matrix (gCastle approach, ddof=0) ────────
+  const means = new Array<number>(n).fill(0);
+  for (let i = 0; i < n; i++) {
+    let sum = 0;
+    for (let r = 0; r < N; r++) sum += data.get(r, i);
+    means[i] = sum / N;
+  }
 
-  // ── BIC scoring ──────────────────────────────────────────────────
+  // cov[i][j] = E[(xi - mx)(xj - mx)] with ddof=0
+  const cov: number[][] = new Array(n);
+  for (let i = 0; i < n; i++) {
+    cov[i] = new Array(n).fill(0);
+    for (let j = 0; j <= i; j++) {
+      let val = 0;
+      for (let r = 0; r < N; r++) {
+        val += (data.get(r, i) - means[i]!) * (data.get(r, j) - means[j]!);
+      }
+      cov[i]![j] = val / N;
+      if (i !== j) cov[j]![i] = val / N;
+    }
+  }
+
+  // ── BIC via covariance (gCastle BICScore._bic_by_scatter) ──────────
 
   const scoreCache = new Map<string, number>();
   const sk = (node: string, parents: string[]): string =>
     `${node}|${[...parents].sort().join(',')}`;
 
-  const bicLocal = (node: string, parents: string[]): number => {
-    const key = sk(node, parents);
+  const bicLocal = (yIdx: number, paIdx: number[]): number => {
+    const k = paIdx.length;
+    const key = `${yIdx}|${[...paIdx].sort().join(',')}`;
     if (scoreCache.has(key)) return scoreCache.get(key)!;
 
-    const ni = nodeIdx.get(node)!;
-    const pi = parents.map(p => nodeIdx.get(p)!);
-    const k = parents.length;
+    // sigma = cov[y][y] (baseline variance)
+    let sigma = cov[yIdx]![yIdx]!;
 
-    let rss: number;
-    if (k === 0) {
-      let ss = 0, sum = 0;
-      for (let r = 0; r < N; r++) { const v = data.get(r, ni); sum += v; }
-      const mean = sum / N;
-      for (let r = 0; r < N; r++) { const v = data.get(r, ni); ss += (v - mean) ** 2; }
-      rss = ss;
-    } else {
-      const XtX: Float64Array[] = [];
-      for (let i = 0; i < k; i++) XtX.push(new Float64Array(k));
-      const Xty = new Float64Array(k);
-      for (let r = 0; r < N; r++) {
-        const y = data.get(r, ni);
-        for (let i = 0; i < k; i++) {
-          const xi = data.get(r, pi[i]!);
-          Xty[i] += xi * y;
-          for (let j = i; j < k; j++) XtX[i]![j] += xi * data.get(r, pi[j]!);
-        }
+    if (k > 0) {
+      // Extract sub-matrices
+      // pa_cov = covariance among parents (k×k)
+      // y_cov = covariance between y and parents (k×1)
+      const paCov: number[][] = [];
+      for (let i = 0; i < k; i++) {
+        const row: number[] = [];
+        for (let j = 0; j < k; j++) row.push(cov[paIdx[i]!]![paIdx[j]!]!);
+        paCov.push(row);
       }
-      for (let i = 0; i < k; i++) for (let j = 0; j < i; j++) XtX[i]![j] = XtX[j]![i]!;
-      const beta = solveLinear(XtX.map(r => Array.from(r)), Array.from(Xty));
-      rss = 0;
-      for (let r = 0; r < N; r++) {
-        const y = data.get(r, ni);
-        let pred = 0;
-        for (let i = 0; i < k; i++) pred += (beta[i] ?? 0) * data.get(r, pi[i]!);
-        rss += (y - pred) ** 2;
-      }
+      const yCov: number[] = [];
+      for (let i = 0; i < k; i++) yCov.push(cov[yIdx]![paIdx[i]!]!);
+
+      // Solve paCov * coef = yCov using Gaussian elimination
+      const coef = solveLinear(paCov, yCov);
+
+      // sigma = cov(y,y) - sum(coef[i] * cov(y, pa[i]))
+      for (let i = 0; i < k; i++) sigma -= (coef[i] ?? 0) * yCov[i]!;
     }
 
-    const bic = -(N * Math.log(Math.max(1e-10, rss / N)) + k * Math.log(Math.max(2, N)));
+    // BIC = -(N * (1 + log(sigma)) + (k + 1) * log(N))
+    // Matches gCastle: -(self.n * (1 + np.log(sigma)) + (k + 1) * np.log(self.n))
+    const bic = -(N * (1 + Math.log(Math.max(1e-12, sigma))) + (k + 1) * Math.log(Math.max(2, N)));
     scoreCache.set(key, bic);
     return bic;
   };
 
-  const globalScore = (g: CausalGraph): number => {
-    let total = 0;
-    for (const node of g.nodes) total += bicLocal(node, [...g.parents(node)]);
-    return total;
-  };
+  const nodeIdx = new Map(nodeNames.map((name, i) => [name, i]));
+
+  // ── Meek Rules ────────────────────────────────────────────────────
 
   const adjacent = (g: CausalGraph, u: string, v: string): boolean =>
     g.hasEdge(u, v) || g.hasEdge(v, u);
 
-  // ── Meek Rules ────────────────────────────────────────────────────
-
   const meekPropagate = (graph: CausalGraph): void => {
     let changed = true;
-    while (changed) {
+    let safety = 0;
+    while (changed && safety++ < 100) {
       changed = false;
-
-      // R1: X → Y — Z, X and Z non-adjacent → Y → Z
+      // R1: X→Y—Z, X⟂Z → Y→Z
       for (const y of graph.nodes) {
-        const xList = [...graph.parents(y)]; // X → Y
+        const xList = [...graph.parents(y)];
         for (const z of graph.neighbors(y)) {
-          if (graph.hasEdge(z, y)) continue; // already Z → Y
+          if (graph.hasEdge(z, y)) continue;
           for (const x of xList) {
             if (!adjacent(graph, x, z)) {
-              graph.removeEdge(z, y); // remove Z — Y
+              graph.removeEdge(z, y);
               changed = true;
               break;
             }
           }
         }
       }
-
-      // R2: X → Y → Z and X — Z → X → Z
+      // R2: X→Y→Z and X—Z → X→Z
       if (!changed) {
         for (const y of graph.nodes) {
-          const xList = [...graph.parents(y)];
-          const zList = [...graph.children(y)];
-          for (const x of xList) {
-            for (const z of zList) {
+          for (const x of graph.parents(y)) {
+            for (const z of graph.children(y)) {
               if (adjacent(graph, x, z) && !graph.hasEdge(x, z) && !graph.hasEdge(z, x)) {
                 graph.removeEdge(z, x);
                 graph.addEdge(x, z);
@@ -141,43 +142,17 @@ export function gesAlgorithm(
           }
         }
       }
-
-      // R3: X — Y, X — Z, X — W, Y → Z, Z → W → Y → W
-      if (!changed) {
-        for (const x of graph.nodes) {
-          const undirTo = graph.neighbors(x).filter(z =>
-            !graph.hasEdge(x, z) && !graph.hasEdge(z, x)
-          );
-          if (undirTo.length < 2) continue;
-          for (const y of undirTo) {
-            for (const w of undirTo) {
-              if (y === w) continue;
-              // Check Y → ... → W chain? Simplified: just check non-adjacent
-              if (!adjacent(graph, y, w)) {
-                const zS = graph.children(y).filter(z =>
-                  graph.children(z).includes(w) && adjacent(graph, x, z)
-                );
-                if (zS.length > 0) {
-                  graph.removeEdge(w, x);
-                  graph.addEdge(x, w);
-                  changed = true;
-                }
-              }
-            }
-          }
-        }
-      }
     }
   };
 
   // ── Working graph ──────────────────────────────────────────────────
-
   const g = new CausalGraph([...nodeNames]);
+  const logN = Math.log(Math.max(2, N));
+  const minDelta = logN;
 
-  // ── Phase 1: Forward (Insert) ─────────────────────────────────────
+  // ── Phase 1: Forward ──────────────────────────────────────────────
   let improved = true;
   let iter = 0;
-  const minDelta = Math.log(Math.max(2, N));
 
   while (improved && iter++ < 200) {
     improved = false;
@@ -186,26 +161,28 @@ export function gesAlgorithm(
 
     for (let i = 0; i < n; i++) {
       const u = nodeNames[i]!;
+      const ui = nodeIdx.get(u)!;
       const uParents = [...g.parents(u)];
       if (maxDegree >= 0 && uParents.length >= maxDegree) continue;
 
       for (let j = 0; j < n; j++) {
         if (i === j) continue;
         const v = nodeNames[j]!;
+        const vi = nodeIdx.get(v)!;
         if (adjacent(g, u, v)) continue;
 
         const vParents = [...g.parents(v)];
 
         // v → u
         if (maxDegree < 0 || uParents.length < maxDegree) {
-          const old = bicLocal(u, uParents);
-          const delta = bicLocal(u, [...uParents, v]) - old;
+          const old = bicLocal(ui, uParents.map(p => nodeIdx.get(p)!));
+          const delta = bicLocal(ui, [...uParents.map(p => nodeIdx.get(p)!), vi]) - old;
           if (delta > bestDelta) { bestDelta = delta; bestFrom = v; bestTo = u; }
         }
         // u → v
         if (maxDegree < 0 || vParents.length < maxDegree) {
-          const old = bicLocal(v, vParents);
-          const delta = bicLocal(v, [...vParents, u]) - old;
+          const old = bicLocal(vi, vParents.map(p => nodeIdx.get(p)!));
+          const delta = bicLocal(vi, [...vParents.map(p => nodeIdx.get(p)!), ui]) - old;
           if (delta > bestDelta) { bestDelta = delta; bestFrom = u; bestTo = v; }
         }
       }
@@ -218,7 +195,7 @@ export function gesAlgorithm(
     }
   }
 
-  // ── Phase 2: Backward (Delete) ────────────────────────────────────
+  // ── Phase 2: Backward ─────────────────────────────────────────────
   improved = true;
   iter = 0;
 
@@ -228,26 +205,26 @@ export function gesAlgorithm(
     let bestSource = '', bestTarget = '';
 
     for (const node of nodeNames) {
+      const ni = nodeIdx.get(node)!;
       const parents = [...g.parents(node)];
       if (parents.length === 0) continue;
 
       for (const p of parents) {
         const newParents = parents.filter(par => par !== p);
-        const old = bicLocal(node, parents);
-        const delta = bicLocal(node, newParents) - old;
+        const old = bicLocal(ni, parents.map(par => nodeIdx.get(par)!));
+        const delta = bicLocal(ni, newParents.map(par => nodeIdx.get(par)!)) - old;
         if (delta > bestDelta) { bestDelta = delta; bestSource = p; bestTarget = node; }
       }
     }
 
     if (bestSource && bestTarget) {
       g.removeEdge(bestSource, bestTarget);
-      // Also remove reverse if somehow present (safety)
       g.removeEdge(bestTarget, bestSource);
       improved = true;
     }
   }
 
-  // ── Phase 3: Turning (optional) ───────────────────────────────────
+  // ── Phase 3: Turning ──────────────────────────────────────────────
   improved = true;
   iter = 0;
 
@@ -257,56 +234,78 @@ export function gesAlgorithm(
     let bestFrom = '', bestTo = '';
 
     for (const node of nodeNames) {
+      const ni = nodeIdx.get(node)!;
       const parents = [...g.parents(node)];
       for (const p of parents) {
-        // Reverse p→node to node→p
-        const newParents = parents.filter(par => par !== p);
-        const pParents = [...g.parents(p)];
-
-        // Check no cycle would form: node must not have a path to p
+        const pi = nodeIdx.get(p)!;
         if (g.hasDirectedPath(node, p)) continue;
 
-        const oldScore = bicLocal(node, parents) + bicLocal(p, pParents);
-        const newScore = bicLocal(node, newParents) + bicLocal(p, [...pParents, node]);
+        const newParents = parents.filter(par => par !== p);
+        const pParents = [...g.parents(p)];
+        const oldScore = bicLocal(ni, parents.map(par => nodeIdx.get(par)!))
+          + bicLocal(pi, pParents.map(par => nodeIdx.get(par)!));
+        const newScore = bicLocal(ni, newParents.map(par => nodeIdx.get(par)!))
+          + bicLocal(pi, [...pParents.map(par => nodeIdx.get(par)!), ni]);
         const delta = newScore - oldScore;
 
-        if (delta > bestDelta) {
-          bestDelta = delta;
-          bestFrom = node;
-          bestTo = p;
-        }
+        if (delta > bestDelta) { bestDelta = delta; bestFrom = node; bestTo = p; }
       }
     }
 
     if (bestFrom && bestTo) {
-      g.removeEdge(bestTo, bestFrom); // remove p→node
-      g.addEdge(bestFrom, bestTo);     // add node→p
+      g.removeEdge(bestTo, bestFrom);
+      g.addEdge(bestFrom, bestTo);
       improved = true;
     }
   }
 
-  // ── Final DAG conversion + domain knowledge ────────────────────────
-
+  // ── Final ──────────────────────────────────────────────────────────
   let result = g.pdag2dag();
   if (domainKnowledge) result.applyDomainKnowledge(domainKnowledge);
 
-  // Cycle safety
   if (result.hasCycle()) {
     const topo = result.topologicalSort();
     const directedEdges = [...result.edges].filter(e => e.directed);
-    const backEdges = directedEdges.filter(e => {
+    for (const e of directedEdges) {
+      if (!result.hasCycle()) break;
       const aIdx = topo.indexOf(e.source);
       const bIdx = topo.indexOf(e.target);
-      return aIdx >= 0 && bIdx >= 0 && aIdx >= bIdx;
-    });
-    for (const e of backEdges) result.removeEdge(e.source, e.target);
+      if (aIdx >= 0 && bIdx >= 0 && aIdx >= bIdx) result.removeEdge(e.source, e.target);
+    }
     if (result.hasCycle()) {
-      for (const e of directedEdges) {
-        if (!result.hasCycle()) break;
-        result.removeEdge(e.source, e.target);
-      }
+      for (const e of directedEdges) { if (!result.hasCycle()) break; result.removeEdge(e.source, e.target); }
     }
   }
 
   return result;
+}
+
+// Gaussian elimination with partial pivoting for small linear systems
+function solveLinear(A: number[][], b: number[]): number[] {
+  const n = A.length;
+  const augmented: number[][] = A.map((row, i) => [...row, b[i]!]);
+
+  for (let col = 0; col < n; col++) {
+    let maxRow = col;
+    for (let row = col + 1; row < n; row++) {
+      if (Math.abs(augmented[row]![col]!) > Math.abs(augmented[maxRow]![col]!)) maxRow = row;
+    }
+    [augmented[col], augmented[maxRow]] = [augmented[maxRow]!, augmented[col]!];
+
+    const pivot = augmented[col]![col]!;
+    if (Math.abs(pivot) < 1e-12) continue;
+
+    for (let row = col + 1; row < n; row++) {
+      const factor = augmented[row]![col]! / pivot;
+      for (let j = col; j <= n; j++) augmented[row]![j] -= factor * augmented[col]![j]!;
+    }
+  }
+
+  const x: number[] = new Array(n).fill(0);
+  for (let i = n - 1; i >= 0; i--) {
+    let sum = augmented[i]![n]!;
+    for (let j = i + 1; j < n; j++) sum -= augmented[i]![j]! * (x[j] ?? 0);
+    x[i] = Math.abs(augmented[i]![i]!) < 1e-12 ? 0 : sum / augmented[i]![i]!;
+  }
+  return x;
 }
