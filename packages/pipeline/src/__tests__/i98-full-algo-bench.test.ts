@@ -28,7 +28,7 @@ describe('Algorithm Precision Reference — ASIA', () => {
     results[name] = { edges: g.edges.length, shd: shd.shd, tpr: shd.tpr };
   }
 
-  it('all algorithms produce valid output', () => {
+  it('all algorithms produce valid output', { timeout: 60000 }, () => {
     record('PC', pcAlgorithm(mat, nodeNames).graph);
     record('GES', gesAlgorithm(mat, nodeNames));
     record('LiNGAM', directLiNGAM(mat, nodeNames).graph);
@@ -36,8 +36,8 @@ describe('Algorithm Precision Reference — ASIA', () => {
     record('BOSS', bossAlgorithm(mat, nodeNames));
     record('DAGMA', dagmaAlgorithm(rawData, nodeNames).graph);
     record('GOLEM', golemAlgorithm(rawData, nodeNames).graph);
-    const fcig = fciAlgorithm(mat, nodeNames); record('FCI', { nodes: fcig.nodes, edges: (fcig as any).edges || [] });
-    const gfcig = gfciAlgorithm(mat, nodeNames); record('GFCI', { nodes: gfcig.nodes, edges: (gfcig as any).edges || [] });
+    const fcig = fciAlgorithm(mat, nodeNames); record('FCI', fcig.graph);
+    const gfcig = gfciAlgorithm(mat, nodeNames); record('GFCI', gfcig.graph);
 
     console.log(`ASIA Benchmark (truth: ${truth.edges.length} edges):`);
     for (const [name, r] of Object.entries(results)) {

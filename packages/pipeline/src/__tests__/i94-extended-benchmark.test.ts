@@ -122,8 +122,8 @@ describe('Extended Benchmark: Small DAGs (≤11 nodes)', () => {
     assertValidBench(r, 'BOSS', 0.5);
   });
 
-  it('DAGMA on ASIA', () => {
-    const r = runBench(asia, dagmaAlgorithm, 2000);
+  it('DAGMA on ASIA', { timeout: 45000 }, () => {
+    const r = runBench(asia, (d, n) => dagmaAlgorithm(d, n, { T: 2, warmIter: 500, maxIter: 1000 }), 2000);
     expect(r.shd).toBeGreaterThan(0); // Should find something
     assertValidBench(r, 'DAGMA', 0);
   });

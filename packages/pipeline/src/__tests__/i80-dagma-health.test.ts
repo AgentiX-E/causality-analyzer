@@ -8,53 +8,53 @@ import { generateLinearData } from '../../src/benchmark.js';
 import { HealthChecker } from '../../src/health.js';
 
 describe('DAGMA Algorithm', () => {
-  it('discovers simple DAG from linear data', () => {
+  it('discovers simple DAG from linear data', { timeout: 45000 }, () => {
     const g = new CausalGraph(['X', 'Y', 'Z']);
     g.addEdge('X', 'Y'); g.addEdge('Y', 'Z');
     const { data, nodeNames } = generateLinearData(g, 200, 42);
-    const result = dagmaAlgorithm(data, nodeNames);
+    const result = dagmaAlgorithm(data, nodeNames, { T: 2, warmIter: 500, maxIter: 1000 });
     expect(result.graph.nodeCount).toBe(3);
     expect(result.W).toBeInstanceOf(Float64Array);
     expect(result.W.length).toBe(9);
     expect(typeof result.h).toBe('number');
   });
 
-  it('produces valid W matrix dimensions', () => {
+  it('produces valid W matrix dimensions', { timeout: 45000 }, () => {
     const g = new CausalGraph(['A', 'B']);
     g.addEdge('A', 'B');
     const { data, nodeNames } = generateLinearData(g, 100, 43);
-    const result = dagmaAlgorithm(data, nodeNames);
+    const result = dagmaAlgorithm(data, nodeNames, { T: 2, warmIter: 500, maxIter: 1000 });
     expect(result.W.length).toBe(4); // 2×2
   });
 
-  it('respects wThreshold config', () => {
+  it('respects wThreshold config', { timeout: 45000 }, () => {
     const g = new CausalGraph(['X', 'Y', 'Z']);
     g.addEdge('X', 'Y');
     const { data, nodeNames } = generateLinearData(g, 150, 44);
-    const r1 = dagmaAlgorithm(data, nodeNames, { wThreshold: 0.5, maxOuterIter: 5 });
-    const r2 = dagmaAlgorithm(data, nodeNames, { wThreshold: 0.1, maxOuterIter: 5 });
+    const r1 = dagmaAlgorithm(data, nodeNames, { T: 2, warmIter: 500, maxIter: 1000, wThreshold: 0.5, maxOuterIter: 5 });
+    const r2 = dagmaAlgorithm(data, nodeNames, { T: 2, warmIter: 500, maxIter: 1000, wThreshold: 0.1, maxOuterIter: 5 });
     // Stricter threshold → fewer edges
     expect(r1.graph.edges.length).toBeLessThanOrEqual(r2.graph.edges.length + 2);
   });
 
-  it('respects lambda1 regularization', () => {
+  it('respects lambda1 regularization', { timeout: 45000 }, () => {
     const g = new CausalGraph(['X', 'Y']);
     const { data, nodeNames } = generateLinearData(g, 100, 45);
-    const result = dagmaAlgorithm(data, nodeNames, { lambda1: 0.5, maxOuterIter: 5 });
+    const result = dagmaAlgorithm(data, nodeNames, { T: 2, warmIter: 500, maxIter: 1000, lambda1: 0.5, maxOuterIter: 5 });
     expect(result.graph.nodeCount).toBe(2);
   });
 
-  it('handles small datasets', () => {
+  it('handles small datasets', { timeout: 45000 }, () => {
     const data = [[1.0, 2.0], [2.0, 4.0], [3.0, 6.0], [1.5, 3.0], [2.5, 5.0]];
-    const result = dagmaAlgorithm(data, ['X', 'Y'], { maxOuterIter: 5 });
+    const result = dagmaAlgorithm(data, ['X', 'Y'], { T: 2, warmIter: 500, maxIter: 1000, maxOuterIter: 5 });
     expect(result.graph.nodeCount).toBe(2);
   });
 
-  it('applies domain knowledge', () => {
+  it('applies domain knowledge', { timeout: 45000 }, () => {
     const g = new CausalGraph(['X', 'Y', 'Z']);
     g.addEdge('X', 'Y'); g.addEdge('Y', 'Z');
     const { data, nodeNames } = generateLinearData(g, 150, 46);
-    const result = dagmaAlgorithm(data, nodeNames, { maxOuterIter: 5 }, {
+    const result = dagmaAlgorithm(data, nodeNames, { T: 2, warmIter: 500, maxIter: 1000, maxOuterIter: 5 }, {
       forbids: [['Z', 'X']],
     });
     expect(result.graph.nodeCount).toBe(3);

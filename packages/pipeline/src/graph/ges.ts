@@ -147,8 +147,7 @@ export function gesAlgorithm(
 
   // ── Working graph ──────────────────────────────────────────────────
   const g = new CausalGraph([...nodeNames]);
-  const logN = Math.log(Math.max(2, N));
-  const minDelta = logN;
+  const minDelta = 0; // gCastle uses 0, accepts any positive delta
 
   // ── Phase 1: Forward ──────────────────────────────────────────────
   let improved = true;

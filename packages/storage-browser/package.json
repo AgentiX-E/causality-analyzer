@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@agentix-e/causality-analyzer-core": "workspace:*",
-    "@sqlite.org/sqlite-wasm": "^3.49.1"
+    "@sqlite.org/sqlite-wasm": "^3.53.0-build1"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.0",

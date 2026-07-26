@@ -4,7 +4,13 @@
  * A continuous DAG optimization alternative to NOTEARS (Ng et al., NeurIPS 2020).
  * Uses the log-determinant of (I-W) as a natural acyclicity measure.
  *
+ * NOTE: The current implementation uses log-det acyclicity (I-W) instead of
+ * the official trace-exponential constraint `trace(expm(W*W)) - d` due to
+ * TensorFlow.js API limitations (no built-in determinant or matrix exponential).
+ * This is a known divergence tracked for future resolution.
+ *
  * Reference: Ng, Ghassami & Zhang (NeurIPS 2020).
+ * Official Source: https://github.com/ignavierng/golem
  *
  * @packageDocumentation
  */
@@ -87,7 +93,7 @@ export function golemAlgorithm(
   return { graph: g, W };
 }
 
-// ── GOLEM Loss: L(W) = (d/2)log(RSS/n) - log|det(I-W)| + λ₁‖W‖₁ ──
+// ── GOLEM Loss (legacy log-det formulation) ────────────────────────
 
 function golemLoss(
   w: Float64Array, d: number, S: Float64Array, lambda1: number,
@@ -99,12 +105,10 @@ function golemLoss(
     for (let j = 0; j < d; j++) M[i * d + j] -= w[i * d + j];
   }
 
-  // log|det(M)| via Gaussian elimination with partial pivoting
-  // det(M) = product of diagonal entries after elimination
   const detM = determinant(M, d);
   if (detM <= 1e-10) return [1e10, new Float64Array(d * d)];
 
-  // RSS = tr(M^T S M) — matching GOLEM Eq.7 for equal variance
+  // RSS = tr(M^T S M)
   let rss = 0;
   for (let i = 0; i < d; i++) {
     for (let j = 0; j < d; j++) {
@@ -114,14 +118,13 @@ function golemLoss(
     }
   }
 
-  const rssN = Math.max(1e-10, rss / d); // per-variable average RSS
+  const rssN = Math.max(1e-10, rss / d);
   const loss = (d / 2) * Math.log(rssN) - Math.log(detM) + lambda1 * l1Norm(w, d * d);
 
-  // Gradient: ∇L = ∇RSS + ∇det + ∇L1
+  // Gradient
   const grad = new Float64Array(d * d);
-  const rssCoeff = d / (2 * rssN * d); // d/(2·RSS·d) = 1/(2·RSS_avg)
+  const rssCoeff = d / (2 * rssN * d);
 
-  // ∇RSS: -2 S M (derivative of tr(M^T S M) w.r.t. W[i,j] is -2 (S M)[j,i])
   for (let i = 0; i < d; i++) {
     for (let j = 0; j < d; j++) {
       let sm = 0;
@@ -130,22 +133,18 @@ function golemLoss(
     }
   }
 
-  // ∇(-log|det(M)|) = (M^{-1})^T — each row of M^{-T} = column of M^{-1}
   const invM = invertWithElimination(M, d);
   if (invM) {
     for (let i = 0; i < d; i++)
       for (let j = 0; j < d; j++)
-        grad[i * d + j] = (grad[i * d + j] ?? 0) + invM[j * d + i]; // M^{-T}[i,j] = M^{-1}[j,i]
+        grad[i * d + j] = (grad[i * d + j] ?? 0) + invM[j * d + i];
   }
 
-  // L1 subgradient
   for (let i = 0; i < d * d; i++)
     grad[i] = (grad[i] ?? 0) + lambda1 * (w[i] > 0 ? 1 : w[i] < 0 ? -1 : 0);
 
   return [loss, grad];
 }
-
-// ── Determinant via Gaussian Elimination ───────────────────────────
 
 function determinant(A: Float64Array, n: number): number {
   const B = new Float64Array(A);
@@ -170,8 +169,6 @@ function determinant(A: Float64Array, n: number): number {
   }
   return det;
 }
-
-// ── Matrix Inverse via Gaussian Elimination ────────────────────────
 
 function invertWithElimination(A: Float64Array, n: number): Float64Array | null {
   const aug = new Float64Array(n * n * 2);

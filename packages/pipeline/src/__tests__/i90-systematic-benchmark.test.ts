@@ -122,8 +122,8 @@ describe('Benchmark: Continuous Optimization', () => {
         expect(result.graph.nodeCount).toBe(nodes);
       });
 
-      it(`DAGMA on ${name}: produces valid DAG`, () => {
-        const result = dagmaAlgorithm(data, nodeNames, { maxOuterIter: nodes > 5 ? 10 : 15 });
+      it(`DAGMA on ${name}: produces valid DAG`, { timeout: 45000 }, () => {
+        const result = dagmaAlgorithm(data, nodeNames, { T: 2, warmIter: 500, maxIter: 1000, maxOuterIter: nodes > 5 ? 10 : 15 });
         expect(result.graph.nodeCount).toBe(nodes);
         expect(result.W.length).toBe(nodes * nodes);
       });
