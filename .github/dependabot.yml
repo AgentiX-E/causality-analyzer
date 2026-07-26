@@ -38,7 +38,6 @@ updates:
           - "patch"
     labels:
       - "dependencies"
-      - "automerge"
     commit-message:
       prefix: "chore(deps)"
       include: "scope"
