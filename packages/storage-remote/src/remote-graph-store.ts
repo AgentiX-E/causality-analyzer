@@ -14,6 +14,7 @@
  * - _Driver DI for test injection (BoltSessionMock)
  */
 import type { IGraphStore, CausalGraph, GraphMetadata, GraphVersion } from '@agentix-e/causality-analyzer-core';
+import { graphSimilarity } from '@agentix-e/causality-analyzer-core';
 import type { MtlsConfig, TrustStrategy } from './types.js';
 import { createRequire } from 'module';
 import { writeFileSync, mkdtempSync } from 'fs';
@@ -149,13 +150,6 @@ const consoleLogger: GraphLogger = {
   error: (msg, meta) => console.error(`[RemoteGraphStore] ${msg}`, meta ?? ''),
   debug: () => { /* no-op by default */ },
 };
-
-function jaccardSimilarity(a: ReadonlyArray<string>, b: ReadonlyArray<string>): number {
-  const sa = new Set(a), sb = new Set(b);
-  const intersection = [...sa].filter(x => sb.has(x)).length;
-  const union = new Set([...sa, ...sb]).size;
-  return union === 0 ? 0 : intersection / union;
-}
 
 // ── RemoteGraphStore ───────────────────────────────────────────────────
 
@@ -426,16 +420,14 @@ export class RemoteGraphStore implements IGraphStore {
     return this.retry(async () => {
       const s = this.driver.session({ defaultAccessMode: 'READ' });
       try {
-        // Get all graph IDs
         const idRec = await s.run('MATCH (g:Graph) RETURN g.id as id');
         const allIds = idRec.records.map((r: RecordLike) => r.get('id') as string);
 
-        // Load each, compute Jaccard similarity, sort descending
         const scored: Array<{ graph: CausalGraph; score: number }> = [];
         for (const gid of allIds) {
           const g = await this.loadGraph(gid);
           if (g) {
-            const score = jaccardSimilarity(target.nodes, g.nodes);
+            const score = graphSimilarity(target, g as unknown as Parameters<typeof graphSimilarity>[1]);
             scored.push({ graph: g, score });
           }
         }

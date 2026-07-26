@@ -109,3 +109,7 @@ export type { LBFGSConfig, LBFGSResult, AdamConfig } from './optimize.js';
 // ©¤©¤ Telemetry ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
 export { Telemetry } from './telemetry.js';
 export type { TelemetrySpan, TelemetryTracer, TelemetrySpanOptions, TelemetryCounter, TelemetryHistogram, TelemetryMeter } from './telemetry.js';
+
+// ©¤©¤ Graph Similarity ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
+export { computeFingerprint, cosineSimilarity, graphSimilarity } from './graph-similarity.js';
+export type { CausalFingerprint } from './graph-similarity.js';

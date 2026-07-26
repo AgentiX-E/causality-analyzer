@@ -1,6 +1,7 @@
 import { createRequire } from 'module';
 const _require = createRequire(import.meta.url);
 import type { IGraphStore, CausalGraph, GraphMetadata, GraphVersion } from '@agentix-e/causality-analyzer-core';
+import { graphSimilarity } from '@agentix-e/causality-analyzer-core';
 import { existsSync, mkdirSync } from 'fs';
 
 // ── OverGraph type interface ────────────────────────────────────────
@@ -127,15 +128,16 @@ export class EmbedGraphStore implements IGraphStore {
     }));
   }
 
-  async findSimilarGraphs(_t: CausalGraph, lim: number, signal?: AbortSignal): Promise<CausalGraph[]> {
+  async findSimilarGraphs(target: CausalGraph, lim: number, signal?: AbortSignal): Promise<CausalGraph[]> {
     signal?.throwIfAborted();
-    const r: CausalGraph[] = [];
+    const scored: Array<{ graph: CausalGraph; score: number }> = [];
     for (const [id] of this.vers) {
       const g = await this.loadGraph(id);
-      if (g) r.push(g);
-      if (r.length >= lim) break;
+      if (g) scored.push({ graph: g, score: graphSimilarity(target, g as unknown as Parameters<typeof graphSimilarity>[1]) });
+      if (scored.length > lim * 3) break; // cap iterations
     }
-    return r;
+    scored.sort((a, b) => b.score - a.score);
+    return scored.slice(0, lim).map(s => s.graph);
   }
 
   close(): void { this.g.close(); }

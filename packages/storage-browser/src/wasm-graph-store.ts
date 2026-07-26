@@ -14,6 +14,7 @@
  * @packageDocumentation
  */
 import type { IGraphStore, CausalGraph, GraphMetadata, GraphVersion } from '@agentix-e/causality-analyzer-core';
+import { graphSimilarity } from '@agentix-e/causality-analyzer-core';
 import type { SqlitePort, SqliteRow } from './sqlite-port.js';
 
 const DDL = [
@@ -34,13 +35,6 @@ const DDL = [
 interface NodeRow extends SqliteRow { name: string; }
 interface EdgeRow extends SqliteRow { source: string; target: string; weight: number; directed: number; }
 interface VersionRow extends SqliteRow { version: number; graphId: string; }
-
-function jaccardSimilarity(a: ReadonlyArray<string>, b: ReadonlyArray<string>): number {
-  const sa = new Set(a), sb = new Set(b);
-  const intersection = [...sa].filter(x => sb.has(x)).length;
-  const union = new Set([...sa, ...sb]).size;
-  return union === 0 ? 0 : intersection / union;
-}
 
 export class WasmGraphStore implements IGraphStore {
   private port: SqlitePort;
@@ -137,7 +131,7 @@ export class WasmGraphStore implements IGraphStore {
     for (const row of ids) {
       const g = await this.loadGraph(row.graphId);
       if (g) {
-        scored.push({ graph: g, score: jaccardSimilarity(target.nodes, g.nodes) });
+        scored.push({ graph: g, score: graphSimilarity(target, g as unknown as Parameters<typeof graphSimilarity>[1]) });
       }
     }
     scored.sort((a, b) => b.score - a.score);
