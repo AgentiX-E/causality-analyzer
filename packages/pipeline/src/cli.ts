@@ -115,12 +115,39 @@ function execAnalyze(args: CliArgs): void {
 function execServe(args: CliArgs): void {
   const port = args.port ?? 3000;
   const apiToken = process.env['CAUSALITY_API_TOKEN'] ?? undefined;
-  const serverOpts: { apiToken?: string } = {};
+
+  // TLS/mTLS configuration from environment variables
+  const tlsCert = process.env['CAUSALITY_TLS_CERT'];
+  const tlsKey = process.env['CAUSALITY_TLS_KEY'];
+  const tlsCa = process.env['CAUSALITY_TLS_CA'];
+  const tlsRequestCert = process.env['CAUSALITY_MTLS_REQUEST_CERT'] === 'true';
+  const tlsRejectUnauthorized = process.env['CAUSALITY_MTLS_REJECT_UNAUTHORIZED'] === 'true';
+  const tlsPassphrase = process.env['CAUSALITY_TLS_PASSPHRASE'] ?? undefined;
+
+  const serverOpts: { apiToken?: string; tls?: import('./server.js').CausalityServerTlsConfig } = {};
   if (apiToken) serverOpts.apiToken = apiToken;
+
+  if (tlsCert && tlsKey) {
+    const tlsConfig: import('./server.js').CausalityServerTlsConfig = {
+      cert: tlsCert,
+      key: tlsKey,
+      requestCert: tlsRequestCert,
+      rejectUnauthorized: tlsRejectUnauthorized,
+    };
+    if (tlsCa) tlsConfig.ca = tlsCa;
+    if (tlsPassphrase) tlsConfig.passphrase = tlsPassphrase;
+    serverOpts.tls = tlsConfig;
+  }
+
+  const proto = serverOpts.tls ? 'https' : 'http';
+  const authFlags: string[] = [];
+  if (apiToken) authFlags.push('Bearer');
+  if (serverOpts.tls?.requestCert) authFlags.push('mTLS');
+  const authNote = authFlags.length > 0 ? ` (auth: ${authFlags.join(' + ')})` : ' (no auth)';
+
   const server = new CausalityServer(serverOpts);
   server.start(port).then(() => {
-    const authNote = apiToken ? ' (auth enabled)' : ' (no auth)';
-    console.log(`Causality Analyzer API v1.0.0 listening on http://localhost:${port}${authNote}`);
+    console.log(`Causality Analyzer API v1.0.0 listening on ${proto}://localhost:${port}${authNote}`);
     console.log(`Endpoints:`);
     console.log(`  GET  /health       — combined health check`);
     console.log(`  GET  /ready        — readiness probe`);

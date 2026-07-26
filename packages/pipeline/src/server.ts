@@ -2,7 +2,7 @@
  * Causality Analyzer HTTP/REST Server — v1 API.
  *
  * Provides a lightweight, production-ready HTTP API for causal analysis.
- * Uses built-in Node.js `http` module — zero additional dependencies.
+ * Supports both HTTP and HTTPS with optional mTLS client certificate auth.
  *
  * Endpoints (all under /v1/):
  *   GET  /health         — combined health + liveness + readiness
@@ -14,13 +14,18 @@
  *   POST /v1/estimate    — run effect estimation
  *   GET  /v1/openapi.json — OpenAPI 3.1 specification
  *
- * Authentication:
- *   Bearer Token via Authorization header when CAUSALITY_API_TOKEN is configured.
- *   Health/live/ready/metrics endpoints are always public.
+ * Authentication (layered):
+ *   1. mTLS — when `tls.requestCert: true`, client must present valid certificate
+ *      signed by the configured CA. Rejected at TLS handshake level.
+ *   2. Bearer Token — when `apiToken` is set, all /v1/* endpoints require
+ *      `Authorization: Bearer <token>`. Health endpoints remain public.
  *
  * @packageDocumentation
  */
-import { createServer, type IncomingMessage, type ServerResponse, type Server } from 'node:http';
+import { createServer, type Server } from 'node:http';
+import { createServer as createSecureServer } from 'node:https';
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { ServerOptions as TlsServerOptions } from 'node:https';
 import { Matrix } from 'ml-matrix';
 import { CausalGraph } from './graph/causal-graph.js';
 import { pcAlgorithm } from './graph/pc.js';
@@ -60,13 +65,29 @@ interface EstimateRequest {
   data: number[][];
 }
 
+/** TLS/mTLS configuration for HTTPS server */
+export interface CausalityServerTlsConfig {
+  /** PEM-encoded server certificate */
+  cert: string;
+  /** PEM-encoded server private key */
+  key: string;
+  /** PEM-encoded CA certificate(s) for client verification */
+  ca?: string;
+  /** Whether to request client certificate (default: false) */
+  requestCert?: boolean;
+  /** Whether to reject connections without valid client cert (default: false) */
+  rejectUnauthorized?: boolean;
+  /** Optional passphrase for encrypted private key */
+  passphrase?: string;
+}
+
 // ── Auth ─────────────────────────────────────────────────────────────
 
 function extractBearerToken(req: IncomingMessage): string | null {
   const header = req.headers['authorization'];
   if (!header) return null;
   const match = /^[Bb]earer\s+(.+)$/.exec(header);
-  return match ? match[1] ?? null : null;
+  return match ? (match[1] ?? null) : null;
 }
 
 // ── Server ───────────────────────────────────────────────────────────
@@ -82,6 +103,7 @@ export class CausalityServer {
   private serverTimeout: number;
   private apiToken: string | null;
   private port: number = 3000;
+  private tlsConfig: CausalityServerTlsConfig | null = null;
 
   constructor(opts?: {
     maxBodySize?: number;
@@ -91,6 +113,8 @@ export class CausalityServer {
     timeout?: number;
     /** Bearer token for API authentication. Set via CAUSALITY_API_TOKEN env var. */
     apiToken?: string;
+    /** TLS/mTLS configuration for HTTPS server. When set, uses HTTPS instead of HTTP. */
+    tls?: CausalityServerTlsConfig;
   }) {
     this.healthChecker = new HealthChecker();
     this.maxBodySize = opts?.maxBodySize ?? 10 * 1024 * 1024;
@@ -101,17 +125,37 @@ export class CausalityServer {
     this.logger = opts?.logger ?? new ConsoleLogger();
     this.serverTimeout = opts?.timeout ?? 30000;
     this.apiToken = opts?.apiToken ?? null;
+    this.tlsConfig = opts?.tls ?? null;
   }
 
   start(port: number = 3000, host: string = '0.0.0.0'): Promise<void> {
     this.port = port;
     return new Promise((resolve, reject) => {
-      this.server = createServer((req, res) => this.handleRequest(req, res));
+      const handler = (req: IncomingMessage, res: ServerResponse) => this.handleRequest(req, res);
+
+      if (this.tlsConfig) {
+        const tlsOpts: TlsServerOptions = {
+          cert: this.tlsConfig.cert,
+          key: this.tlsConfig.key,
+        };
+        if (this.tlsConfig.ca) tlsOpts.ca = this.tlsConfig.ca;
+        if (this.tlsConfig.passphrase) tlsOpts.passphrase = this.tlsConfig.passphrase;
+        if (this.tlsConfig.requestCert) tlsOpts.requestCert = true;
+        if (this.tlsConfig.rejectUnauthorized) tlsOpts.rejectUnauthorized = true;
+
+        this.server = createSecureServer(tlsOpts, handler) as unknown as Server;
+        if (this.logger.info) this.logger.info('mTLS enabled: client certificate auth active');
+      } else {
+        this.server = createServer(handler);
+      }
+
       this.server.timeout = this.serverTimeout;
       this.startTime = Date.now();
       this.server.listen(port, host, () => {
         this.healthChecker.markReady();
-        this.logger.info?.(`Causality Analyzer API v1.0.0 started on port ${port}`);
+        const proto = this.tlsConfig ? 'https' : 'http';
+        const mtls = this.tlsConfig?.requestCert ? ' (mTLS)' : '';
+        if (this.logger.info) this.logger.info(`Causality Analyzer API v1.0.0 started on ${proto}://${host}:${port}${mtls}`);
         resolve();
       });
       this.server.on('error', reject);
@@ -157,14 +201,11 @@ export class CausalityServer {
       const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
       const method = req.method ?? 'GET';
 
-      // ── Route matching ──────────────────────────────────────────
-      // Public endpoints (no auth required)
+      // ── Public endpoints (no auth required) ──────────────────────
       if (method === 'GET' && url.pathname === '/health') return this.handleHealth(res, requestId);
       if (method === 'GET' && url.pathname === '/ready') return this.handleReady(res, requestId);
       if (method === 'GET' && url.pathname === '/live') return this.handleLiveness(res, requestId);
       if (method === 'GET' && url.pathname === '/metrics') return this.handleMetrics(res, requestId);
-
-      // OpenAPI spec (public)
       if (method === 'GET' && url.pathname === '/v1/openapi.json') return this.handleOpenApi(res, requestId);
 
       // ── Auth check for v1 business endpoints ────────────────────
@@ -208,6 +249,7 @@ export class CausalityServer {
         memory: { status: 'ok', detail: `${heapMB}MB` },
         ready: { status: this.healthChecker.isReady() ? 'ok' : 'error', detail: '' },
         alive: { status: this.healthChecker.isAlive() ? 'ok' : 'error', detail: '' },
+        tls: { status: this.tlsConfig ? 'ok' : 'ok', detail: this.tlsConfig?.requestCert ? 'mTLS' : this.tlsConfig ? 'TLS' : 'none' },
       },
     };
     this.sendJson(res, 200, { success: true, data: status, requestId });
@@ -216,8 +258,7 @@ export class CausalityServer {
   private handleReady(res: ServerResponse, requestId: string): void {
     const ready = this.healthChecker.isReady();
     this.sendJson(res, ready ? 200 : 503, {
-      success: ready,
-      data: { ready },
+      success: ready, data: { ready },
       error: ready ? undefined : 'Service not ready',
       requestId,
     });
@@ -226,8 +267,7 @@ export class CausalityServer {
   private handleLiveness(res: ServerResponse, requestId: string): void {
     const alive = this.healthChecker.isAlive();
     this.sendJson(res, alive ? 200 : 503, {
-      success: alive,
-      data: { alive },
+      success: alive, data: { alive },
       error: alive ? undefined : 'Service not alive',
       requestId,
     });
@@ -236,6 +276,7 @@ export class CausalityServer {
   // ── OpenAPI Spec ──────────────────────────────────────────────────
 
   private handleOpenApi(res: ServerResponse, _requestId: string): void {
+    const scheme = this.tlsConfig ? 'https' : 'http';
     const spec = {
       openapi: '3.1.0',
       info: {
@@ -244,19 +285,15 @@ export class CausalityServer {
         description: 'Enterprise-grade causal AI REST API — discovery, root cause analysis, and effect estimation.',
         license: { name: 'MIT' },
       },
-      servers: [{ url: `http://localhost:${this.port}/v1`, description: 'Local development' }],
+      servers: [{ url: `${scheme}://localhost:${this.port}/v1`, description: 'Local development' }],
       paths: {
         '/discover': {
           post: {
             operationId: 'discoverGraph',
             summary: 'Run causal discovery',
-            description: 'Runs PC algorithm on the provided data to discover causal relationships.',
             tags: ['Causal Discovery'],
-            security: this.apiToken ? [{ bearerAuth: [] }] : [],
-            requestBody: {
-              required: true,
-              content: { 'application/json': { schema: { $ref: '#/components/schemas/DiscoverRequest' } } },
-            },
+            security: this.getSecurity(),
+            requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/DiscoverRequest' } } } },
             responses: {
               '200': { description: 'Causal graph discovered', content: { 'application/json': { schema: { $ref: '#/components/schemas/DiscoverResponse' } } } },
               '400': { $ref: '#/components/responses/BadRequest' },
@@ -269,13 +306,9 @@ export class CausalityServer {
           post: {
             operationId: 'analyzeRootCauses',
             summary: 'Run root cause analysis',
-            description: 'Identifies root causes of anomalies using causal graph + HeuristicPathRCA.',
             tags: ['Root Cause Analysis'],
-            security: this.apiToken ? [{ bearerAuth: [] }] : [],
-            requestBody: {
-              required: true,
-              content: { 'application/json': { schema: { $ref: '#/components/schemas/AnalyzeRequest' } } },
-            },
+            security: this.getSecurity(),
+            requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/AnalyzeRequest' } } } },
             responses: {
               '200': { description: 'Root causes identified', content: { 'application/json': { schema: { $ref: '#/components/schemas/AnalyzeResponse' } } } },
               '400': { $ref: '#/components/responses/BadRequest' },
@@ -288,13 +321,9 @@ export class CausalityServer {
           post: {
             operationId: 'estimateEffect',
             summary: 'Run effect estimation',
-            description: 'Estimates Average Treatment Effect using backdoor adjustment with proper d-separation criteria.',
             tags: ['Causal Inference'],
-            security: this.apiToken ? [{ bearerAuth: [] }] : [],
-            requestBody: {
-              required: true,
-              content: { 'application/json': { schema: { $ref: '#/components/schemas/EstimateRequest' } } },
-            },
+            security: this.getSecurity(),
+            requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/EstimateRequest' } } } },
             responses: {
               '200': { description: 'Effect estimated', content: { 'application/json': { schema: { $ref: '#/components/schemas/EstimateResponse' } } } },
               '400': { $ref: '#/components/responses/BadRequest' },
@@ -305,126 +334,8 @@ export class CausalityServer {
         },
       },
       components: {
-        securitySchemes: this.apiToken ? {
-          bearerAuth: { type: 'http', scheme: 'bearer', description: 'API token from CAUSALITY_API_TOKEN environment variable' },
-        } : {},
-        schemas: {
-          DiscoverRequest: {
-            type: 'object',
-            required: ['data', 'nodeNames'],
-            properties: {
-              data: { type: 'array', items: { type: 'array', items: { type: 'number' } }, description: 'n×d data matrix' },
-              nodeNames: { type: 'array', items: { type: 'string' }, description: 'Variable names' },
-              alpha: { type: 'number', description: 'Significance threshold', default: 0.05 },
-            },
-          },
-          DiscoverResponse: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              data: {
-                type: 'object',
-                properties: {
-                  edges: { type: 'array', items: { $ref: '#/components/schemas/CausalEdge' } },
-                  adjustmentSets: { type: 'object', additionalProperties: { type: 'array', items: { type: 'string' } } },
-                },
-              },
-              requestId: { type: 'string' },
-            },
-          },
-          AnalyzeRequest: {
-            type: 'object',
-            required: ['graph', 'data', 'anomalousNodes'],
-            properties: {
-              graph: { $ref: '#/components/schemas/GraphInput' },
-              data: { type: 'array', items: { type: 'array', items: { type: 'number' } } },
-              anomalousNodes: { type: 'array', items: { type: 'string' } },
-            },
-          },
-          AnalyzeResponse: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              data: {
-                type: 'object',
-                properties: {
-                  rootCauses: { type: 'array', items: { $ref: '#/components/schemas/RootCauseEntry' } },
-                  paths: { type: 'array', items: { $ref: '#/components/schemas/RootCausePath' } },
-                  adjustmentInfo: { type: 'object' },
-                },
-              },
-              requestId: { type: 'string' },
-            },
-          },
-          EstimateRequest: {
-            type: 'object',
-            required: ['graph', 'treatment', 'outcome', 'data'],
-            properties: {
-              graph: { $ref: '#/components/schemas/GraphInput' },
-              treatment: { type: 'string' },
-              outcome: { type: 'string' },
-              data: { type: 'array', items: { type: 'array', items: { type: 'number' } } },
-            },
-          },
-          EstimateResponse: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              data: {
-                type: 'object',
-                properties: {
-                  ate: { type: 'number', description: 'Average Treatment Effect' },
-                  se: { type: 'number', description: 'Standard Error' },
-                  ci95: { type: 'array', items: { type: 'number' }, description: '95% confidence interval [lower, upper]' },
-                  adjustmentSet: { type: 'array', items: { type: 'string' } },
-                  isSignificant: { type: 'boolean', description: 'Whether |ATE/SE| > 1.96' },
-                },
-              },
-              requestId: { type: 'string' },
-            },
-          },
-          GraphInput: {
-            type: 'object',
-            required: ['nodes', 'edges'],
-            properties: {
-              nodes: { type: 'array', items: { type: 'string' } },
-              edges: { type: 'array', items: { type: 'object', properties: { source: { type: 'string' }, target: { type: 'string' } } } },
-            },
-          },
-          CausalEdge: {
-            type: 'object',
-            properties: {
-              source: { type: 'string' },
-              target: { type: 'string' },
-              weight: { type: 'number' },
-              directed: { type: 'boolean' },
-            },
-          },
-          RootCauseEntry: {
-            type: 'object',
-            properties: {
-              name: { type: 'string' },
-              score: { type: 'number' },
-              evidence: { type: 'array', items: { type: 'object' } },
-            },
-          },
-          RootCausePath: {
-            type: 'object',
-            properties: {
-              nodes: { type: 'array', items: { type: 'string' } },
-              score: { type: 'number' },
-              direction: { type: 'string', enum: ['forward', 'backward'] },
-            },
-          },
-          ErrorResponse: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean', enum: [false] },
-              error: { type: 'string' },
-              requestId: { type: 'string' },
-            },
-          },
-        },
+        securitySchemes: this.getSecuritySchemes(),
+        schemas: this.getSchemas(),
         responses: {
           BadRequest: { description: 'Bad request', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
           Unauthorized: { description: 'Unauthorized', headers: { 'WWW-Authenticate': { schema: { type: 'string' } } }, content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
@@ -432,15 +343,91 @@ export class CausalityServer {
         },
       },
       tags: [
-        { name: 'Causal Discovery', description: 'Discover causal relationships from observational data' },
-        { name: 'Root Cause Analysis', description: 'Identify root causes of anomalies using causal graphs' },
-        { name: 'Causal Inference', description: 'Estimate treatment effects with backdoor adjustment' },
+        { name: 'Causal Discovery' },
+        { name: 'Root Cause Analysis' },
+        { name: 'Causal Inference' },
       ],
     };
 
     res.setHeader('Content-Type', 'application/json');
     res.writeHead(200);
     res.end(JSON.stringify(spec, null, 2));
+  }
+
+  private getSecurity(): Array<Record<string, string[]>> {
+    const schemes: Array<Record<string, string[]>> = [];
+    if (this.tlsConfig?.requestCert) schemes.push({ mTLS: [] });
+    if (this.apiToken) schemes.push({ bearerAuth: [] });
+    return schemes.length > 0 ? schemes : [];
+  }
+
+  private getSecuritySchemes(): Record<string, unknown> {
+    const schemes: Record<string, unknown> = {};
+    if (this.tlsConfig?.requestCert) {
+      schemes.mTLS = { type: 'mutualTLS', description: 'Client certificate authentication via TLS handshake' };
+    }
+    if (this.apiToken) {
+      schemes.bearerAuth = { type: 'http', scheme: 'bearer', description: 'API token from CAUSALITY_API_TOKEN' };
+    }
+    return schemes;
+  }
+
+  private getSchemas(): Record<string, unknown> {
+    return {
+      DiscoverRequest: {
+        type: 'object', required: ['data', 'nodeNames'],
+        properties: {
+          data: { type: 'array', items: { type: 'array', items: { type: 'number' } } },
+          nodeNames: { type: 'array', items: { type: 'string' } },
+          alpha: { type: 'number', default: 0.05 },
+        },
+      },
+      DiscoverResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          data: { type: 'object', properties: { edges: { type: 'array', items: { $ref: '#/components/schemas/CausalEdge' } }, adjustmentSets: { type: 'object' } } },
+          requestId: { type: 'string' },
+        },
+      },
+      AnalyzeRequest: {
+        type: 'object', required: ['graph', 'data', 'anomalousNodes'],
+        properties: {
+          graph: { $ref: '#/components/schemas/GraphInput' },
+          data: { type: 'array', items: { type: 'array', items: { type: 'number' } } },
+          anomalousNodes: { type: 'array', items: { type: 'string' } },
+        },
+      },
+      AnalyzeResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          data: { type: 'object', properties: { rootCauses: { type: 'array', items: { $ref: '#/components/schemas/RootCauseEntry' } }, paths: { type: 'array', items: { $ref: '#/components/schemas/RootCausePath' } } } },
+          requestId: { type: 'string' },
+        },
+      },
+      EstimateRequest: {
+        type: 'object', required: ['graph', 'treatment', 'outcome', 'data'],
+        properties: {
+          graph: { $ref: '#/components/schemas/GraphInput' },
+          treatment: { type: 'string' }, outcome: { type: 'string' },
+          data: { type: 'array', items: { type: 'array', items: { type: 'number' } } },
+        },
+      },
+      EstimateResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          data: { type: 'object', properties: { ate: { type: 'number' }, se: { type: 'number' }, ci95: { type: 'array', items: { type: 'number' } }, adjustmentSet: { type: 'array', items: { type: 'string' } }, isSignificant: { type: 'boolean' } } },
+          requestId: { type: 'string' },
+        },
+      },
+      GraphInput: { type: 'object', required: ['nodes', 'edges'], properties: { nodes: { type: 'array', items: { type: 'string' } }, edges: { type: 'array', items: { type: 'object', properties: { source: { type: 'string' }, target: { type: 'string' } } } } } },
+      CausalEdge: { type: 'object', properties: { source: { type: 'string' }, target: { type: 'string' }, weight: { type: 'number' }, directed: { type: 'boolean' } } },
+      RootCauseEntry: { type: 'object', properties: { name: { type: 'string' }, score: { type: 'number' }, evidence: { type: 'array' } } },
+      RootCausePath: { type: 'object', properties: { nodes: { type: 'array', items: { type: 'string' } }, score: { type: 'number' }, direction: { type: 'string' } } },
+      ErrorResponse: { type: 'object', properties: { success: { type: 'boolean' }, error: { type: 'string' }, requestId: { type: 'string' } } },
+    };
   }
 
   // ── Metrics ───────────────────────────────────────────────────────
@@ -470,22 +457,9 @@ export class CausalityServer {
       this.sendJson(res, 400, { success: false, error: 'Missing data or nodeNames', requestId });
       return;
     }
-
-    const matrix = this.toMatrix(body.data);
-    const { graph, sepSet } = pcAlgorithm(matrix, body.nodeNames, {
-      alpha: body.alpha ?? 0.05,
-      maxDegree: -1,
-      stable: true,
-    });
-
-    this.sendJson(res, 200, {
-      success: true,
-      data: {
-        edges: graph.edges,
-        adjustmentSets: Object.fromEntries(sepSet),
-      },
-      requestId,
-    });
+    const matrix = new Matrix(body.data);
+    const { graph, sepSet } = pcAlgorithm(matrix, body.nodeNames, { alpha: body.alpha ?? 0.05, maxDegree: -1, stable: true });
+    this.sendJson(res, 200, { success: true, data: { edges: graph.edges, adjustmentSets: Object.fromEntries(sepSet) }, requestId });
   }
 
   private async handleAnalyze(req: IncomingMessage, res: ServerResponse, requestId: string): Promise<void> {
@@ -494,33 +468,18 @@ export class CausalityServer {
       this.sendJson(res, 400, { success: false, error: 'Missing graph, data, or anomalousNodes', requestId });
       return;
     }
-
     const graph = new CausalGraph(body.graph.nodes);
     for (const e of body.graph.edges) graph.addEdge(e.source, e.target);
-
-    const data = body.data;
     const rca = new HeuristicPathRCA();
-    rca.train(graph, new Set(body.anomalousNodes), this.toMatrix(data));
+    rca.train(graph, new Set(body.anomalousNodes), new Matrix(body.data));
     const result = rca.findRootCauses(body.anomalousNodes);
-
-    // Compute backdoor sets for each anomalous node
     const adjustmentInfo: Record<string, string[]> = {};
     for (const anom of body.anomalousNodes) {
       for (const rc of result.rootCauses) {
-        const key = `${rc.name}→${anom}`;
-        adjustmentInfo[key] = findBackdoorAdjustmentSet(graph, rc.name, anom);
+        adjustmentInfo[`${rc.name}→${anom}`] = findBackdoorAdjustmentSet(graph, rc.name, anom);
       }
     }
-
-    this.sendJson(res, 200, {
-      success: true,
-      data: {
-        rootCauses: result.rootCauses.map(rc => ({ name: rc.name, score: rc.score, evidence: rc.evidence })),
-        paths: result.paths,
-        adjustmentInfo,
-      },
-      requestId,
-    });
+    this.sendJson(res, 200, { success: true, data: { rootCauses: result.rootCauses.map(rc => ({ name: rc.name, score: rc.score, evidence: rc.evidence })), paths: result.paths, adjustmentInfo }, requestId });
   }
 
   private async handleEstimate(req: IncomingMessage, res: ServerResponse, requestId: string): Promise<void> {
@@ -529,34 +488,16 @@ export class CausalityServer {
       this.sendJson(res, 400, { success: false, error: 'Missing graph, treatment, outcome, or data', requestId });
       return;
     }
-
     const graph = new CausalGraph(body.graph.nodes);
     for (const e of body.graph.edges) graph.addEdge(e.source, e.target);
-
-    const data = body.data;
     const nodeIndex = new Map(body.graph.nodes.map((n, i) => [n, i]));
-    const treatmentIdx = nodeIndex.get(body.treatment);
-    const outcomeIdx = nodeIndex.get(body.outcome);
-
-    if (treatmentIdx === undefined || outcomeIdx === undefined) {
-      this.sendJson(res, 400, { success: false, error: 'Treatment or outcome not found in graph nodes', requestId });
+    if (nodeIndex.get(body.treatment) === undefined || nodeIndex.get(body.outcome) === undefined) {
+      this.sendJson(res, 400, { success: false, error: 'Treatment or outcome not found', requestId });
       return;
     }
-
-    const { ate, se } = adjustBackdoor(graph, body.treatment, body.outcome, data, nodeIndex);
+    const { ate, se } = adjustBackdoor(graph, body.treatment, body.outcome, body.data, nodeIndex);
     const estimand = identifyBackdoor(graph, body.treatment, body.outcome);
-
-    this.sendJson(res, 200, {
-      success: true,
-      data: {
-        ate,
-        se,
-        ci95: [ate - 1.96 * se, ate + 1.96 * se],
-        adjustmentSet: estimand.backdoorVariables.backdoor ?? [],
-        isSignificant: Math.abs(ate / Math.max(se, 1e-10)) > 1.96,
-      },
-      requestId,
-    });
+    this.sendJson(res, 200, { success: true, data: { ate, se, ci95: [ate - 1.96 * se, ate + 1.96 * se], adjustmentSet: estimand.backdoorVariables.backdoor ?? [], isSignificant: Math.abs(ate / Math.max(se, 1e-10)) > 1.96 }, requestId });
   }
 
   // ── Helpers ───────────────────────────────────────────────────────
@@ -570,38 +511,13 @@ export class CausalityServer {
   private parseBody<T>(req: IncomingMessage): Promise<T> {
     return new Promise((resolve, reject) => {
       const contentType = req.headers['content-type'] ?? '';
-      if (!contentType.includes('application/json')) {
-        reject(new Error('Unsupported Media Type: Content-Type must be application/json'));
-        return;
-      }
+      if (!contentType.includes('application/json')) { reject(new Error('Unsupported Media Type')); return; }
       const contentLength = parseInt(req.headers['content-length'] ?? '0', 10);
-      if (contentLength > this.maxBodySize) {
-        reject(new Error('Payload Too Large'));
-        return;
-      }
-      let raw = '';
-      let size = 0;
-      req.on('data', (chunk: Buffer) => {
-        size += chunk.length;
-        if (size > this.maxBodySize) {
-          req.destroy();
-          reject(new Error('Payload Too Large'));
-          return;
-        }
-        raw += chunk.toString();
-      });
-      req.on('end', () => {
-        try { resolve(JSON.parse(raw || '{}') as T); }
-        catch { reject(new Error('Bad Request: invalid JSON')); }
-      });
+      if (contentLength > this.maxBodySize) { reject(new Error('Payload Too Large')); return; }
+      let raw = '', size = 0;
+      req.on('data', (chunk: Buffer) => { size += chunk.length; if (size > this.maxBodySize) { req.destroy(); reject(new Error('Payload Too Large')); return; } raw += chunk.toString(); });
+      req.on('end', () => { try { resolve(JSON.parse(raw || '{}') as T); } catch { reject(new Error('Bad Request: invalid JSON')); } });
       req.on('error', err => reject(err));
     });
   }
-
-  private toMatrix(data: number[][]): Matrix {
-    return new Matrix(data);
-  }
 }
-
-/** @deprecated Import CausalityServer from 'server.js'. */
-export { CausalityServer as Server };
