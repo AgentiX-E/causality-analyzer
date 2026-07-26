@@ -32,6 +32,7 @@ export type RemoteGraphAuth =
   | { type: 'none' };
 
 /** Structured logger interface. Defaults to console. */
+/** @deprecated Prefer core Logger for new code. */
 export interface GraphLogger {
   info(msg: string, meta?: Record<string, unknown>): void;
   warn(msg: string, meta?: Record<string, unknown>): void;

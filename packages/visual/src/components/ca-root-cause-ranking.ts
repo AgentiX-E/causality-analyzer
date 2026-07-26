@@ -41,7 +41,8 @@ export class CaRootCauseRanking extends LitElement {
     this.setAttribute('tabindex', '0');
     this.setAttribute('role', 'listbox');
     this.setAttribute('aria-label', this.accessibleLabel);
-    this.addEventListener('keydown', this._onKeyDown.bind(this));
+    this._boundKeyDown = this._onKeyDown.bind(this);
+    this.addEventListener('keydown', this._boundKeyDown);
   }
 
   override render() {
@@ -68,6 +69,7 @@ export class CaRootCauseRanking extends LitElement {
     `;
   }
 
+  private _boundKeyDown!: (e: KeyboardEvent) => void;
   private _onKeyDown(e: KeyboardEvent) {
     if (!this.data) return;
     const causes = this.data.rootCauses;
@@ -114,6 +116,6 @@ export class CaRootCauseRanking extends LitElement {
 
   override disconnectedCallback() {
     super.disconnectedCallback();
-    this.removeEventListener('keydown', this._onKeyDown.bind(this));
+    this.removeEventListener('keydown', this._boundKeyDown);
   }
 }

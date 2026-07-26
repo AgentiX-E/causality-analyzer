@@ -52,7 +52,8 @@ export class CaCausalGraph extends LitElement {
     if (this._canvas) this._resizeObserver.observe(this._canvas);
     this.setAttribute('tabindex', '0');
     this.setAttribute('role', 'figure');
-    this.addEventListener('keydown', this._onKeyDown.bind(this));
+    this._boundKeyDown = this._onKeyDown.bind(this);
+    this.addEventListener('keydown', this._boundKeyDown);
   }
 
   override render() {
@@ -70,6 +71,7 @@ export class CaCausalGraph extends LitElement {
     if (id) this.dispatchEvent(new CustomEvent('node-click', { detail: { id }, bubbles: true, composed: true }));
   }
 
+  private _boundKeyDown!: (e: KeyboardEvent) => void;
   private _onKeyDown(e: KeyboardEvent) {
     if (!this.data || !this.data.nodes.length) return;
     const nodes = this.data.nodes;
@@ -119,7 +121,7 @@ export class CaCausalGraph extends LitElement {
 
   override disconnectedCallback() {
     super.disconnectedCallback();
-    this.removeEventListener('keydown', this._onKeyDown.bind(this));
+    this.removeEventListener('keydown', this._boundKeyDown);
     this._resizeObserver?.disconnect();
     this._resizeObserver = null;
     this.renderer.dispose();

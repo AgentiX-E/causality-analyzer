@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   CONSTANTS,
-  CausalityError, ConfigValidationError, NodeNotFoundError,
-  SingularMatrixError, IdentificationError, ColumnNotFoundError,
+  CausalityError, StoreError, ValidationError, ConfigError,
+  NotFoundError, ConvergenceError, ErrorCode,
   clamp, safeDiv, safeLog,
 } from '../constants.js';
 
@@ -23,41 +23,63 @@ describe('CONSTANTS', () => {
   });
 });
 
-describe('CausalityError hierarchy', () => {
-  it('CausalityError is instanceof Error', () => {
-    const e = new CausalityError('test');
+describe('CausalityError hierarchy (re-exported from core)', () => {
+  it('CausalityError with code and message', () => {
+    const e = new CausalityError(ErrorCode.INVALID_CONFIG, 'bad config');
     expect(e).toBeInstanceOf(Error);
     expect(e).toBeInstanceOf(CausalityError);
-    expect(e.name).toBe('CausalityError');
-    expect(e.message).toBe('test');
+    expect(e.code).toBe(ErrorCode.INVALID_CONFIG);
+    expect(e.message).toBe('bad config');
   });
 
-  it('ConfigValidationError has path property', () => {
-    const e = new ConfigValidationError('bad config', ['alpha', 'value']);
+  it('StoreError records store and operation', () => {
+    const e = new StoreError(ErrorCode.CONNECTION_FAILED, 'pg down', {
+      store: 'PostgreSQL', operation: 'connect',
+    });
     expect(e).toBeInstanceOf(CausalityError);
-    expect(e.name).toBe('ConfigValidationError');
-    expect(e.path).toEqual(['alpha', 'value']);
+    expect(e.store).toBe('PostgreSQL');
+    expect(e.operation).toBe('connect');
   });
 
-  it('NodeNotFoundError contains node name', () => {
-    const e = new NodeNotFoundError('test-node');
-    expect(e.message).toContain('test-node');
-  });
-
-  it('SingularMatrixError has context', () => {
-    const e = new SingularMatrixError('OLS inversion');
-    expect(e.message).toContain('OLS inversion');
+  it('ValidationError records field/expected/received', () => {
+    const e = new ValidationError(ErrorCode.INVALID_CONFIG, 'out of range', {
+      field: 'alpha', expected: '[0,1]', received: 2.5,
+    });
     expect(e).toBeInstanceOf(CausalityError);
+    expect(e.field).toBe('alpha');
+    expect(e.received).toBe(2.5);
   });
 
-  it('IdentificationError has reason', () => {
-    const e = new IdentificationError('no backdoor set found');
-    expect(e.message).toContain('no backdoor set found');
+  it('NotFoundError records resource and identifier', () => {
+    const e = new NotFoundError(ErrorCode.NODE_NOT_FOUND, 'node not in graph', {
+      resource: 'graph', identifier: 'X',
+    });
+    expect(e).toBeInstanceOf(CausalityError);
+    expect(e.resource).toBe('graph');
+    expect(e.identifier).toBe('X');
   });
 
-  it('ColumnNotFoundError has column name', () => {
-    const e = new ColumnNotFoundError('latency_p99');
-    expect(e.message).toContain('latency_p99');
+  it('ConvergenceError records algorithm and iterations', () => {
+    const e = new ConvergenceError(ErrorCode.NO_CONVERGENCE, 'did not converge', {
+      algorithm: 'NOTEARS', iterations: 100, tolerance: 1e-4,
+    });
+    expect(e).toBeInstanceOf(CausalityError);
+    expect(e.algorithm).toBe('NOTEARS');
+    expect(e.iterations).toBe(100);
+  });
+
+  it('CausalityError.toJSON produces structured output', () => {
+    const e = new CausalityError(ErrorCode.INTERNAL, 'boom', {
+      context: { key: 'val' },
+    });
+    const json = e.toJSON();
+    expect(json.code).toBe(ErrorCode.INTERNAL);
+    expect(json.context).toEqual({ key: 'val' });
+  });
+
+  it('ErrorCode values are distinct', () => {
+    const codes = new Set(Object.values(ErrorCode));
+    expect(codes.size).toBe(Object.values(ErrorCode).length);
   });
 });
 
@@ -68,11 +90,10 @@ describe('clamp / safeDiv / safeLog', () => {
   it('safeDiv with near-zero denominator returns 0', () => { expect(safeDiv(5, 1e-12)).toBe(0); });
   it('safeDiv with valid denominator returns ratio', () => { expect(safeDiv(6, 3)).toBe(2); });
   it('safeLog of 1 returns 0', () => { expect(safeLog(1)).toBe(0); });
-});
-
-describe('SingularMatrixError branches', () => {
-  it('includes context in message when provided', () => {
-    const e = new SingularMatrixError('GPD estimation');
-    expect(e.message).toContain('GPD estimation');
+  it('safeLog of 0 returns finite value (not -Infinity)', () => {
+    expect(Number.isFinite(safeLog(0))).toBe(true);
+  });
+  it('safeLog of negative returns finite value', () => {
+    expect(Number.isFinite(safeLog(-5))).toBe(true);
   });
 });

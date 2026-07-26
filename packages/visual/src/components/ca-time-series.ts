@@ -24,6 +24,7 @@ export class CaTimeSeries extends LitElement {
   @property({ type: String }) accessibleLabel = 'Time series anomaly chart';
 
   private plot: uPlot | null = null;
+  private _resizeObserver: ResizeObserver | null = null;
   private container: HTMLDivElement | null = null;
 
   override firstUpdated() {
@@ -34,7 +35,8 @@ export class CaTimeSeries extends LitElement {
     }
     this._render();
     if (this.container) {
-      new ResizeObserver(() => this._render()).observe(this.container);
+      this._resizeObserver = new ResizeObserver(() => this._render());
+    this._resizeObserver.observe(this.container);
     }
   }
 
@@ -108,5 +110,5 @@ export class CaTimeSeries extends LitElement {
     return colors[idx] ?? '#2563eb';
   }
 
-  override disconnectedCallback() { super.disconnectedCallback(); this.plot?.destroy(); }
+  override disconnectedCallback() { super.disconnectedCallback(); this.plot?.destroy(); this._resizeObserver?.disconnect(); }
 }

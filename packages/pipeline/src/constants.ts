@@ -73,58 +73,12 @@ export const CONSTANTS = {
 export const clamp = (v: number, lim: number): number => v < -lim ? -lim : v > lim ? lim : v;
 /** Safe division: returns 0 when denominator is near-zero. */
 export const safeDiv = (num: number, den: number, eps = 1e-10): number => Math.abs(den) < eps ? 0 : num / den;
-/** Safe log: returns log(v) when v > 0, else generates legitimate NaN (no branch). */
-export const safeLog = (v: number): number => Math.log(v);
+/** Safe log: returns log(v) when v > 0, clamps to log(1e-10) for non-positive values. */
+export const safeLog = (v: number): number => Math.log(Math.max(1e-10, v));
 
-// ── Error hierarchy ───────────────────────────────────────────────────
-
-/**
- * Base error for all Causality Analyzer errors.
- * Enables programmatic error handling (instanceof checks).
- */
-export class CausalityError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'CausalityError';
-  }
-}
-
-/** Configuration validation failure */
-export class ConfigValidationError extends CausalityError {
-  constructor(message: string, public readonly path: string[]) {
-    super(message);
-    this.name = 'ConfigValidationError';
-  }
-}
-
-/** A required node was not found in the graph */
-export class NodeNotFoundError extends CausalityError {
-  constructor(nodeName: string) {
-    super(`Node "${nodeName}" not found`);
-    this.name = 'NodeNotFoundError';
-  }
-}
-
-/** Matrix is singular or near-singular, cannot be inverted */
-export class SingularMatrixError extends CausalityError {
-  constructor(context: string = '') {
-    super(`Matrix is singular or near-singular${context ? ` (${context})` : ''}`);
-    this.name = 'SingularMatrixError';
-  }
-}
-
-/** Causal effect is not identifiable from the given graph and data */
-export class IdentificationError extends CausalityError {
-  constructor(reason: string) {
-    super(`Causal effect not identifiable: ${reason}`);
-    this.name = 'IdentificationError';
-  }
-}
-
-/** Column not found in ColumnarTable */
-export class ColumnNotFoundError extends CausalityError {
-  constructor(columnName: string) {
-    super(`Column "${columnName}" not found`);
-    this.name = 'ColumnNotFoundError';
-  }
-}
+// ── Error hierarchy (re-exported from core) ────────────────────────────
+export {
+  CausalityError, StoreError, ValidationError, ConfigError,
+  NotFoundError, ConvergenceError, ErrorCode,
+} from '@agentix-e/causality-analyzer-core';
+export type { ErrorCodeType } from '@agentix-e/causality-analyzer-core';

@@ -14,6 +14,9 @@
  * @packageDocumentation
  */
 import { createServer, type IncomingMessage, type ServerResponse, type Server } from 'node:http';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import { Matrix } from 'ml-matrix';
 import { CausalGraph } from './graph/causal-graph.js';
 import { pcAlgorithm } from './graph/pc.js';
@@ -23,6 +26,7 @@ import { findBackdoorAdjustmentSet } from './infer/backdoor.js';
 import { HeuristicPathRCA } from './analyze/rca.js';
 import { HealthChecker, type HealthStatus } from './health.js';
 import { RateLimiter } from './rate-limiter.js';
+import { ConsoleLogger, type Logger } from '@agentix-e/causality-analyzer-core';
 
 // ─��� Types ────────────────────────────────────────────────────────────
 
@@ -61,22 +65,34 @@ export class CausalityServer {
   private requestCount = 0;
   private rateLimiter: RateLimiter;
   private maxBodySize: number;
+  private logger: Logger;
+  private serverTimeout: number;
 
-  constructor(opts?: { maxBodySize?: number; rateLimitMax?: number; rateLimitWindowMs?: number }) {
+  constructor(opts?: {
+    maxBodySize?: number;
+    rateLimitMax?: number;
+    rateLimitWindowMs?: number;
+    logger?: Logger;
+    timeout?: number;
+  }) {
     this.healthChecker = new HealthChecker();
     this.maxBodySize = opts?.maxBodySize ?? 10 * 1024 * 1024; // 10MB default
     this.rateLimiter = new RateLimiter({
       maxRequests: opts?.rateLimitMax ?? 100,
       windowMs: opts?.rateLimitWindowMs ?? 60000,
     });
+    this.logger = opts?.logger ?? new ConsoleLogger();
+    this.serverTimeout = opts?.timeout ?? 30000;
   }
 
   start(port: number = 3000, host: string = '0.0.0.0'): Promise<void> {
     return new Promise((resolve, reject) => {
       this.server = createServer((req, res) => this.handleRequest(req, res));
+      this.server.timeout = this.serverTimeout;
       this.startTime = Date.now();
       this.server.listen(port, host, () => {
         this.healthChecker.markReady();
+        this.logger.info?.(`Causality Analyzer API v1.0.0 started on port ${port}`);
         resolve();
       });
       this.server.on('error', reject);
@@ -330,7 +346,7 @@ export class CausalityServer {
       });
       req.on('end', () => {
         try { resolve(JSON.parse(raw || '{}')); }
-        catch { resolve({} as T); }
+        catch { reject(new Error("Bad Request: invalid JSON")); }
       });
       req.on('error', err => reject(err));
     });

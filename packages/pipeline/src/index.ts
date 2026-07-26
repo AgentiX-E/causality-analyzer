@@ -127,6 +127,12 @@ export type { StreamingConfig, StreamingResult } from './streaming.js';
 export { HealthChecker } from './health.js';
 export type { HealthStatus, HealthCheckResult } from './health.js';
 
+// ── Parallel ──────────────────────────────────────────────────
+export { WorkerPool, sequentialRestart } from './parallel/index.js';
+
+// ── Constants ─────────────────────────────────────────────────
+export { CONSTANTS, clamp, safeDiv, safeLog } from './constants.js';
+
 // ── Benchmark ────────────────────────────────────────────────
 export { runBenchmark, computeSHD, formatBenchmarkTable, asiaGraph, sachsGraph, mBiasGraph, butterflyGraph, childGraph, alarmGraph, randomDAG, generateLinearData } from './benchmark.js';
 export type { BenchmarkResult, AlgorithmResult } from './benchmark.js';
