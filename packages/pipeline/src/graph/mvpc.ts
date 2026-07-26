@@ -141,9 +141,9 @@ function missingValueCI(
   const N = data.length;
 
   // Pairwise-complete observation counts
-  const pairCounts: number[][] = Array.from({length: m}, () => new Array(m).fill(0));
-  const means = new Array(m).fill(0);
-  const counts = new Array(m).fill(0);
+  const pairCounts: number[][] = []; for (let _i=0; _i<m; _i++) pairCounts.push(new Array<number>(m).fill(0) as number[]);
+  const means: number[] = new Array<number>(m).fill(0) as number[];
+  const counts: number[] = new Array<number>(m).fill(0) as number[];
 
   // Compute column means (using available values)
   for (let r = 0; r < N; r++) {
@@ -159,7 +159,7 @@ function missingValueCI(
   for (let c = 0; c < m; c++) means[c] /= Math.max(1, counts[c]);
 
   // Compute pairwise covariances
-  const cov: number[][] = Array.from({length: m}, () => new Array(m).fill(0));
+  const cov: number[][] = []; for (let _i=0; _i<m; _i++) cov.push(new Array<number>(m).fill(0) as number[]);
   for (let a = 0; a < m; a++) {
     for (let b = a; b < m; b++) {
       let sum = 0, cnt = 0;

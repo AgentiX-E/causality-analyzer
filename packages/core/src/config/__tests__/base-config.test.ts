@@ -162,6 +162,14 @@ describe('BaseConfig', () => {
       const json2 = config.toJSON();
       expect(json2.alpha).toBe(0.1); // original unchanged
     });
+    it('toJSON filters out function-valued properties', () => {
+      const config = new TestConfig({ alpha: 0.5 });
+      const json = config.toJSON();
+      // Functions should not appear in serialized output
+      for (const v of Object.values(json)) {
+        expect(typeof v).not.toBe('function');
+      }
+    });
   });
 });
 

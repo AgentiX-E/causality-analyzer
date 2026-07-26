@@ -235,8 +235,8 @@ export class HTRCA {
       const X = Array.from({ length: n }, (_, r) => pIdx.map(i => data.get(r, i)));
       // Compute X^T X and X^T y
       const k = pIdx.length;
-      const XtX = Array.from({ length: k }, () => new Array(k).fill(0));
-      const Xty = new Array(k).fill(0);
+      const XtX: number[][] = []; for (let _i=0; _i<k; _i++) XtX.push(new Array<number>(k).fill(0) as number[]);
+      const Xty: number[] = new Array<number>(k).fill(0);
       for (let r = 0; r < n; r++) {
         const xr = X[r];
         for (let i = 0; i < k; i++) {

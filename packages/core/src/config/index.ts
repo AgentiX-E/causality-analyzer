@@ -8,7 +8,7 @@
  * @packageDocumentation
  */
 
-import type { ZodType, ZodTypeDef } from 'zod';
+import type { ZodType } from 'zod';
 
 /** Result of a configuration validation */
 export interface ValidationResult {
@@ -88,7 +88,7 @@ export abstract class BaseConfig {
    * Get the zod schema for this configuration.
    * Override in subclasses to enable validation.
    */
-  protected abstract getSchema(): ZodType<this, ZodTypeDef, unknown>;
+  protected abstract getSchema(): ZodType<this>;
 
   /**
    * Validate and throw if invalid.

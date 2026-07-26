@@ -21,6 +21,38 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 const _require = createRequire(import.meta.url);
 
+// ── Neo4j Driver Types (boundary for CJS neo4j-driver-lite) ─────────
+
+interface Neo4jAuthModule {
+  basic(user: string, password: string, realm?: string): unknown;
+  bearer(token: string): unknown;
+  kerberos(ticket: string): unknown;
+  custom(principal: string, credentials: string, realm: string, scheme: string, parameters?: Record<string, unknown>): unknown;
+  none(): unknown;
+}
+
+interface Neo4jDriverModule {
+  driver: new (url: string, auth: unknown, config: Record<string, unknown>) => DriverLike;
+  auth: Neo4jAuthModule;
+}
+
+interface Neo4jErrorStatic {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+  isRetryable: (e: unknown) => boolean;
+}
+
+function loadNeo4j(): Neo4jDriverModule {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  const mod = _require('neo4j-driver-lite');
+  return mod as Neo4jDriverModule;
+}
+
+function loadNeo4jError(): Neo4jErrorStatic {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  const mod = _require('neo4j-driver-lite');
+  return mod as unknown as Neo4jErrorStatic;
+}
+
 // ── Types ──────────────────────────────────────────────────────────────
 
 /** Auth discriminant. Covers the full Neo4j auth matrix. */
@@ -141,7 +173,7 @@ export class RemoteGraphStore implements IGraphStore {
     this.log = config.logger ?? consoleLogger;
 
     // Resolve Driver constructor: _Driver (test DI) or real neo4j-driver-lite
-    const DriverCtor = config._Driver ?? _require('neo4j-driver-lite').driver;
+    const DriverCtor = config._Driver ?? loadNeo4j().driver;
 
     // Build auth token
     const auth = this.buildAuth(config.auth);
@@ -196,7 +228,7 @@ export class RemoteGraphStore implements IGraphStore {
 
   /** Build the appropriate neo4j AuthToken from config. */
   private buildAuth(authConfig?: RemoteGraphAuth): unknown {
-    const neo4j = _require('neo4j-driver-lite');
+    const neo4j = loadNeo4j();
     if (!authConfig) return neo4j.auth.basic('neo4j', 'password');
 
     switch (authConfig.type) {
@@ -222,20 +254,23 @@ export class RemoteGraphStore implements IGraphStore {
   // ── Retry logic ─────────────────────────────────────────────────────
 
   private async retry<T>(fn: () => Promise<T>, op: string): Promise<T> {
-    const { Neo4jError } = _require('neo4j-driver-lite');
+    const { isRetryable } = loadNeo4jError();
     const max = this.config.maxRetries ?? 3;
     const base = this.config.retryBaseMs ?? 100;
     let attempt = 0;
+
+    interface ErrWithCode { code?: string; }
 
     const go = async (): Promise<T> => {
       try { return await fn(); }
       catch (e: unknown) {
         attempt++;
+        const errCode = (e != null && typeof e === 'object') ? (e as ErrWithCode).code : undefined;
         const retryable =
-          (e instanceof Error && (e as any).code && Neo4jError.isRetryable(e)) ||
-          ((e as any)?.code === 'ECONNREFUSED') ||
-          ((e as any)?.code === 'ECONNRESET') ||
-          ((e as any)?.code === 'ETIMEDOUT');
+          (e instanceof Error && errCode !== undefined && isRetryable(e)) ||
+          errCode === 'ECONNREFUSED' ||
+          errCode === 'ECONNRESET' ||
+          errCode === 'ETIMEDOUT';
 
         if (attempt < max && retryable) {
           const delay = base * Math.pow(2, attempt);
@@ -426,12 +461,13 @@ export class RemoteGraphStore implements IGraphStore {
   /** Health check: verifies Neo4j connectivity */
   async healthCheck(): Promise<boolean> {
     try {
-      const driver = this.driver as any;
-      if (typeof driver.getServerInfo === 'function') {
-        await driver.getServerInfo();
+      const driver = this.driver;
+      // getServerInfo may not exist on all DriverLike implementations
+      const d = driver as DriverLike & { getServerInfo?: () => Promise<unknown> };
+      if (typeof d.getServerInfo === 'function') {
+        await d.getServerInfo();
       } else {
-        // Fallback: execute a simple Cypher query to verify connectivity
-        const session = driver.session?.() ?? this.driver.session();
+        const session = driver.session();
         try { await session.run('RETURN 1'); } finally { await session.close(); }
       }
       return true;

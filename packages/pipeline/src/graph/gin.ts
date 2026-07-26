@@ -38,7 +38,7 @@ export function ginDetect(
 
   // GIN condition: variables i,j share latent parent if
   // there exists k such that (i,k) ⟂ (j) | latent subset
-  const adj = Array.from({ length: d }, () => new Array<boolean>(d).fill(false));
+  const adj: boolean[][] = []; for (let _i=0; _i<d; _i++) adj.push(new Array<boolean>(d).fill(false) as boolean[]);
 
   for (let i = 0; i < d; i++) {
     for (let j = i + 1; j < d; j++) {

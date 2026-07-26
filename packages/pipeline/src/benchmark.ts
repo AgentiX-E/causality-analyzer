@@ -173,7 +173,7 @@ export function generateLinearData(graph: CausalGraph, n: number, seed: number, 
   const rng = createRNG(seed);
   const nodes = [...graph.nodes];
   const order = graph.topologicalSort();
-  const data: number[][] = Array.from({ length: n }, () => new Array(nodes.length).fill(0));
+  const data: number[][] = []; for (let _i=0; _i<n; _i++) data.push(new Array<number>(nodes.length).fill(0) as number[]);
   const rootNoise = 1.0; // standard deviation for root nodes (unit variance)
 
   for (let i = 0; i < n; i++) {
@@ -232,7 +232,7 @@ export function runBenchmark(
     { name: 'PC', fn: (d, n) => pcAlgorithm(d, n, {}).graph },
     { name: 'GES', fn: (d, n) => gesAlgorithm(d, n) },
     { name: 'BOSS', fn: (d, n) => bossAlgorithm(d, n, { numStarts: 2, maxIter: 20 }) },
-    { name: 'NOTEARS', fn: (_d, n) => notearsAlgorithm([...Array(_d.rows)].map((_, i) => [...Array(_d.columns)].map((_, j) => _d.get(i, j))), n, { lambda1: 0.1, maxOuterIter: 10, wThreshold: 0.2 }).graph },
+    { name: 'NOTEARS', fn: (_d, n) => notearsAlgorithm(Array.from({ length: _d.rows }, (_, i): number[] => Array.from({ length: _d.columns }, (_, j): number => _d.get(i, j))), n, { lambda1: 0.1, maxOuterIter: 10, wThreshold: 0.2 }).graph },
     { name: 'LiNGAM', fn: (d, n) => directLiNGAM(d, n).graph },
     { name: 'FCI', fn: (d, n) => fciAlgorithm(d, n).graph },
     { name: 'GFCI', fn: (d, n) => gfciAlgorithm(d, n).graph },

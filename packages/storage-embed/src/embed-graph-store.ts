@@ -1,42 +1,76 @@
 import { createRequire } from 'module';
 const _require = createRequire(import.meta.url);
-const { OverGraph } = _require('overgraph');
 import type { IGraphStore, CausalGraph, GraphMetadata, GraphVersion } from '@agentix-e/causality-analyzer-core';
 import { existsSync, mkdirSync } from 'fs';
+
+// ── OverGraph type interface ────────────────────────────────────────
+
+interface OverGraphNode {
+  id: number;
+  key: string;
+}
+
+interface OverGraphEdge {
+  src: number;
+  tgt: number;
+  label: string;
+}
+
+interface OverGraphLabel {
+  label: string;
+}
+
+interface OverGraphInstance {
+  upsertNode(label: string, key: string, props: Record<string, unknown>): number;
+  upsertEdge(src: number, tgt: number, label: string): void;
+  getNodesByLabels(label: string): OverGraphNode[];
+  listEdgeLabels(): OverGraphLabel[];
+  getEdgesByLabel(label: string): OverGraphEdge[];
+  close(): void;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+const OverGraph: { open(path: string): OverGraphInstance } = _require('overgraph').OverGraph;
 
 export interface EmbedGraphOptions {
   dbPath?: string;
 }
 
 export class EmbedGraphStore implements IGraphStore {
-  private g: any;
+  private g: OverGraphInstance;
   private vers: Map<string, number>;
 
   constructor(opts: EmbedGraphOptions = {}) {
     const dir = opts.dbPath || './causality-analyzer-graph';
     if (!opts.dbPath && !existsSync(dir)) mkdirSync(dir, { recursive: true });
     this.g = OverGraph.open(dir);
-    this.vers = new Map(); // graphId → version count
+    this.vers = new Map();
   }
 
-  async saveGraph(graph: CausalGraph, m: GraphMetadata, signal?: AbortSignal): Promise<string> { signal?.throwIfAborted();
+  async saveGraph(graph: CausalGraph, m: GraphMetadata, signal?: AbortSignal): Promise<string> {
+    signal?.throwIfAborted();
     const id = m.id;
     const v = (this.vers.get(id) ?? 0) + 1;
     this.vers.set(id, v);
-    const lid = `g_${id}_v${v}`; // graph+version-specific label
+    const lid = `g_${id}_v${v}`;
     const nodeIds: Record<string, number> = {};
-    for (const n of graph.nodes) { signal?.throwIfAborted();
+    for (const n of graph.nodes) {
+      signal?.throwIfAborted();
       nodeIds[n] = this.g.upsertNode(lid, `${id}_${n}`, {});
     }
-    for (const e of graph.edges) { signal?.throwIfAborted();
-      const f = nodeIds[e.source], t = nodeIds[e.target];
-      if (f != null && t != null) this.g.upsertEdge(f, t, e.directed ? 'DEPENDS_ON_dir' : 'DEPENDS_ON_undir');
+    for (const e of graph.edges) {
+      signal?.throwIfAborted();
+      const f = nodeIds[e.source];
+      const t = nodeIds[e.target];
+      if (f !== undefined && t !== undefined) {
+        this.g.upsertEdge(f, t, e.directed ? 'DEPENDS_ON_dir' : 'DEPENDS_ON_undir');
+      }
     }
     return id;
   }
 
-
-  async loadGraph(id: string, signal?: AbortSignal): Promise<CausalGraph | null> { signal?.throwIfAborted();
+  async loadGraph(id: string, signal?: AbortSignal): Promise<CausalGraph | null> {
+    signal?.throwIfAborted();
     const v = this.vers.get(id) ?? 0;
     if (v === 0) return null;
     return this._loadGraphByLabel(`g_${id}_v${v}`);
@@ -44,19 +78,18 @@ export class EmbedGraphStore implements IGraphStore {
 
   private _loadGraphByLabel(label: string): CausalGraph | null {
     const result = this.g.getNodesByLabels(label);
-    const nodes: string[] = [];
+    const graphNodes: string[] = [];
     const nodeMap = new Map<string, number>();
     for (const n of result) {
-      const k = n.key as string;
+      const k: string = n.key;
       if (!k) continue;
-      // Key format: {graphId}_{nodeName}
       const sep = k.indexOf('_');
       if (sep === -1) continue;
       const name = k.slice(sep + 1);
-      nodes.push(name);
+      graphNodes.push(name);
       nodeMap.set(name, n.id);
     }
-    if (nodes.length === 0) return null;
+    if (graphNodes.length === 0) return null;
 
     const edges: Array<{ source: string; target: string; weight: number; directed: boolean }> = [];
     const edgeLabels = this.g.listEdgeLabels();
@@ -64,32 +97,47 @@ export class EmbedGraphStore implements IGraphStore {
       if (!el.label.includes('DEPENDS_ON')) continue;
       const es = this.g.getEdgesByLabel(el.label);
       for (const e of es) {
-        if (!nodeMap.has(e.src) && !nodeMap.has(e.tgt)) continue;
-        const sn = nodes.find(n => nodeMap.get(n) === e.src);
-        const tn = nodes.find(n => nodeMap.get(n) === e.tgt);
-        if (sn && tn) edges.push({ source: sn, target: tn, weight: 1, directed: el.label.includes('dir') });
+        if (!nodeMap.has(String(e.src)) && !nodeMap.has(String(e.tgt))) continue;
+        const sn = graphNodes.find(n => nodeMap.get(n) === e.src);
+        const tn = graphNodes.find(n => nodeMap.get(n) === e.tgt);
+        if (sn && tn) edges.push({
+          source: sn,
+          target: tn,
+          weight: 1,
+          directed: el.label.includes('dir'),
+        });
       }
     }
-    return { nodes, edges };
+    return { nodes: graphNodes, edges };
   }
 
-
-  async loadGraphVersion(id: string, ver: number, signal?: AbortSignal): Promise<CausalGraph | null> { signal?.throwIfAborted();
+  async loadGraphVersion(id: string, ver: number, signal?: AbortSignal): Promise<CausalGraph | null> {
+    signal?.throwIfAborted();
     return this._loadGraphByLabel(`g_${id}_v${ver}`);
   }
 
-  async listGraphVersions(id: string, signal?: AbortSignal): Promise<GraphVersion[]> { signal?.throwIfAborted();
+  async listGraphVersions(id: string, signal?: AbortSignal): Promise<GraphVersion[]> {
+    signal?.throwIfAborted();
     const count = this.vers.get(id) ?? 0;
     if (count === 0) return [];
-    return Array.from({ length: count }, (_, i) => ({ graphId: id, version: i + 1, timestamp: Date.now() }));
+    return Array.from({ length: count }, (_, i) => ({
+      graphId: id,
+      version: i + 1,
+      timestamp: Date.now(),
+    }));
   }
 
-  async findSimilarGraphs(_t: CausalGraph, lim: number, signal?: AbortSignal): Promise<CausalGraph[]> { signal?.throwIfAborted();
+  async findSimilarGraphs(_t: CausalGraph, lim: number, signal?: AbortSignal): Promise<CausalGraph[]> {
+    signal?.throwIfAborted();
     const r: CausalGraph[] = [];
-    for (const [id] of this.vers) { const g = await this.loadGraph(id); if (g) r.push(g); if (r.length >= lim) break; }
+    for (const [id] of this.vers) {
+      const g = await this.loadGraph(id);
+      if (g) r.push(g);
+      if (r.length >= lim) break;
+    }
     return r;
   }
 
-  close(): void { this.g?.close?.(); }
+  close(): void { this.g.close(); }
   healthCheck(): boolean { return this.g != null; }
 }

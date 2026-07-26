@@ -68,8 +68,9 @@ function execDiscover(args: CliArgs): void {
     console.error('Usage: causal-analyzer discover <file.json> --nodes A,B,C');
     process.exit(1);
   }
-  const raw = JSON.parse(readFileSync(args.file, 'utf-8'));
-  const data = new Matrix(raw.data ?? raw);
+  const raw: unknown = JSON.parse(readFileSync(args.file, 'utf-8'));
+  const rawObj = raw as Record<string, unknown>;
+  const data = new Matrix((rawObj.data ?? rawObj) as ArrayLike<ArrayLike<number>>);
   const result = pcAlgorithm(data, args.nodes, { alpha: 0.05, stable: true });
   console.log(JSON.stringify({
     edges: result.graph.edges.map((e: { source: string; target: string; weight: number }) =>
@@ -83,16 +84,20 @@ function execAnalyze(args: CliArgs): void {
     console.error('Usage: causal-analyzer analyze <file.json> --slis CPU,Latency');
     process.exit(1);
   }
-  const raw = JSON.parse(readFileSync(args.file, 'utf-8'));
-  const data = raw.data ?? raw;
-  const graphData = raw.graph ?? { nodes: [], edges: [] };
+  const raw: unknown = JSON.parse(readFileSync(args.file, 'utf-8'));
+  const rawObj = raw as Record<string, unknown>;
+  const data = rawObj.data as Record<string, unknown> ?? rawObj;
+  const graphData = (rawObj.graph as Record<string, unknown>) ?? { nodes: [] as string[], edges: [] as Array<{ from: string; to: string }> };
 
-  const g = new CausalGraph(graphData.nodes);
-  for (const e of graphData.edges) { g.addEdge(e.from, e.to); }
+  const g = new CausalGraph(graphData.nodes as string[]);
+  const edges = graphData.edges as Array<{ from: string; to: string }>;
+  for (const e of edges) { g.addEdge(e.from, e.to); }
 
   const pipeline = new CIRCAPipeline();
-  pipeline.train(g, data.normal ?? data);
-  const result = pipeline.analyze(data.anomaly ?? data, args.slis);
+  const normalData = data.normal as number[][] ?? (data as unknown as number[][]);
+  pipeline.train(g, normalData);
+  const anomalyData = data.anomaly as number[][] ?? (data as unknown as number[][]);
+  const result = pipeline.analyze(anomalyData, args.slis);
 
   console.log(JSON.stringify({
     rootCauses: result.rootCauses.map(

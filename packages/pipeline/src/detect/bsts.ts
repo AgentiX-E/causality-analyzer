@@ -41,7 +41,7 @@ export interface BSTSResult {
 export function exponentialSmoothingDetect(y: number[], period: number = 0, threshold: number = 3.0): BSTSResult {
   const n = y.length;
   if (n < 4) {
-    return { residuals: y.slice(), trend: y.slice(), scores: new Array(n).fill(0), anomalies: new Array(n).fill(false) };
+    return { residuals: y.slice(), trend: y.slice(), scores: new Array<number>(n).fill(0) as number[], anomalies: new Array<boolean>(n).fill(false) as boolean[] };
   }
 
   // Step 1: Estimate trend via exponential smoothing (NOT Kalman filtering)
@@ -49,7 +49,7 @@ export function exponentialSmoothingDetect(y: number[], period: number = 0, thre
 
   // Step 2: Estimate and remove seasonal component (if period > 0)
   const detrended = y.map((v, i) => v - trend[i]);
-  const seasonal = period > 0 ? estimateSeasonal(detrended, period) : new Array(n).fill(0);
+  const seasonal = period > 0 ? estimateSeasonal(detrended, period) : new Array<number>(n).fill(0) as number[];
 
   // Step 3: Compute residuals
   const residuals = y.map((v, i) => v - trend[i] - seasonal[i]!);
@@ -82,7 +82,7 @@ export { exponentialSmoothingDetect as bstsDetect };
 
 function exponentialSmooth(y: number[], alpha: number): number[] {
   const n = y.length;
-  const result = new Array(n).fill(0);
+  const result: number[] = new Array<number>(n).fill(0) as number[];
   result[0] = y[0]!;
 
   for (let i = 1; i < n; i++) {
@@ -93,8 +93,8 @@ function exponentialSmooth(y: number[], alpha: number): number[] {
 
 function estimateSeasonal(detrended: number[], period: number): number[] {
   const n = detrended.length;
-  const seasonalPattern = new Array(period).fill(0);
-  const counts = new Array(period).fill(0);
+  const seasonalPattern: number[] = new Array<number>(period).fill(0) as number[];
+  const counts: number[] = new Array<number>(period).fill(0) as number[];
 
   // Average values at each seasonal position
   for (let i = 0; i < n; i++) {

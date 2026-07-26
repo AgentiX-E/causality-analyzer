@@ -88,8 +88,8 @@ export class StructuralCausalModel {
         // OLS: X_i = β₀ + Σ βⱼ * paⱼ + ε
         // Every row contributes consistently to XtX and Xty:
         // if any variable (y or any xi) is NaN, skip the entire row.
-        const XtX = Array.from({ length: k }, () => new Array(k).fill(0));
-        const Xty = new Array(k).fill(0);
+        const XtX: number[][] = []; for (let _i=0; _i<k; _i++) XtX.push(new Array<number>(k).fill(0) as number[]);
+        const Xty: number[] = new Array<number>(k).fill(0);
         let ySum = 0, validN = 0;
         for (let r = 0; r < n; r++) {
           const y = data[r][nodeIdx];

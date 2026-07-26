@@ -190,6 +190,15 @@ export function combinations<T>(arr: T[], k: number): T[][] {
   return result;
 }
 
+/** Create an n×m zero matrix (number[][]) with explicit typing. */
+function makeZeroMatrix(rows: number, cols: number): number[][] {
+  const m: number[][] = [];
+  for (let i = 0; i < rows; i++) {
+    m.push(new Array<number>(cols).fill(0) as number[]);
+  }
+  return m;
+}
+
 // ── Fisher's Z Conditional Independence Test ──────────────────────────
 
 /**
@@ -257,7 +266,7 @@ export function fisherZTest(
   let cov: number[][];
   if (corrMatrix) {
     // Subset from precomputed correlation matrix — O(d²) where d=|S|+2
-    cov = Array.from({ length: indices.length }, () => new Array(indices.length).fill(0));
+    cov = makeZeroMatrix(indices.length, indices.length);
     for (let a = 0; a < indices.length; a++) {
       const ai = indices[a]!;
       for (let b = a; b < indices.length; b++) {
@@ -275,7 +284,7 @@ export function fisherZTest(
       for (let r = 0; r < n; r++) sum += data[r]?.[ci] ?? 0;
       means[c] = sum / n;
     }
-    cov = Array.from({ length: indices.length }, () => new Array(indices.length).fill(0));
+    cov = makeZeroMatrix(indices.length, indices.length);
     for (let a = 0; a < indices.length; a++) {
       const ai = indices[a]!;
       for (let b = a; b < indices.length; b++) {
@@ -353,8 +362,8 @@ export function precomputeCorrelation(data: number[][]): number[][] {
   if (d === 0) return [];
 
   const n = data.length;
-  const means = new Array(d).fill(0);
-  const stds = new Array(d).fill(0);
+  const means = new Array<number>(d).fill(0) as number[];
+  const stds = new Array<number>(d).fill(0) as number[];
 
   // Means
   for (let j = 0; j < d; j++) {
@@ -375,7 +384,7 @@ export function precomputeCorrelation(data: number[][]): number[][] {
   }
 
   // Correlation matrix
-  const corr: number[][] = Array.from({ length: d }, () => new Array(d).fill(0));
+  const corr: number[][] = makeZeroMatrix(d, d);
   for (let a = 0; a < d; a++) {
     corr[a]![a] = 1;
     for (let b = a + 1; b < d; b++) {

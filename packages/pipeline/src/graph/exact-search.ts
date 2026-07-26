@@ -64,7 +64,7 @@ export function exactSearch(
 
   // Check if edges form a DAG (topological sort)
   const isDAG = (edges: Array<[number, number]>): boolean => {
-    const inDegree = new Array(d).fill(0);
+    const inDegree: number[] = new Array<number>(d).fill(0) as number[];
     const adj = Array.from({ length: d }, () => new Set<number>());
     for (const [f, t] of edges) { adj[f].add(t); inDegree[t]++; }
     const queue: number[] = [];

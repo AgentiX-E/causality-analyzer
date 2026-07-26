@@ -335,17 +335,17 @@ export class CausalityServer {
       }
       let raw = '';
       let size = 0;
-      req.on('data', chunk => {
+      req.on('data', (chunk: Buffer) => {
         size += chunk.length;
         if (size > this.maxBodySize) {
           req.destroy();
           reject(new Error('Payload Too Large'));
           return;
         }
-        raw += chunk;
+        raw += chunk.toString();
       });
       req.on('end', () => {
-        try { resolve(JSON.parse(raw || '{}')); }
+        try { resolve(JSON.parse(raw || '{}') as T); }
         catch { reject(new Error("Bad Request: invalid JSON")); }
       });
       req.on('error', err => reject(err));

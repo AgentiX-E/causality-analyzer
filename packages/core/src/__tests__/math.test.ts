@@ -878,3 +878,40 @@ describe('bicScore very small n', () => {
     expect(isFinite(bic)).toBe(true);
   });
 });
+
+// ── chiSquareTest and gSquareTest edge cases ────────────────────────
+
+describe('chiSquarePValue edge cases', () => {
+  it('handles 2x2 observed with values', () => {
+    const r = chiSquareTest([
+      [10, 20],
+      [30, 40],
+    ]);
+    expect(r).toBeGreaterThan(0);
+    expect(r).toBeLessThan(1);
+  });
+  it('returns valid p-value for 3x2 table', () => {
+    const r = chiSquareTest([
+      [15, 25],
+      [35, 45],
+      [10, 20],
+    ]);
+    expect(r).toBeGreaterThan(0);
+    expect(r).toBeLessThan(1);
+  });
+});
+
+describe('gSquareTest edge cases', () => {
+  it('returns finite p-value for 2x2', () => {
+    const r = gSquareTest([
+      [10, 5],
+      [5, 10],
+    ]);
+    expect(r).toBeGreaterThan(0);
+    expect(r).toBeLessThan(1);
+  });
+  it('returns 1 for single cell table', () => {
+    const r = gSquareTest([[1]]);
+    expect(r).toBe(1);
+  });
+});

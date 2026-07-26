@@ -185,7 +185,7 @@ export class CausalGraph {
 
   hasCycle(): boolean {
     const n = this.nodeCount;
-    const visited = new Array(n).fill(0); // 0=unvisited, 1=visiting, 2=done
+    const visited: number[] = new Array<number>(n).fill(0) as number[]; // 0=unvisited, 1=visiting, 2=done
     const dfs = (v: number): boolean => {
       visited[v] = 1;
       for (let w = 0; w < n; w++) {
@@ -421,7 +421,7 @@ export class CausalGraph {
   /** Kahn's algorithm for topological ordering. */
   topologicalSort(): string[] {
     const n = this.nodeCount;
-    const inDegree = new Array(n).fill(0);
+    const inDegree: number[] = new Array<number>(n).fill(0) as number[];
     for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) if (this.adj.get(i, j) === 1) inDegree[j]++;
     const queue: number[] = [];
     for (let i = 0; i < n; i++) if (inDegree[i] === 0) queue.push(i);

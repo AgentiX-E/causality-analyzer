@@ -39,7 +39,7 @@ export class WorkerPool {
     this.workers = [];
     for (let i = 0; i < size; i++) {
       const worker = new Worker(workerScript);
-      worker.on('message', (result) => this.onResult(result));
+      worker.on('message', (result: unknown) => this.onResult(result as { id: number; result?: unknown; error?: string }));
       worker.on('error', () => {});
       this.workers.push({ worker, busy: false });
     }
