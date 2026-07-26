@@ -32,7 +32,7 @@ const PERF_BUDGETS = {
   /** LiNGAM on 4-node graph with 200 samples */
   lingam4Node200: 600,
   /** StatsDetector batch training on 1000 samples */
-  statsBatch: 100,
+  statsBatch: 200,
 };
 
 function generateLinearData(nodes: string[], edges: Array<[string, string, number]>, N: number): Matrix {

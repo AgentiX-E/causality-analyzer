@@ -228,12 +228,9 @@ export function runBenchmark(
   data: number[][],
   nodeNames: string[],
 ): BenchmarkResult {
-  // Adaptive maxDegree: large graphs benefit from more restrictive search
-  const gesMaxDegree = truth.nodeCount > 15 ? 2 : (truth.nodeCount > 8 ? 3 : undefined);
-
   const algorithms: Array<{ name: string; fn: (d: Matrix, nodes: string[]) => CausalGraph }> = [
     { name: 'PC', fn: (d, n) => pcAlgorithm(d, n, {}).graph },
-    { name: 'GES', fn: (d, n) => gesAlgorithm(d, n, gesMaxDegree !== undefined ? { maxDegree: gesMaxDegree } : {}) },
+    { name: 'GES', fn: (d, n) => gesAlgorithm(d, n) },
     { name: 'BOSS', fn: (d, n) => bossAlgorithm(d, n, { numStarts: 2, maxIter: 20 }) },
     { name: 'NOTEARS', fn: (_d, n) => notearsAlgorithm([...Array(_d.rows)].map((_, i) => [...Array(_d.columns)].map((_, j) => _d.get(i, j))), n, { lambda1: 0.1, maxOuterIter: 10, wThreshold: 0.2 }).graph },
     { name: 'LiNGAM', fn: (d, n) => directLiNGAM(d, n).graph },

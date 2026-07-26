@@ -40,7 +40,17 @@ export function gesAlgorithm(
 ): CausalGraph {
   const n = nodeNames.length;
   const N = data.rows;
-  const maxDegree = config.maxDegree ?? -1;
+
+  // Auto-detect maxDegree:
+  //   d > 15 (large graph)  → maxDegree=2 (prevents CPDAG explosion)
+  //   N/d < 50              → maxDegree=2 (sparse data)
+  //   50 ≤ N/d < 150         → maxDegree=3 (moderate)
+  //   N/d ≥ 150              → maxDegree=4 (data-rich)
+  // Explicit config.maxDegree always overrides.
+  const ratio = N / n;
+  const maxDegree = config.maxDegree && config.maxDegree >= 0
+    ? config.maxDegree
+    : n > 15 ? 2 : ratio < 50 ? 2 : ratio < 150 ? 3 : 4;
 
   // Start with empty graph (empty CPDAG)
   const g = new CausalGraph(nodeNames);
