@@ -23,7 +23,7 @@ export interface GOLEMConfig {
 }
 
 const DEFAULTS: GOLEMConfig = {
-  lambda1: 0.01,
+  lambda1: 0.05,
   lr: 0.01,
   maxIter: 5000,
   tol: 1e-6,
