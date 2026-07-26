@@ -126,112 +126,111 @@ export function gesAlgorithm(
   const isAdjacent = (u: string, v: string): boolean =>
     g.hasEdge(u, v) || g.hasEdge(v, u);
 
-  // ── Phase 1: Forward (add edges greedily) in CPDAG space ──────
+  // Helper: apply Meek rule R1 — if X→Y—Z and X,Z non-adjacent, orient Y→Z
+  const applyMeekR1 = (graph: CausalGraph): void => {
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const y of graph.nodes) {
+        // Find all X where X→Y
+        const parentsX = [...graph.parents(y)];
+        // Find all Z where Y—Z (undirected edge = both directions)
+        for (const z of graph.neighbors(y)) {
+          if (graph.hasEdge(z, y)) continue; // skip if Z→Y (directed)
+          for (const x of parentsX) {
+            // Check X and Z are non-adjacent (neither direction)
+            if (!graph.hasEdge(x, z) && !graph.hasEdge(z, x)) {
+              // R1: orient Y→Z
+              graph.removeEdge(z, y); // remove undirected Z—Y
+              changed = true;
+            }
+          }
+        }
+      }
+    }
+  };
+
+  const minDelta = Math.log(Math.max(2, N)); // minimum BIC improvement for edge acceptance
+
+  // ── Phase 1: Forward (add edges greedily) ──────────────────────────
   let improved = true;
   let iter = 0;
 
   while (improved && iter++ < 100) {
     improved = false;
-    let bestDelta = -1e-6;
+    let bestDelta = minDelta;
     let bestEdge: [string, string] | null = null;
 
     for (let i = 0; i < n; i++) {
       const u = nodeNames[i];
-      // Use neighbors (undirected) for degree check in CPDAG space
-      const uDegree = g.neighbors(u).length;
+      const uParents = [...g.parents(u)];
 
-      if (maxDegree >= 0 && uDegree >= maxDegree) continue;
+      if (maxDegree >= 0 && uParents.length >= maxDegree) continue;
 
       for (let j = 0; j < n; j++) {
         if (i === j) continue;
         const v = nodeNames[j];
         if (isAdjacent(u, v)) continue;
 
-        const vDegree = g.neighbors(v).length;
-
-        // BIC computation uses parents (one-way edges), degree check uses neighbors
-        const uParents = [...g.parents(u)];
         const vParents = [...g.parents(v)];
 
-        // Try both orientations: v→u and u→v
-        if (!(maxDegree >= 0 && uDegree >= maxDegree)) {
-          const bicNew1 = computeBIC(u, [...uParents, v]);
-          const bicOld1 = computeBIC(u, uParents);
-          const delta1 = bicNew1 - bicOld1;
-          if (delta1 > bestDelta) {
-            bestDelta = delta1;
-            bestEdge = [v, u];
-          }
+        // Candidate: v → u
+        if (maxDegree < 0 || uParents.length < maxDegree) {
+          const bicNew = computeBIC(u, [...uParents, v]);
+          const bicOld = computeBIC(u, uParents);
+          const delta = bicNew - bicOld;
+          if (delta > bestDelta) { bestDelta = delta; bestEdge = [v, u]; }
         }
 
-        // Orientation 2: u → v (u is parent of v)
-        if (!(maxDegree >= 0 && vDegree >= maxDegree)) {
-          const bicNew2 = computeBIC(v, [...vParents, u]);
-          const bicOld2 = computeBIC(v, vParents);
-          const delta2 = bicNew2 - bicOld2;
-          if (delta2 > bestDelta) {
-            bestDelta = delta2;
-            bestEdge = [u, v];
-          }
+        // Candidate: u → v
+        if (maxDegree < 0 || vParents.length < maxDegree) {
+          const bicNew = computeBIC(v, [...vParents, u]);
+          const bicOld = computeBIC(v, vParents);
+          const delta = bicNew - bicOld;
+          if (delta > bestDelta) { bestDelta = delta; bestEdge = [u, v]; }
         }
       }
     }
 
     if (bestEdge) {
-      // Add as undirected edge in CPDAG space.
-      // Direction is ambiguous for the first edge — scores are
-      // symmetric for both orientations.  Later edges and the
-      // backward phase will resolve the orientation via BIC.
-      g.undirectedEdge(bestEdge[0], bestEdge[1]);
+      // Add as directed edge — BIC was computed for this specific direction
+      g.addEdge(bestEdge[0], bestEdge[1]);
+      // Apply Meek R1 to propagate forced V-structure orientations
+      applyMeekR1(g);
       improved = true;
     }
   }
 
-  // ── Phase 2: Backward (remove edges greedily) ──
-  // Operates on both directed and undirected edges.
+  // ── Phase 2: Backward (remove edges greedily) ────────────────────
   improved = true;
   iter = 0;
 
   while (improved && iter++ < 100) {
     improved = false;
-    let bestDelta = -1e-6;
-    let bestRemove: [string, string] | null = null;
+    let bestDelta = minDelta;
+    let bestSource: string | null = null;
+    let bestTarget: string | null = null;
 
-    for (let i = 0; i < n; i++) {
-      const u = nodeNames[i];
-      // Use neighbors (includes both directed parents and undirected adjacencies)
-      for (const v of g.neighbors(u)) {
-        // Try removing edge as parent: BIC(u without v) vs BIC(u with v)
-        const currentParents = [...g.parents(u)];
-        if (currentParents.includes(v)) {
-          const newParents = currentParents.filter(p => p !== v);
-          const bicNew = computeBIC(u, newParents);
-          const bicOld = computeBIC(u, currentParents);
-          const delta = bicNew - bicOld;
-          if (delta > bestDelta) { bestDelta = delta; bestRemove = [v, u]; }
-        } else {
-          // Undirected edge u—v: treat v as a potential parent of u OR
-          // u as potential parent of v.  Score with full existing parent sets.
-          const vParents = [...g.parents(v)];
+    for (const node of nodeNames) {
+      const parents = [...g.parents(node)];
+      if (parents.length === 0) continue;
 
-          // Direction 1: v→u (v as parent of u)
-          const bicNew1 = computeBIC(u, currentParents);            // remove v
-          const bicOld1 = computeBIC(u, [...currentParents, v]);    // add v as parent
-          const delta1 = bicNew1 - bicOld1;
-          if (delta1 > bestDelta) { bestDelta = delta1; bestRemove = [v, u]; }
+      for (const p of parents) {
+        const newParents = parents.filter(par => par !== p);
+        const bicNew = computeBIC(node, newParents);
+        const bicOld = computeBIC(node, parents);
+        const delta = bicNew - bicOld;
 
-          // Direction 2: u→v (u as parent of v)
-          const bicNew2 = computeBIC(v, vParents);                // remove u
-          const bicOld2 = computeBIC(v, [...vParents, u]);        // add u as parent
-          const delta2 = bicNew2 - bicOld2;
-          if (delta2 > bestDelta) { bestDelta = delta2; bestRemove = [u, v]; }
+        if (delta > bestDelta) {
+          bestDelta = delta;
+          bestSource = p;
+          bestTarget = node;
         }
       }
     }
 
-    if (bestRemove) {
-      g.removeEdge(bestRemove[0], bestRemove[1]);
-      g.removeEdge(bestRemove[1], bestRemove[0]);
+    if (bestSource && bestTarget) {
+      g.removeEdge(bestSource, bestTarget);
       improved = true;
     }
   }

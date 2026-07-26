@@ -13,65 +13,66 @@ pnpm run --filter @agentix-e/causality-analyzer-core build
 
 ```
 packages/
-├── core/          # Types, interfaces, ColumnarTable, PluginRegistry, math
-├── pipeline/      # Detection, causal discovery, RCA, inference, GCM, visualization
-├── storage-embed/ # SQLite (better-sqlite3) + OverGraph embedded stores
-├── storage-remote/# PostgreSQL (pg) + Neo4j (neo4j-driver-lite) remote stores
-└── visual/        # Lit 3 Web Components for causal graph + timeseries visualization
+├── core/            # Types, interfaces, ColumnarTable, PluginRegistry, math
+├── pipeline/        # Detection, causal discovery, RCA, inference, GCM, HTTP API
+├── storage-embed/   # node:sqlite + OverGraph embedded stores
+├── storage-browser/ # WASM SQLite + OPFS browser stores
+├── storage-remote/  # PostgreSQL (pg) + Neo4j remote stores
+└── visual/          # Lit 3 Web Components for causal graph + timeseries
 ```
 
 ## Quality Gates (CI enforced)
 
 | Gate | Command | Description |
 |------|---------|-------------|
-| Lint | `pnpm -r lint` | ESLint with `@typescript-eslint/recommended` |
-| Typecheck | `pnpm -r typecheck` | `tsc --noEmit` on all 5 packages |
-| Test | `pnpm -r test` | Vitest with v8 coverage (95%+ threshold) |
-| Browser | `pnpm run --filter ...visual browser-test` | Playwright Chromium |
-| Neo4j | `pnpm run --filter ...storage-remote test:neo4j` | Docker Neo4j 5 with mTLS |
+| Lint | `pnpm -r lint` | ESLint — no-unsafe-* rules enforced as errors |
+| Typecheck | `pnpm -r typecheck` | `tsc --noEmit` on all 6 packages |
+| Test | `pnpm -r test` | Vitest with v8 coverage |
+| Browser | Playwright | Visual + storage-browser E2E (Chromium) |
+| Neo4j | `test:neo4j` | Docker Neo4j integration tests |
 
 ## Development Workflow
 
-1. **Create a branch** from `main`
+1. **Create a branch** from `master`
 2. **Write tests first** — verify they fail
 3. **Implement** the feature or fix
 4. **Run quality gates** locally:
    ```bash
    pnpm run --filter @agentix-e/causality-analyzer-core build
    pnpm -r lint
-   pnpm -r typecheck
    pnpm -r test
    ```
-5. **Push** and open a PR — CI runs all gates + browser + Neo4j tests
+5. **Push** and open a PR — CI runs all gates
 
-## Coverage Requirements
+## Coverage Requirements (actual, CI enforced)
 
-Every package must maintain ≥ 95% coverage on statements, branches, functions, and lines.
-
-| Package | Statements | Branches | Functions | Lines |
-|---------|-----------|----------|-----------|-------|
-| core | 95% | 95% | 95% | 95% |
-| pipeline | 95% | 90% | 95% | 95% |
+| Package | Stmts | Branches | Funcs | Lines |
+|---------|-------|----------|-------|-------|
+| core | 95% | 83% | 95% | 95% |
+| pipeline | 92% | 77% | 92% | 94% |
 | storage-embed | 95% | 95% | 95% | 95% |
-| storage-remote | 85% | 80% | 55% | 85% |
-| visual | 48% | 70% | 70% | 48% |
+| storage-browser | 90% | 80% | 90% | 90% |
+| storage-remote | 77% | 58% | 55% | 77% |
+| visual | 55% | 52% | 42% | 50% |
 
-(Visual thresholds are lower because Lit decorators are framework infrastructure.)
+Storage-remote thresholds reflect pg-mem test coverage (Neo4j tests run in CI via Docker).
+Visual thresholds reflect Lit decorator infrastructure (Canvas2DRenderer at 98% individually).
 
 ## Architecture Principles
 
-1. **core is pure contracts** — interfaces, types, and foundational data structures. No heavy implementations.
-2. **DI over inheritance** — stores are injected via instance config, not constructor classes.
+1. **core is pure contracts** — interfaces, types, and foundational data structures.
+2. **DI over inheritance** — stores are injected via instance config.
 3. **No in-process fallbacks** — remote stores fail fast, embedded stores are explicitly chosen.
-4. **Test with real backends** — pg-mem for PostgreSQL, overgraph for graph, BoltSessionMock + real Neo4j in CI.
-5. **Type safety first** — `any` is a warning, `as` casts must be justified.
+4. **Test with real backends** — pg-mem for PostgreSQL, overgraph for graph, BoltMock for Neo4j.
+5. **Type safety first** — `no-unsafe-*` rules enforced as errors.
 
-## Adding a New Causal Discovery Algorithm
+## Known Limitations
 
-1. Implement in `packages/pipeline/src/graph/`
-2. Export via `graph/index.ts` and `pipeline/src/index.ts`
-3. Test: `i{N}-*.test.ts` in `__tests__/` with synthetic DAGs
-4. Document with JSDoc — all public API must have `@param` and `@returns`
+### GES Algorithm
+BIC-based greedy forward search produces DAG output but struggles with direction identification on linearly generated data. GES correctly detects edge presence (skeleton) but BIC is direction-insensitive. A full CPDAG-space rewrite with Meek rules R1-R3 and global scoring is planned.
+
+### NOTEARS Algorithm
+NOTEARS converged to zero edges on ASIA benchmarks with certain seeds. The gradient-based optimization is sensitive to initialization and hyperparameters.
 
 ## Commit Convention
 
