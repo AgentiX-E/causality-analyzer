@@ -1,15 +1,15 @@
 /**
- * RESIT — REgression with Subsequent Independence Test.
+ * RESIT �? REgression with Subsequent Independence Test.
  *
  * Pairwise causal direction inference for nonlinear relationships.
  * Tests whether X causes Y or Y causes X by comparing the
  * independence of residuals from regressions in both directions.
  *
  * Algorithm (Peters et al., 2014 / Mooij et al., 2016):
- *  1. Direction X→Y: fit Y ≈ f(X) via polynomial regression,
- *     compute residuals ε_X→Y. Test ε_X→Y ⟂ X.
- *  2. Direction Y→X: fit X ≈ g(Y) via polynomial regression,
- *     compute residuals ε_Y→X. Test ε_Y→X ⟂ Y.
+ *  1. Direction X→Y: fit Y �? f(X) via polynomial regression,
+ *     compute residuals ε_X→Y. Test ε_X→Y �? X.
+ *  2. Direction Y→X: fit X �? g(Y) via polynomial regression,
+ *     compute residuals ε_Y→X. Test ε_Y→X �? Y.
  *  3. Choose direction with larger p-value (more independent).
  *
  * References:
@@ -22,7 +22,7 @@
  *
  * @packageDocumentation
  */
-import { fisherZTest } from '@agentix-e/causality-analyzer-core';
+import { fisherZTest, solveLinearSafe } from '@agentix-e/causality-analyzer-core';
 
 export interface RESITResult {
   /** Inferred causal direction: "X→Y" or "Y→X" or "uncertain" */
@@ -43,8 +43,8 @@ export interface RESITConfig {
 /**
  * Test causal direction between two variables using RESIT.
  *
- * @param X — first variable
- * @param Y — second variable
+ * @param X �? first variable
+ * @param Y �? second variable
  * @returns direction, p-values, and confidence
  */
 export function resitTest(
@@ -57,10 +57,10 @@ export function resitTest(
 
   if (n < 10) return { direction: 'uncertain', pValueXY: 1, pValueYX: 1, confidence: 0 };
 
-  // Direction 1: X → Y — fit polynomial Y = f(X) + ε
+  // Direction 1: X �? Y �? fit polynomial Y = f(X) + ε
   const pValueXY = testDirection(X, Y, degree, n);
 
-  // Direction 2: Y → X — fit polynomial X = g(Y) + ε
+  // Direction 2: Y �? X �? fit polynomial X = g(Y) + ε
   const pValueYX = testDirection(Y, X, degree, n);
 
   let direction: 'X→Y' | 'Y→X' | 'uncertain';
@@ -105,7 +105,13 @@ function testDirection(X: number[], Y: number[], degree: number, n: number): num
     }
   }
 
-  const beta = solveOLS(XtX, Xty, k);
+  const { solution, singular } = solveLinearSafe(
+    XtX.map(r => Array.from(r)),
+    Array.from(Xty),
+  );
+  const beta = singular || !solution
+    ? new Float64Array(k)  // fallback: all-zero coefficients if singular
+    : new Float64Array(solution);
 
   // Compute residuals
   const residuals: number[] = [];
@@ -115,31 +121,10 @@ function testDirection(X: number[], Y: number[], degree: number, n: number): num
     residuals.push(Y[i] - pred);
   }
 
-  // Independence test: residuals ⟂ X via Fisher Z on (X, residuals)
+  // Independence test: residuals �? X via Fisher Z on (X, residuals)
   const dataMatrix = X.map((x, i) => [x, residuals[i]]);
   return fisherZTest(dataMatrix, 0, 1, []);
 }
 
 // ── OLS Solver ─────────────────────────────────────────────────────
 
-function solveOLS(XtX: Float64Array[], Xty: Float64Array, n: number): Float64Array {
-  const XtXArr = XtX.map(r => Array.from(r));
-  const XtyArr = Array.from(Xty);
-
-  const aug = XtXArr.map((row, i) => [...row, XtyArr[i] ?? 0]);
-  for (let col = 0; col < n; col++) {
-    let pivot = col;
-    for (let row = col + 1; row < n; row++)
-      if (Math.abs(aug[row][col]) > Math.abs(aug[pivot][col])) pivot = row;
-    if (Math.abs(aug[pivot][col]) < 1e-14) continue;
-    [aug[col], aug[pivot]] = [aug[pivot], aug[col]];
-    const pv = aug[col][col];
-    for (let j = col; j <= n; j++) aug[col][j] /= pv;
-    for (let row = 0; row < n; row++) {
-      if (row === col) continue;
-      const f = aug[row][col];
-      for (let j = col; j <= n; j++) aug[row][j] -= f * aug[col][j];
-    }
-  }
-  return new Float64Array(aug.map(r => r[n]));
-}

@@ -112,7 +112,7 @@ export type { AuditEntry, MetricCounter, MetricHistogram } from './observability
 
 // ── Infrastructure ───────────────────────────────────────────
 export { RateLimiter } from './rate-limiter.js';
-export type { RateLimiterConfig, RateLimitResult, OverflowStrategy } from './rate-limiter.js';
+export type { RateLimiterConfig, RateLimitResult, RateLimitCheckResult, OverflowStrategy } from './rate-limiter.js';
 export { EncryptedStore } from './encrypted-store.js';
 export type { EncryptedStoreConfig } from './encrypted-store.js';
 

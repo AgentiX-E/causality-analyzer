@@ -30,7 +30,7 @@ export interface PCMCIEdge {
   lag: number;
   /** p-value from MCI test */
   pValue: number;
-  /** Normalized causal strength: partial correlation */
+  /** Confidence score = 1 - pValue, clamped to [0, 1]. Higher = more confident causal link. */
   strength: number;
 }
 
@@ -192,7 +192,7 @@ export function pcmciAlgorithm(
           to: edge.to,
           lag: edge.lag,
           pValue: p,
-          strength: 1 - p, // approximate: 1 - p as confidence
+          strength: Math.max(0, Math.min(1, 1 - p)), // confidence = 1 - pValue, clamped to [0,1]
         });
       }
     }

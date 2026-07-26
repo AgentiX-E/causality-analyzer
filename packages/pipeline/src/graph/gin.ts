@@ -83,7 +83,7 @@ export function ginDetect(
         if (adj[v][w] && !visited.has(w)) stack.push(w);
     }
     if (comp.length >= 2) {
-      clusters.set(clusterId++, comp.map(v => nodeNames.indexOf(nodeNames[v])));
+      clusters.set(clusterId++, comp.map(v => v));  // v is already a numeric index
     }
   }
 

@@ -16,19 +16,32 @@
 export type OverflowStrategy = 'drop_oldest' | 'drop_newest' | 'block';
 
 export interface RateLimiterConfig {
-  /** Maximum number of buffered data points */
-  maxBufferSize: number;
-  /** Overflow strategy */
+  /** Maximum number of buffered data points (for streaming buffer mode) */
+  maxBufferSize?: number;
+  /** Overflow strategy (for data point buffer mode) */
   strategy?: OverflowStrategy;
+  /** Maximum requests per window (for HTTP rate limiting) */
+  maxRequests?: number;
+  /** Window duration in ms (for HTTP rate limiting, default 60000) */
+  windowMs?: number;
 }
 
 export interface RateLimitResult {
-  /** Whether the point was accepted */
+  /** Whether the point/request was accepted */
   accepted: boolean;
   /** Number of points dropped (cumulative since creation) */
   dropped: number;
   /** Current buffer utilization (0-1) */
   utilization: number;
+}
+
+export interface RateLimitCheckResult {
+  /** Whether the request is allowed */
+  allowed: boolean;
+  /** Remaining requests in current window */
+  remaining: number;
+  /** Time until reset in ms */
+  resetInMs: number;
 }
 
 /**
@@ -40,9 +53,43 @@ export class RateLimiter {
   private readonly maxSize: number;
   private readonly strategy: OverflowStrategy;
 
+  // HTTP rate limiting state (token bucket per client key)
+  private windowBuckets = new Map<string, { count: number; windowStart: number }>();
+  private readonly maxRequests: number;
+  private readonly windowMs: number;
+
   constructor(config: RateLimiterConfig) {
-    this.maxSize = Math.max(1, config.maxBufferSize);
+    this.maxSize = Math.max(1, config.maxBufferSize ?? 1000);
     this.strategy = config.strategy ?? 'drop_oldest';
+    this.maxRequests = config.maxRequests ?? 100;
+    this.windowMs = config.windowMs ?? 60000;
+  }
+
+  /**
+   * HTTP request rate limiting check.
+   * Uses a sliding window per client key (e.g., IP address).
+   */
+  check(key: string): RateLimitCheckResult {
+    const now = Date.now();
+    const bucket = this.windowBuckets.get(key);
+
+    if (!bucket || now - bucket.windowStart >= this.windowMs) {
+      // New window
+      this.windowBuckets.set(key, { count: 1, windowStart: now });
+      return { allowed: true, remaining: this.maxRequests - 1, resetInMs: this.windowMs };
+    }
+
+    bucket.count++;
+    if (bucket.count > this.maxRequests) {
+      const resetInMs = this.windowMs - (now - bucket.windowStart);
+      return { allowed: false, remaining: 0, resetInMs: Math.max(0, resetInMs) };
+    }
+
+    return {
+      allowed: true,
+      remaining: this.maxRequests - bucket.count,
+      resetInMs: this.windowMs - (now - bucket.windowStart),
+    };
   }
 
   /** Push a data point. Returns acceptance status and metrics. */

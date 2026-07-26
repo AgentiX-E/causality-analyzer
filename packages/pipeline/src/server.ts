@@ -22,6 +22,7 @@ import { adjustBackdoor } from './infer/effect-estimation.js';
 import { findBackdoorAdjustmentSet } from './infer/backdoor.js';
 import { HeuristicPathRCA } from './analyze/rca.js';
 import { HealthChecker, type HealthStatus } from './health.js';
+import { RateLimiter } from './rate-limiter.js';
 
 // ─��� Types ────────────────────────────────────────────────────────────
 
@@ -58,9 +59,16 @@ export class CausalityServer {
   private healthChecker: HealthChecker;
   private startTime: number = 0;
   private requestCount = 0;
+  private rateLimiter: RateLimiter;
+  private maxBodySize: number;
 
-  constructor() {
+  constructor(opts?: { maxBodySize?: number; rateLimitMax?: number; rateLimitWindowMs?: number }) {
     this.healthChecker = new HealthChecker();
+    this.maxBodySize = opts?.maxBodySize ?? 10 * 1024 * 1024; // 10MB default
+    this.rateLimiter = new RateLimiter({
+      maxRequests: opts?.rateLimitMax ?? 100,
+      windowMs: opts?.rateLimitWindowMs ?? 60000,
+    });
   }
 
   start(port: number = 3000, host: string = '0.0.0.0'): Promise<void> {
@@ -89,11 +97,21 @@ export class CausalityServer {
     this.requestCount++;
     const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+    // Rate limiting
+    const clientIp = req.socket.remoteAddress ?? 'unknown';
+    const limitResult = this.rateLimiter.check(clientIp);
+    if (!limitResult.allowed) {
+      res.setHeader('Retry-After', Math.ceil(limitResult.resetInMs / 1000));
+      this.sendJson(res, 429, { success: false, error: 'Too many requests', requestId });
+      return;
+    }
+
     try {
       // CORS headers
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+      res.setHeader('Access-Control-Max-Age', '86400');
 
       if (req.method === 'OPTIONS') {
         res.writeHead(204);
@@ -115,11 +133,14 @@ export class CausalityServer {
           this.sendJson(res, 404, { success: false, error: 'Not found', requestId });
       }
     } catch (err) {
-      this.sendJson(res, 500, {
-        success: false,
-        error: err instanceof Error ? err.message : 'Internal server error',
-        requestId,
-      });
+      const message = err instanceof Error ? err.message : 'Internal server error';
+      if (message === 'Payload Too Large') {
+        this.sendJson(res, 413, { success: false, error: message, requestId });
+      } else if (message.startsWith('Unsupported Media Type')) {
+        this.sendJson(res, 415, { success: false, error: message, requestId });
+      } else {
+        this.sendJson(res, 500, { success: false, error: message, requestId });
+      }
     }
   }
 
@@ -285,14 +306,33 @@ export class CausalityServer {
   }
 
   private parseBody<T>(req: IncomingMessage): Promise<T> {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
+      const contentType = req.headers['content-type'] ?? '';
+      if (!contentType.includes('application/json')) {
+        reject(new Error('Unsupported Media Type: Content-Type must be application/json'));
+        return;
+      }
+      const contentLength = parseInt(req.headers['content-length'] ?? '0', 10);
+      if (contentLength > this.maxBodySize) {
+        reject(new Error('Payload Too Large'));
+        return;
+      }
       let raw = '';
-      req.on('data', chunk => { raw += chunk; });
+      let size = 0;
+      req.on('data', chunk => {
+        size += chunk.length;
+        if (size > this.maxBodySize) {
+          req.destroy();
+          reject(new Error('Payload Too Large'));
+          return;
+        }
+        raw += chunk;
+      });
       req.on('end', () => {
         try { resolve(JSON.parse(raw || '{}')); }
-        catch { resolve({} as T); } // return empty object — validation will catch missing fields
+        catch { resolve({} as T); }
       });
-      req.on('error', () => resolve({} as T));
+      req.on('error', err => reject(err));
     });
   }
 
