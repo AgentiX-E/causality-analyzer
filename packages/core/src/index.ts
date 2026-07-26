@@ -105,3 +105,7 @@ export type {
 // â”€â”€ Optimization â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export { lbfgs, adam } from './optimize.js';
 export type { LBFGSConfig, LBFGSResult, AdamConfig } from './optimize.js';
+
+// ©¤©¤ Telemetry ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
+export { Telemetry } from './telemetry.js';
+export type { TelemetrySpan, TelemetryTracer, TelemetrySpanOptions, TelemetryCounter, TelemetryHistogram, TelemetryMeter } from './telemetry.js';

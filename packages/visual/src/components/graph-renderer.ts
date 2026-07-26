@@ -81,6 +81,7 @@ export class Canvas2DRenderer implements GraphRenderer {
   private computeLayout(data: GraphVisualizationData, w: number, h: number): Map<string, { x: number; y: number }> {
     const layout = new Map<string, { x: number; y: number }>();
     const { nodes, edges } = data;
+    if (nodes.length === 0) return layout;
 
     // Build adjacency maps
     const children = new Map<string, string[]>();

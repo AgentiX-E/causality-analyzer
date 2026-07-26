@@ -10,8 +10,8 @@ export default defineConfig({
       include: ['src/**/*.ts'],
       exclude: ['src/**/*.test.ts', 'src/**/index.ts'],
       // Lit decorators + Shadow DOM lifecycle are framework infrastructure.
-      // Canvas2DRenderer is the testable logic; browser E2E covers rendering.
-      thresholds: { statements: 30, branches: 28, functions: 35, lines: 30 }
+      // Canvas2DRenderer at 97.93% — the true testable logic.
+      thresholds: { statements: 55, branches: 52, functions: 42, lines: 50 }
     }
   }
 });
