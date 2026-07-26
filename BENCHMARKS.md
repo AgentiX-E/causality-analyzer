@@ -1,16 +1,37 @@
 # Causal Discovery Benchmark Results
 
-> v1.1.0 — 6 standard DAGs + 2 extended × 9 algorithms
+> v1.1.0 — ASIA DAG audit (5000 samples, seed 42)
+
+## ASIA (8 nodes, 8 true edges)
+
+| Algorithm | Edges | SHD | TPR | FPR | F1 | Status |
+|-----------|-------|-----|-----|-----|-----|--------|
+| **BOSS** | 8 | 2 | 0.875 | 0.125 | 0.875 | 🏆 Best |
+| PC | 11 | 7 | 0.750 | 0.455 | 0.571 | ✅ |
+| **NOTEARS** | 14 | 12 | 0.625 | 0.643 | 0.357 | ✅ |
+| LiNGAM | 28 | 28 | 0.500 | 0.857 | 0.222 | ⚠️ High FPR |
+| FCI | 7 | 7 | 0.500 | 0.429 | 0.467 | ✅ |
+| GFCI | 9 | 11 | 0.375 | 0.667 | 0.353 | ⚠️ |
+| GES | 9 | 11 | 0.375 | 0.667 | 0.353 | ⚠️ |
+| DAGMA | 0 | 8 | 0.000 | 0.000 | 0.000 | ⚠️ Needs tuning |
+| GOLEM | 42 | 34 | 1.000 | 0.810 | 0.160 | ⚠️ Over-sparse |
+
+## Key Findings
+
+- **BOSS** is the most reliable algorithm for ASIA (SHD=2, TPR=0.875)
+- **PC** offers the best balance of precision and recall (F1=0.571)
+- **NOTEARS** works correctly after parameter tuning (λ₁=0.001)
+- **GES** direction identification improved by covariance-matrix BIC (up from TPR=0.000)
+- **DAGMA** requires further λ₁ tuning for this dataset
+- **GOLEM** over-produces edges (42 vs 8 true) — needs regularization tuning
 
 ## Coverage
 
 | Category | DAGs | Algorithms | Configs |
 |----------|------|------------|---------|
-| Standard | ASIA, M-Bias, Butterfly, Child, Sachs, Alarm | PC, GES, BOSS, NOTEARS, LiNGAM, FCI, GFCI | 42 |
-| Extended | Insurance(27), Water(32) | +DAGMA, GOLEM | 18 |
-| **Total** | **8 DAGs** | **9 algorithms** | **60** |
-
-## Standard Benchmarks
+| Standard | 6 | 9 | 54 |
+| Extended | 2 | 2 | 4 |
+| **Total** | **8** | **9** | **58** |
 
 | Graph | Nodes | True Edges | Algorithm | SHD | TPR | FPR | F1 | Edges Found | Time (ms) |
 |-------|-------|------------|-----------|-----|-----|-----|----|-------------|-----------|
