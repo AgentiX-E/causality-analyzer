@@ -1,32 +1,30 @@
-import Database from 'better-sqlite3';
-import type { Statement, RunResult } from 'better-sqlite3';
+/**
+ * Embedded Relational Store — Node.js 22+ built-in SQLite (node:sqlite).
+ *
+ * Uses Node.js 22's native `node:sqlite` DatabaseSync for zero-dependency,
+ * zero-compilation embedded SQL storage. No better-sqlite3 required.
+ *
+ * The synchronous DatabaseSync API maps naturally to our async store interface
+ * since SQLite is inherently single-writer and fast enough for embedded use.
+ *
+ * @packageDocumentation
+ */
+import { DatabaseSync } from 'node:sqlite';
+import type { StatementSync } from 'node:sqlite';
 import type {
   IRelationalStore, MetricQuery, DetectionResult,
   ConditionalProbabilityTable, RegressionParams, RCAResult, ResultQuery,
   ColumnarTable, TableSchema,
 } from '@agentix-e/causality-analyzer-core';
 
-// ── SQLite row types ───────────────────────────────────────────────
+// ── Row types ───────────────────────────────────────────────────────
 
 interface MetricRow { ts: number; metric_name: string; value: number; }
 interface CptRow { parent_state: string; prob: number; }
 interface RegressionRow { coefficients: string; intercept: number; residual_std: number; }
 interface RcaResultRow { result_json: string; }
-interface RcaInsertRow { analyzed_at: number; root_cause: string | null; }
 
-// ── Prepared statement bindings ────────────────────────────────────
-
-interface PreparedStatements {
-  mInsert: Statement<[]>;
-  mRead: Statement<[number, number]>;
-  cSave: Statement<[string, string, string, number]>;
-  cLoad: Statement<[string, string]>;
-  rSave: Statement<[string, string, string, number, number]>;
-  rLoad: Statement<[string, string]>;
-  aSave: Statement<[string, string, number, (string | null)]>;
-  aQuery: Statement<[number | null, number, number | null, number, string | null, string | null, number]>;
-  sUpsert: Statement<[string, string, (string | null), (string | null)]>;
-}
+// ── DDL ─────────────────────────────────────────────────────────────
 
 const DDL: Record<string, string> = {
   metrics:     "CREATE TABLE IF NOT EXISTS metrics (ts INTEGER NOT NULL, value REAL NOT NULL, metric_name TEXT NOT NULL, PRIMARY KEY (ts, metric_name))",
@@ -48,34 +46,42 @@ function checkAborted(signal?: AbortSignal): void {
 }
 
 export class EmbedRelationalStore implements IRelationalStore {
-  private db: Database.Database;
-  private q: PreparedStatements;
+  private db: DatabaseSync;
+
+  // Prepared statements
+  private mInsert: StatementSync;
+  private mRead: StatementSync;
+  private cSave: StatementSync;
+  private cLoad: StatementSync;
+  private rSave: StatementSync;
+  private rLoad: StatementSync;
+  private aSave: StatementSync;
+  private aQuery: StatementSync;
+  private sUpsert: StatementSync;
 
   constructor(opts: EmbedStoreOptions = {}) {
     const dbPath = opts.dbPath || "./causality-analyzer.db";
-    this.db = new Database(dbPath);
-    this.db.pragma(dbPath === ":memory:" ? "journal_mode = MEMORY" : "journal_mode = WAL");
-    this.db.pragma("synchronous = NORMAL");
+    this.db = new DatabaseSync(dbPath);
+    this.db.exec(dbPath === ":memory:" ? "PRAGMA journal_mode = MEMORY" : "PRAGMA journal_mode = WAL");
+    this.db.exec("PRAGMA synchronous = NORMAL");
     for (const ddl of Object.values(DDL)) this.db.exec(ddl);
 
-    this.q = {
-      mInsert: this.db.prepare("INSERT OR REPLACE INTO metrics VALUES (?, ?, ?)"),
-      mRead:   this.db.prepare("SELECT ts, metric_name, value FROM metrics WHERE ts >= ? AND ts <= ? ORDER BY ts"),
-      cSave:   this.db.prepare("INSERT OR REPLACE INTO cpt VALUES (?, ?, ?, ?)"),
-      cLoad:   this.db.prepare("SELECT parent_state, prob FROM cpt WHERE graph_id = ? AND node = ? ORDER BY parent_state"),
-      rSave:   this.db.prepare("INSERT OR REPLACE INTO regression_models VALUES (?, ?, ?, ?, ?)"),
-      rLoad:   this.db.prepare("SELECT coefficients, intercept, residual_std FROM regression_models WHERE graph_id = ? AND node = ?"),
-      aSave:   this.db.prepare("INSERT OR REPLACE INTO rca_results VALUES (?, ?, ?, ?)"),
-      aQuery:  this.db.prepare("SELECT result_json FROM rca_results WHERE (? IS NULL OR analyzed_at >= ?) AND (? IS NULL OR analyzed_at <= ?) AND (? IS NULL OR root_cause = ?) ORDER BY analyzed_at DESC LIMIT ?"),
-      sUpsert: this.db.prepare("INSERT OR REPLACE INTO analysis_state VALUES (?, ?, ?, ?)"),
-    };
+    this.mInsert = this.db.prepare("INSERT OR REPLACE INTO metrics VALUES (?, ?, ?)");
+    this.mRead   = this.db.prepare("SELECT ts, metric_name, value FROM metrics WHERE ts >= ? AND ts <= ? ORDER BY ts");
+    this.cSave   = this.db.prepare("INSERT OR REPLACE INTO cpt VALUES (?, ?, ?, ?)");
+    this.cLoad   = this.db.prepare("SELECT parent_state, prob FROM cpt WHERE graph_id = ? AND node = ? ORDER BY parent_state");
+    this.rSave   = this.db.prepare("INSERT OR REPLACE INTO regression_models VALUES (?, ?, ?, ?, ?)");
+    this.rLoad   = this.db.prepare("SELECT coefficients, intercept, residual_std FROM regression_models WHERE graph_id = ? AND node = ?");
+    this.aSave   = this.db.prepare("INSERT OR REPLACE INTO rca_results VALUES (?, ?, ?, ?)");
+    this.aQuery  = this.db.prepare("SELECT result_json FROM rca_results WHERE (? IS NULL OR analyzed_at >= ?) AND (? IS NULL OR analyzed_at <= ?) AND (? IS NULL OR root_cause = ?) ORDER BY analyzed_at DESC LIMIT ?");
+    this.sUpsert = this.db.prepare("INSERT OR REPLACE INTO analysis_state VALUES (?, ?, ?, ?)");
   }
 
   private esc(s: string): string { return s.replace(SAFEPOINT_ESC, DOUBLE_QUOTE); }
 
   async readMetrics<S extends TableSchema>(query: MetricQuery): Promise<ColumnarTable<S>> {
     checkAborted(query.signal);
-    const rows = this.q.mRead.all(query.start, query.end) as MetricRow[];
+    const rows = this.mRead.all(query.start, query.end) as unknown as MetricRow[];
     const metricFilter = query.metrics ? new Set(query.metrics) : null;
     const filtered = metricFilter ? rows.filter(r => metricFilter.has(r.metric_name)) : rows;
     const { ColumnarTable } = await import("@agentix-e/causality-analyzer-core");
@@ -84,41 +90,40 @@ export class EmbedRelationalStore implements IRelationalStore {
       value: new Float64Array(filtered.map(r => r.value)),
     }) as ColumnarTable<S>;
   }
+
   async writeDetections(d: DetectionResult[], signal?: AbortSignal): Promise<void> {
     checkAborted(signal);
-    const runInsert = (r: RunResult): void => { void r; };
-    this.db.transaction((): void => {
-      for (const x of d) {
-        for (let i = 0; i < x.scores.length; i++) {
-          runInsert(this.q.mInsert.run(x.timestamp, x.scores[i]!, 'm' + i));
-        }
+    for (const x of d) {
+      for (let i = 0; i < x.scores.length; i++) {
+        this.mInsert.run(x.timestamp, x.scores[i]!, 'm' + i);
       }
-    })();
+    }
   }
+
   async saveCPT(gid: string, node: string, cpt: ConditionalProbabilityTable, signal?: AbortSignal): Promise<void> {
     checkAborted(signal);
-    const entries = Object.entries(cpt.entries) as Array<[string, number]>;
-    this.db.transaction((): void => {
-      for (const [s, p] of entries) {
-        this.q.cSave.run(gid, node, s, p);
-      }
-    })();
+    for (const [s, p] of Object.entries(cpt.entries)) {
+      this.cSave.run(gid, node, s, p);
+    }
   }
+
   async loadCPT(gid: string, node: string, signal?: AbortSignal): Promise<ConditionalProbabilityTable | null> {
     checkAborted(signal);
-    const rows = this.q.cLoad.all(gid, node) as CptRow[];
+    const rows = this.cLoad.all(gid, node) as unknown as CptRow[];
     if (!rows.length) return null;
     const e: Record<string, number> = {};
     for (const r of rows) e[r.parent_state] = r.prob;
     return { node, parents: [], entries: e };
   }
+
   async saveRegressionModel(gid: string, node: string, m: RegressionParams, signal?: AbortSignal): Promise<void> {
     checkAborted(signal);
-    this.q.rSave.run(gid, node, JSON.stringify(m.coefficients), m.intercept, m.residualStdDev);
+    this.rSave.run(gid, node, JSON.stringify(m.coefficients), m.intercept, m.residualStdDev);
   }
+
   async loadRegressionModel(gid: string, node: string, signal?: AbortSignal): Promise<RegressionParams | null> {
     checkAborted(signal);
-    const r = this.q.rLoad.get(gid, node) as RegressionRow | undefined;
+    const r = this.rLoad.get(gid, node) as unknown as RegressionRow | undefined;
     if (!r) return null;
     return {
       coefficients: JSON.parse(r.coefficients) as number[],
@@ -126,42 +131,56 @@ export class EmbedRelationalStore implements IRelationalStore {
       residualStdDev: r.residual_std,
     };
   }
+
   async saveRCAResult(cid: string, r: RCAResult, signal?: AbortSignal): Promise<void> {
     checkAborted(signal);
-    this.q.aSave.run(cid, JSON.stringify(r.toJSON()), Date.now(), r.rootCauses[0]?.name ?? null);
+    this.aSave.run(cid, JSON.stringify(r.toJSON()), Date.now(), r.rootCauses[0]?.name ?? null);
   }
+
   async queryHistoricalResults(q: ResultQuery): Promise<RCAResult[]> {
-    const rows = this.q.aQuery.all(
+    const rows = this.aQuery.all(
       q.start ?? null, q.start ?? 0,
       q.end ?? null, q.end ?? Number.MAX_SAFE_INTEGER,
       q.rootCause ?? null, q.rootCause ?? null,
       q.limit ?? 100,
-    ) as RcaResultRow[];
+    ) as unknown as RcaResultRow[];
     return rows.map(r => JSON.parse(r.result_json) as RCAResult);
   }
+
   async beginTransaction(sid: string, signal?: AbortSignal): Promise<void> {
     checkAborted(signal);
     this.db.exec('SAVEPOINT "' + this.esc(sid) + '"');
-    this.q.sUpsert.run(sid, 'started', null, null);
+    this.sUpsert.run(sid, 'started', null, null);
   }
+
   async commitTransaction(sid: string, signal?: AbortSignal): Promise<void> {
     checkAborted(signal);
     this.db.exec('RELEASE SAVEPOINT "' + this.esc(sid) + '"');
   }
+
   async rollbackToCheckpoint(sid: string, cp: string, signal?: AbortSignal): Promise<void> {
     checkAborted(signal);
     this.db.exec('ROLLBACK TO SAVEPOINT "' + this.esc(cp) + '"');
   }
+
   async setCheckpoint(sid: string, name: string, signal?: AbortSignal): Promise<void> {
     checkAborted(signal);
     this.db.exec('SAVEPOINT "' + this.esc(name) + '"');
-    this.q.sUpsert.run(sid, 'checkpoint', name, null);
+    this.sUpsert.run(sid, 'checkpoint', name, null);
   }
-  close(): void { this.db.close(); }
+
+  private _closed = false;
+
+  close(): void {
+    if (this._closed) return;
+    this._closed = true;
+    this.db.close();
+  }
+
   healthCheck(): boolean {
+    if (this._closed) return false;
     try {
-      const stmt = this.db.prepare('SELECT 1');
-      stmt.get();
+      this.db.prepare('SELECT 1').get();
       return true;
     } catch {
       return false;

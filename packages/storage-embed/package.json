@@ -14,9 +14,6 @@
     "@agentix-e/causality-analyzer-core": "workspace:*",
     "overgraph": "^0.17.0"
   },
-  "optionalDependencies": {
-    "better-sqlite3": "^11.7.0"
-  },
   "devDependencies": {
     "@vitest/coverage-v8": "^4.1.10",
     "typescript": "^5.9.3",
