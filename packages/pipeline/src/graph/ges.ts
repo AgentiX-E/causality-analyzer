@@ -41,6 +41,13 @@ export function gesAlgorithm(
   const n = nodeNames.length;
   const N = data.rows;
 
+  // Empty data guard: cannot learn structure from no observations.
+  if (N === 0) {
+    const g = new CausalGraph(nodeNames);
+    if (domainKnowledge) g.applyDomainKnowledge(domainKnowledge);
+    return g;
+  }
+
   // Auto-detect maxDegree:
   //   d > 15 (large graph)  → maxDegree=2 (prevents CPDAG explosion)
   //   N/d < 50              → maxDegree=2 (sparse data)
@@ -229,12 +236,28 @@ export function gesAlgorithm(
 
   if (domainKnowledge) cpdag.applyDomainKnowledge(domainKnowledge);
 
-  // Cycle safety
+  // Cycle safety — use topological sort to find exact back-edges.
+  // Removes only edges that close cycles, preserving the DAG structure.
   if (cpdag.hasCycle()) {
+    const topo = cpdag.topologicalSort();
+    const topoSet = new Set(topo);
     const directedEdges = [...cpdag.edges].filter(e => e.directed);
-    for (const e of directedEdges) {
+    // A directed edge a→b is a back-edge if b comes before a in topological order
+    const backEdges = directedEdges.filter(e => {
+      const aIdx = topo.indexOf(e.source);
+      const bIdx = topo.indexOf(e.target);
+      return aIdx >= 0 && bIdx >= 0 && aIdx >= bIdx;
+    });
+    // Remove back-edges to break all cycles
+    for (const e of backEdges) {
       cpdag.removeEdge(e.source, e.target);
-      if (!cpdag.hasCycle()) break;
+    }
+    // Fallback: if cycles persist, remove edges in topological violation order
+    if (cpdag.hasCycle()) {
+      for (const e of directedEdges) {
+        if (!cpdag.hasCycle()) break;
+        cpdag.removeEdge(e.source, e.target);
+      }
     }
   }
 

@@ -84,16 +84,32 @@ describe('StructuralCausalModel', () => {
   });
 
   it('detectDistributionChange finds significant shifts', () => {
-    const g = twoNodeGraph();
+    // Use a 5-node graph so Welch t-test has sufficient statistical power (m=5).
+    const nodes = ['A', 'B', 'C', 'D', 'E'];
+    const g = new CausalGraph(nodes);
+    g.addEdge('A', 'B');
+    g.addEdge('B', 'C');
+    g.addEdge('C', 'D');
+    g.addEdge('D', 'E');
     const scm = new StructuralCausalModel(g);
     const data = Array.from({ length: 50 }, () => {
-      const x = Math.random() * 3;
-      return [x, 2 * x + (Math.random() - 0.5) * 0.3];
+      const a = Math.random() * 3;
+      const b = 2 * a + (Math.random() - 0.5) * 0.3;
+      const c = 1.5 * b + (Math.random() - 0.5) * 0.3;
+      const d = 0.8 * c + (Math.random() - 0.5) * 0.3;
+      const e = 1.2 * d + (Math.random() - 0.5) * 0.3;
+      return [a, b, c, d, e];
     });
     scm.train(data);
 
-    const before = [{ X: 2, Y: 4.5 }, { X: 2.5, Y: 5.5 }];
-    const after = [{ X: 10, Y: 22 }, { X: 11, Y: 24 }];
+    const before = Array.from({ length: 8 }, () => ({
+      A: 1 + Math.random(), B: 2 + Math.random() * 3,
+      C: 3 + Math.random() * 5, D: 2 + Math.random() * 4, E: 3 + Math.random() * 5,
+    }));
+    const after = Array.from({ length: 8 }, () => ({
+      A: 10 + Math.random(), B: 22 + Math.random() * 3,
+      C: 35 + Math.random() * 5, D: 30 + Math.random() * 4, E: 38 + Math.random() * 5,
+    }));
     const result = scm.detectDistributionChange(before, after);
     expect(result.changed).toBe(true);
     expect(result.pValue).toBeGreaterThan(0);
@@ -108,7 +124,7 @@ describe('StructuralCausalModel', () => {
   });
 });
 
-// ── CATE → RCA Bridge ────────────────────────────────────────────
+// ── CATE �? RCA Bridge ────────────────────────────────────────────
 describe('cateToRCA', () => {
   it('converts treatment effects to root cause ranking', () => {
     const effects = new Map([
@@ -237,7 +253,7 @@ describe('SCM NaN handling', () => {
     const scm = new StructuralCausalModel(g);
     const data = Array.from({ length: 10 }, () => [NaN, NaN] as number[]);
     scm.train(data);
-    // Should not crash — mechanisms should fall back to safe defaults
+    // Should not crash �? mechanisms should fall back to safe defaults
     const scores = scm.anomalyScores({ X: 1, Y: 2 });
     expect(scores.size).toBe(2);
   });
@@ -251,7 +267,7 @@ describe('SCM NaN handling', () => {
       [2, 4, 7], [3, 6, 13],
     ];
     scm.train(data);
-    // Should not crash — only clean rows contribute
+    // Should not crash �? only clean rows contribute
     const scores = scm.anomalyScores({ X: 10, Y: 20, Z: 50 });
     expect(scores.get('X')).toBeDefined();
     expect(scores.get('Y')).toBeDefined();

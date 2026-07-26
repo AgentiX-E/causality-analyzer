@@ -1,9 +1,14 @@
 /**
  * Tamper-Evident Audit Trail — SHA-256 hash-chained append-only log.
+ * Optional HMAC-SHA256 integrity signing for defense against forgery.
  *
  * Every entry in the audit log is hash-chained: each entry includes the
  * SHA-256 hash of the previous entry plus its own payload. verify() detects
  * any insertion, deletion, alteration, or reordering.
+ *
+ * In HMAC mode (recommended for production), each entry's hash is an
+ * HMAC-SHA256(key, content) rather than plain SHA-256(content). This
+ * prevents an attacker with write access from forging the entire chain.
  *
  * Uses Web Crypto API (standard in Node 20+, browser, edge runtimes).
  *
@@ -14,6 +19,7 @@
  * - Each entry: { index, timestamp, type, payload, previousHash, hash }
  * - verify() returns { valid, tamperedIndices } for precise diagnostics
  * - Immutable entries (cannot be modified once appended)
+ * - HMAC mode: optional signing key for authenticated integrity
  *
  * @packageDocumentation
  */
@@ -71,15 +77,29 @@ export interface AuditVerifyResult {
 export class AuditTrail {
   private entries: AuditEntry[] = [];
   private lastHash: string = '0';
+  private hmacKey: CryptoKey | null = null;
 
   private constructor() {}
 
   /**
    * Create a new audit trail.
-   * Async because it initializes the genesis hash.
+   * @param hmacSecret — optional HMAC-SHA256 key for authenticated integrity.
+   *   When provided, entries are signed with HMAC instead of plain SHA-256,
+   *   preventing forgery by attackers with write access.
    */
-  static async create(): Promise<AuditTrail> {
-    return new AuditTrail();
+  static async create(hmacSecret?: Uint8Array): Promise<AuditTrail> {
+    const trail = new AuditTrail();
+    if (hmacSecret) {
+      if (typeof crypto === 'undefined' || !crypto.subtle) {
+        throw new Error('HMAC mode requires Web Crypto API (Node 20+)');
+      }
+      // @ts-expect-error TS2769 importKey overload resolution (Node vs browser types)
+      trail.hmacKey = await crypto.subtle.importKey(
+        'raw', hmacSecret, { name: 'HMAC', hash: 'SHA-256' },
+        false, ['sign'],
+      );
+    }
+    return trail;
   }
 
   /**
@@ -96,7 +116,9 @@ export class AuditTrail {
 
     // Build content to hash: index | timestamp | type | payload | previousHash
     const contentString = JSON.stringify({ index, timestamp, type, payload, previousHash });
-    const hash = await sha256(contentString);
+    const hash = this.hmacKey
+      ? await hmacSHA256(this.hmacKey, contentString)
+      : await sha256(contentString);
 
     const entry: AuditEntry = Object.freeze({
       index,
@@ -155,7 +177,9 @@ export class AuditTrail {
         payload: entry.payload,
         previousHash: entry.previousHash,
       });
-      const computedHash = await sha256(contentString);
+      const computedHash = this.hmacKey
+        ? await hmacSHA256(this.hmacKey, contentString)
+        : await sha256(contentString);
 
       if (entry.hash !== computedHash) {
         tamperedIndices.push(i);
@@ -191,6 +215,38 @@ export class AuditTrail {
   /** Export the full audit trail as JSON (for persistence) */
   toJSON(): AuditEntry[] {
     return [...this.entries];
+  }
+
+  /**
+   * Compact the audit trail: keep entries after the given snapshot index.
+   *
+   * After compaction, entries [0..snapshotIndex-1] are removed. The entry
+   * at snapshotIndex becomes the new genesis (previousHash set to '0').
+   * This is a truncation — removed entries cannot be recovered.
+   *
+   * @param snapshotIndex — index of the first entry to keep (default: keep last 100)
+   * @returns number of entries removed
+   */
+  compact(snapshotIndex?: number): number {
+    const n = this.entries.length;
+    if (n === 0) return 0;
+    const keepFrom = snapshotIndex ?? Math.max(0, n - 100);
+    if (keepFrom <= 0) return 0;
+    if (keepFrom >= n) {
+      const removed = n;
+      this.entries = [];
+      this.lastHash = '0';
+      return removed;
+    }
+    const removed = keepFrom;
+    this.entries = this.entries.slice(keepFrom);
+    // Re-index entries and reset genesis hash
+    for (let i = 0; i < this.entries.length; i++) {
+      const entry = { ...this.entries[i]!, index: i, previousHash: i === 0 ? '0' : this.entries[i - 1]!.hash };
+      this.entries[i] = Object.freeze(entry);
+    }
+    this.lastHash = this.entries[this.entries.length - 1]?.hash ?? '0';
+    return removed;
   }
 
   /**
@@ -234,8 +290,23 @@ async function sha256(input: string): Promise<string> {
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
-  // Fallback: use Node.js crypto module
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const nodeCrypto = require('crypto') as typeof import('crypto');
-  return nodeCrypto.createHash('sha256').update(input).digest('hex');
+  // Fallback: use Node.js crypto module via dynamic import (ESM safe)
+  try {
+    const nodeCrypto = await import('crypto');
+    return nodeCrypto.createHash('sha256').update(input).digest('hex');
+  } catch {
+    throw new Error('SHA-256 unavailable: no crypto.subtle and dynamic import("crypto") failed');
+  }
+}
+
+/**
+ * Compute HMAC-SHA256(key, input) and return hex string.
+ * Used for authenticated integrity when HMAC mode is enabled.
+ */
+async function hmacSHA256(key: CryptoKey, input: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(input);
+  const sigBuffer = await crypto.subtle.sign('HMAC', key, data);
+  const sigArray = Array.from(new Uint8Array(sigBuffer));
+  return sigArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }

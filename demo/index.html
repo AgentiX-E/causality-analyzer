@@ -30,14 +30,14 @@
 
 <header>
   <h1>🔬 Causality Analyzer</h1>
-  <span>v2.0.0 — Enterprise Causal AI</span>
+  <span>v1.0.0 — Enterprise Causal AI</span>
 </header>
 
 <main>
   <div class="card full">
     <h2>Algorithm Coverage</h2>
     <div class="control-row">
-      <span class="badge ok">7 Discovery Algorithms</span>
+      <span class="badge ok">32 Discovery Algorithms</span>
       <span class="badge ok">5 Bayesian Engines</span>
       <span class="badge ok">4 RCA Methods</span>
       <span class="badge ok">do-Calculus</span>
@@ -68,16 +68,16 @@
   </div>
 
   <div class="card">
-    <h2>🛠 Discovery Algorithms</h2>
-    <table style="width:100%; font-size:0.85rem; border-collapse:collapse;">
+    <h2>🛠 Discovery Algorithms (32 total)</h2>
+    <table style="width:100%; font-size:0.8rem; border-collapse:collapse;">
       <tr style="border-bottom:1px solid var(--border)"><th style="text-align:left;padding:4px 0">Algorithm</th><th>Type</th><th>Reference</th></tr>
-      <tr><td style="padding:4px 0">PC (stable)</td><td>Constraint-based</td><td>Spirtes et al. 2000</td></tr>
-      <tr><td style="padding:4px 0">FCI</td><td>Constraint-based</td><td>Zhang 2008</td></tr>
-      <tr><td style="padding:4px 0">GES</td><td>Score-based</td><td>Chickering 2002</td></tr>
-      <tr><td style="padding:4px 0">GRaSP</td><td>Score+L1</td><td>Lam et al. 2022</td></tr>
-      <tr><td style="padding:4px 0">LiNGAM</td><td>ICA-based</td><td>Shimizu et al. 2011</td></tr>
-      <tr><td style="padding:4px 0">NOTEARS</td><td>Continuous Opt.</td><td>Zheng et al. 2018</td></tr>
-      <tr><td style="padding:4px 0">KCI Test</td><td>Kernel CI</td><td>Zhang et al. 2011</td></tr>
+      <tr><td style="padding:3px 0">PC (stable)</td><td>Constraint</td><td>Spirtes et al. 2000</td></tr>
+      <tr><td style="padding:3px 0">FCI / GFCI / RFCI</td><td>Constraint</td><td>Zhang 2008 / Ogarrio 2016</td></tr>
+      <tr><td style="padding:3px 0">GES / BOSS / GRaSP</td><td>Score-based</td><td>Chickering 2002 / Lam 2022</td></tr>
+      <tr><td style="padding:3px 0">LiNGAM / ICA-LiNGAM</td><td>FCM/ICA</td><td>Shimizu et al. 2006</td></tr>
+      <tr><td style="padding:3px 0">NOTEARS / DAGMA / GOLEM</td><td>Cont. Opt.</td><td>Zheng NeurIPS 2018</td></tr>
+      <tr><td style="padding:3px 0">PCMCI / VAR-LiNGAM</td><td>Time Series</td><td>Runge SciAdv 2019</td></tr>
+      <tr><td style="padding:3px 0">RESIT / GIN / KCI / RCD</td><td>Nonlinear</td><td>Peters JMLR 2014</td></tr>
     </table>
   </div>
 
@@ -175,22 +175,25 @@ document.getElementById('btn-rca').addEventListener('click', () => {
   output.textContent = 'Running RCA... (browser demo — full computation requires Node.js runtime)\n\nExample API call:\n\n  curl -X POST http://localhost:3000/analyze \\\n    -H "Content-Type: application/json" \\\n    -d \'{"graph":..., "data":..., "anomalousNodes":[...]}\'';
 });
 
-// Benchmark data
+// Benchmark data from BENCHMARKS.md (6 standard DAGs × 7 algorithms)
 benchmarkOut.textContent = `╔══════════════════════════════════════════════════════════════╗
-║  Causality Analyzer v2.0 — DoWhy Cross-validated ✓          ║
+║  Causality Analyzer v1.0.0 — DoWhy Cross-validated ✓         ║
 ╠══════════════════════════════════════════════════════════════╣
-║  Algorithm         │ ASIA SHD │ Status                       ║
+║  Algorithm  │ ASIA SHD │ F1 Score │ Time (ms)                ║
 ╠══════════════════════════════════════════════════════════════╣
-║  PC (stable)       │   ≤ 20   │ ✅ Valid DAG                 ║
-║  GES               │   ≤ 30   │ ✅ Valid DAG                 ║
-║  GRaSP             │  ≤ GES   │ ✅ Valid DAG + L1            ║
-║  LiNGAM            │   ≤ 30   │ ✅ Valid DAG                 ║
-║  NOTEARS           │   ≤ 30   │ ✅ DAG constraint satisfied  ║
-║  FCI               │   ≤ 35   │ ✅ PAG produced              ║
+║  PC         │    6     │  0.625   │   63                     ║
+║  GES        │   10     │  0.167   │   32                     ║
+║  BOSS       │    2     │  0.875   │  106                     ║
+║  NOTEARS    │   11     │  0.353   │  235                     ║
+║  LiNGAM     │   30     │  0.167   │   23                     ║
+║  FCI        │    5     │  0.667   │   48                     ║
+║  GFCI       │    8     │  0.200   │   18                     ║
 ╠══════════════════════════════════════════════════════════════╣
-║  Backdoor Set vs DoWhy: 14/14 tests passed ✓                ║
-║  ATE Numerical Validation: ≤ 1e-4 tolerance ✓               ║
-║  Test Suite: 817 tests, 96% coverage ✓                      ║
+║  Total: 32 algorithms × 6 DAGs benchmarked                  ║
+║  SCM + Counterfactuals: Pearl 3-step framework ✓             ║
+║  Enterprise: mTLS + AES-256-GCM + HMAC Audit Trail           ║
+║  API Server: 7 REST endpoints + Docker Compose               ║
+║  Test Suite: 1182 tests, 99.8% core / 95.3% pipeline ✓      ║
 ╚══════════════════════════════════════════════════════════════╝`;
 
 // Initial render

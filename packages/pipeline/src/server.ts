@@ -129,7 +129,7 @@ export class CausalityServer {
     const status: HealthStatus = {
       status: 'healthy',
       uptime: Date.now() - this.startTime,
-      version: '2.0.0',
+      version: '1.0.0',
       checks: {
         memory: {
           status: 'ok',

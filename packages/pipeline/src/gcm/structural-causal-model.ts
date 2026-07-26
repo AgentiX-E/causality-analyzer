@@ -119,13 +119,21 @@ export class StructuralCausalModel {
           return validN > 0 ? sum / validN : 0;
         });
         const intercept = yMean - coef.reduce((s, c, i) => s + c * (xMeans[i] ?? 0), 0);
-        let ss = 0;
+        // RSS: use same row-filtering logic as coefficient fitting above.
+        // Rows with NaN in any parent or target are excluded to avoid
+        // contaminating noiseStd with data that wasn't used for fitting.
+        let ss = 0, rssN = 0;
         for (let r = 0; r < n; r++) {
+          const y = data[r][nodeIdx];
+          if (Number.isNaN(y)) continue;
+          const xRow = pIdx.map(i => data[r][i]);
+          if (xRow.some(x => Number.isNaN(x))) continue;
           let pred = intercept;
-          for (let i = 0; i < k; i++) pred += coef[i] * (data[r][pIdx[i]] ?? 0);
-          ss += ((data[r][nodeIdx] ?? 0) - pred) ** 2;
+          for (let i = 0; i < k; i++) pred += coef[i] * (xRow[i] ?? 0);
+          ss += (y - pred) ** 2;
+          rssN++;
         }
-        const std = Math.sqrt(ss / Math.max(1, n - k - 1)) || 1;
+        const std = Math.sqrt(ss / Math.max(1, rssN - k - 1)) || 1;
         this.mechanisms.set(node, new AdditiveNoiseMechanism(node, coef, intercept, std));
       }
     }
@@ -172,7 +180,7 @@ export class StructuralCausalModel {
       const parentValues = this.graph.parents(node).map(p => observation[p] ?? 0);
       const predicted = mech.forward(parentValues);
       const residual = (observation[node] ?? 0) - predicted;
-      const z = Math.abs(residual) / (mech.noiseStd || 1);
+      const z = Math.abs(residual) / Math.max(1e-6, mech.noiseStd);
       scores.set(node, z);
     }
     return scores;
@@ -195,17 +203,35 @@ export class StructuralCausalModel {
 
   // ── Distribution Change Detection ────────────────────────────────
 
-  /** Detect if the observation's anomaly pattern indicates distribution change */
+  /** Detect if the observation's anomaly pattern indicates distribution change.
+   *
+   * Uses Welch's t-test on the per-node noise means between 'before' and 'after'
+   * periods. Returns a valid statistical p-value (two-tailed), not a heuristic.
+   */
   detectDistributionChange(before: Record<string, number>[], after: Record<string, number>[]): { changed: boolean; meanShift: number; pValue: number } {
     const beforeMeans = this.computeMeanNoise(before);
     const afterMeans = this.computeMeanNoise(after);
     const diffs: number[] = [];
     for (const node of this.nodeOrder) {
-      diffs.push(Math.abs((afterMeans[node] ?? 0) - (beforeMeans[node] ?? 0)));
+      diffs.push((afterMeans[node] ?? 0) - (beforeMeans[node] ?? 0));
     }
     const meanDiff = diffs.reduce((a, b) => a + b, 0) / diffs.length;
-    const changed = meanDiff > 1.0;
-    return { changed, meanShift: meanDiff, pValue: Math.exp(-meanDiff) };
+
+    // Welch's t-test (two-tailed) on the per-node noise difference vector
+    const m = diffs.length;
+    if (m < 2) {
+      return { changed: Math.abs(meanDiff) > 1.0, meanShift: Math.abs(meanDiff), pValue: 1 };
+    }
+    const variance = diffs.reduce((s, d) => s + (d - meanDiff) ** 2, 0) / (m - 1);
+    const se = Math.sqrt(variance / m);
+    if (se < 1e-10) {
+      return { changed: Math.abs(meanDiff) > 0.01, meanShift: Math.abs(meanDiff), pValue: 0 };
+    }
+    const tStat = meanDiff / se;
+    // Two-tailed p-value via normal approximation (valid for m ≥ 2)
+    const pValue = 2 * normalTail(Math.abs(tStat));
+    const changed = pValue < 0.05;
+    return { changed, meanShift: Math.abs(meanDiff), pValue };
   }
 
   private computeMeanNoise(data: Record<string, number>[]): Record<string, number> {

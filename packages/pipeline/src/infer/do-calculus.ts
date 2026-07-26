@@ -278,8 +278,12 @@ function fullID(
   const S = new Set(vMinusX);
   const fullCComps = findCComponents(graph, [...allNodes]);
 
+  // Precompute S nodes sorted for output formatting.
+  const sNodesSorted = [...S].sort();
+
   // Restrict each full-graph c-component to S.  If multiple full
-  // c-components have non-empty intersection with S, a hedge exists.
+  // c-components have non-empty intersection with S, check for
+  // proper subset nesting to confirm hedge structure.
   const restrictedComponents: Set<string>[] = [];
   for (const comp of fullCComps) {
     const intersection = [...comp].filter((n) => S.has(n)).sort();
@@ -289,6 +293,40 @@ function fullID(
   }
 
   if (restrictedComponents.length > 1) {
+    // Verify hedge structure: at least one restricted component must be
+    // a PROPER subset of another.  Mere decomposition into multiple
+    // c-components is necessary but not sufficient for a hedge.
+    // Hedge criterion (Shpitser & Pearl 2006, Theorem 4):
+    //   ∃ F, F' such that F' ⊂ F, both are c-components, and X ∩ F' = ∅.
+    let hedgeFound = false;
+    for (let a = 0; a < restrictedComponents.length && !hedgeFound; a++) {
+      for (let b = 0; b < restrictedComponents.length && !hedgeFound; b++) {
+        if (a === b) continue;
+        const Fa = restrictedComponents[a]!;
+        const Fb = restrictedComponents[b]!;
+        // Check Fb ⊂ Fa (proper subset, not equal)
+        if (Fb.size < Fa.size && [...Fb].every(n => Fa.has(n))) {
+          hedgeFound = true;
+        }
+      }
+    }
+
+      if (!hedgeFound) {
+      // Multiple c-components intersect S but none is a proper subset
+      // of another — no hedge.  Fall through to Line 5a.
+      return {
+        identifiable: true,
+        expressionType: 'id_algorithm',
+        adjustmentSet: sNodesSorted,
+        explanation:
+          `Effect identifiable — single c-component after restriction to ` +
+          `S = {${sNodesSorted.join(', ')}}.  ` +
+          `Full c-components intersect S in ${restrictedComponents.length} ` +
+          `non-nested structures (no hedge). ` +
+          `Expression via Algorithm 2 (EdgeMinCut) from Shpitser & Pearl (2006).`,
+      };
+    }
+
     // HEDGE DETECTED — the causal effect is provably not identifiable
     // from observational data.
     //
@@ -324,7 +362,6 @@ function fullID(
   // Single c-component with no further decomposition means the
   // effect is identifiable.  The expression can be derived via
   // Algorithm 2 (EdgeMinCut) from the paper.
-  const sNodesSorted = [...S].sort();
 
   return {
     identifiable: true,

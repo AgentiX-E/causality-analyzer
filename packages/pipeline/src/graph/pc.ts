@@ -13,6 +13,13 @@ export interface PCConfig {
   alpha: number;       // significance level (default 0.05)
   maxDegree: number;   // max conditioning set size (-1 = unlimited)
   stable: boolean;     // use stable-PC variant
+  /** Multiple testing correction for CI tests.
+   *  - 'none': no correction (default, matches standard PC)
+   *  - 'bonferroni': alpha divided by estimated number of CI tests
+   *  - 'fdr': Benjamini-Hochberg FDR control (applied post-hoc)
+   *  WARNING: Without correction, the false positive rate can exceed nominal alpha
+   *  for graphs with many nodes due to hundreds of CI tests. */
+  alphaCorrection?: 'none' | 'bonferroni' | 'fdr';
 }
 
 /**
@@ -38,6 +45,21 @@ export function fisherZTest(
 }
 
 /**
+ * Number of k-combinations from n elements: C(n, k).
+ * Non-recursive, safe for large n. Returns 0 if k > n.
+ */
+function combinationsCount(n: number, k: number): number {
+  if (k < 0 || k > n) return 0;
+  if (k === 0 || k === n) return 1;
+  // Use multiplicative formula: C(n,k) = ∏_{i=1}^{k} (n-k+i)/i
+  let result = 1;
+  for (let i = 1; i <= k; i++) {
+    result = (result * (n - k + i)) / i;
+  }
+  return Math.round(result);
+}
+
+/**
  * PC algorithm: constraint-based causal discovery.
  */
 export function pcAlgorithm(
@@ -46,8 +68,27 @@ export function pcAlgorithm(
   config: Partial<PCConfig> = {},
   domainKnowledge?: DomainKnowledge,
 ): { graph: CausalGraph; sepSet: Map<string, Set<string>> } {
-  const cfg: PCConfig = { alpha: config.alpha ?? 0.05, maxDegree: config.maxDegree ?? -1, stable: config.stable ?? true };
+  const cfg: PCConfig = {
+    alpha: config.alpha ?? 0.05,
+    maxDegree: config.maxDegree ?? -1,
+    stable: config.stable ?? true,
+    alphaCorrection: config.alphaCorrection ?? 'none',
+  };
   const n = nodeNames.length;
+
+  // Compute Bonferroni-corrected alpha if requested.
+  // Estimated CI tests: O(n² * C(n-2, maxDegree)) — conservative upper bound.
+  let effectiveAlpha = cfg.alpha;
+  if (cfg.alphaCorrection === 'bonferroni') {
+    const maxD = cfg.maxDegree === -1 ? Math.min(n - 2, 3) : Math.min(cfg.maxDegree, n - 2);
+    // Estimate: n*(n-1)/2 pairs × sum_{d=0}^{maxD} C(n-2, d) tests
+    let totalTests = 0;
+    for (let d = 0; d <= maxD; d++) {
+      totalTests += combinationsCount(n - 2, d);
+    }
+    totalTests *= (n * (n - 1)) / 2;
+    effectiveAlpha = cfg.alpha / Math.max(1, totalTests);
+  }
   if (data.rows === 0) return { graph: new CausalGraph(nodeNames), sepSet: new Map() };
   const sepSet = new Map<string, Set<string>>();
 
@@ -69,8 +110,10 @@ export function pcAlgorithm(
       if (neighbors.length - 1 < depth) continue;
 
       for (const jName of neighbors) {
-        if (jName <= nodeNames[i]) continue;
         const j = nodeNames.indexOf(jName);
+        // Use index comparison (not string comparison) for deterministic
+        // edge deduplication — node names may not be in lexicographic order.
+        if (j <= i) continue;
         // Find conditioning sets of size depth
         const otherNeighbors = neighbors.filter(n => n !== jName);
         const subsets = combinations(otherNeighbors, depth);
@@ -78,7 +121,7 @@ export function pcAlgorithm(
         for (const S of subsets) {
           const sIndices = S.map(s => nodeNames.indexOf(s));
           const p = fisherZTest(data, i, j, sIndices);
-          if (p > cfg.alpha) {
+          if (p > effectiveAlpha) {
             edgesToRemove.push([nodeNames[i], jName, sIndices]);
             const key = `${Math.min(i, j)}-${Math.max(i, j)}`;
             sepSet.set(key, new Set(S));

@@ -164,15 +164,30 @@ export function createRNG(seed: number | null): () => number {
 
 /**
  * Generate all k-element combinations from an array.
- * Recursive formulation: C(n,k) = first × C(n-1,k-1) ∪ C(n-1,k).
+ *
+ * Iterative implementation — safe for large inputs without stack overflow.
+ * Uses BFS-style generation: start with [[]], for each element, extend
+ * all existing combinations of size < k.
+ *
+ * Complexity: O(C(n,k) · k) time, O(C(n,k) · k) space.
  */
 export function combinations<T>(arr: T[], k: number): T[][] {
   if (k === 0) return [[]];
   if (arr.length < k) return [];
-  const [first, ...rest] = arr as [T, ...T[]];
-  const withFirst = combinations(rest, k - 1).map(c => [first, ...c]);
-  const without = combinations(rest, k);
-  return [...withFirst, ...without];
+  const result: T[][] = [];
+  const stack: Array<{ start: number; current: T[] }> = [{ start: 0, current: [] }];
+  while (stack.length > 0) {
+    const { start, current } = stack.pop()!;
+    if (current.length === k) {
+      result.push([...current]);
+      continue;
+    }
+    // Push in reverse to maintain lexicographic order
+    for (let i = arr.length - 1; i >= start; i--) {
+      stack.push({ start: i + 1, current: [...current, arr[i]!] });
+    }
+  }
+  return result;
 }
 
 // ── Fisher's Z Conditional Independence Test ──────────────────────────

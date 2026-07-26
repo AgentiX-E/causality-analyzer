@@ -270,7 +270,10 @@ export function findMinCost(
   let bestSet = findEfficient(graph, treatment, outcome, admissible);
   let bestCost = bestSet.reduce((s, c) => s + (costs.get(c) ?? 0), 0);
 
-  // Try subsets of admissible candidates
+  // Try subsets of admissible candidates (via bitmask enumeration).
+  // NOTE: Search is truncated at 2^10 = 1024 subsets (when |admissible| > 10)
+  // to keep runtime bounded. For larger admissible sets, the efficient minimal
+  // set found by findEfficient() above is used as the baseline.
   for (let mask = 1; mask < (1 << Math.min(admissible.length, 10)); mask++) {
     const subset: string[] = [];
     let subsetCost = 0;

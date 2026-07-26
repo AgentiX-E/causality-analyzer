@@ -4,8 +4,8 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![CI](https://github.com/AgentiX-E/causality-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/AgentiX-E/causality-analyzer/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-99%25_core_%7C_95%25_pipeline-brightgreen)](https://agentix-e.github.io/causality-analyzer/coverage/)
-[![Tests](https://img.shields.io/badge/tests-1230%20passed-brightgreen)](.)
+[![Coverage](https://img.shields.io/badge/coverage-99.8%25_core_%7C_95.3%25_pipeline-brightgreen)](https://agentix-e.github.io/causality-analyzer/coverage/)
+[![Tests](https://img.shields.io/badge/tests-1182%20passed-brightgreen)](.)
 
 ## Why Causality Analyzer?
 

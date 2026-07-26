@@ -74,6 +74,72 @@ describe('EmbedRelationalStore', () => {
     const table = await store.readMetrics({ start: 0, end: 2000 });
     expect(table.rowCount).toBeGreaterThan(0);
   });
+
+  it('healthCheck returns true for live database', () => {
+    store = createStore();
+    expect(store.healthCheck()).toBe(true);
+  });
+
+  it('close() does not throw and double close is safe', () => {
+    store = createStore();
+    expect(() => store.close()).not.toThrow();
+    expect(() => store.close()).not.toThrow();
+  });
+
+  it('readMetrics with AbortSignal respects abort', async () => {
+    store = createStore();
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      store.readMetrics({ start: 0, end: 2000, signal: controller.signal })
+    ).rejects.toThrow();
+  });
+
+  it('writeDetections with AbortSignal respects abort', async () => {
+    store = createStore();
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      store.writeDetections([{ isAnomalous: true, labels: new Float64Array([1]), scores: new Float64Array([0.5]), timestamp: 1, metadata: {} }], controller.signal)
+    ).rejects.toThrow();
+  });
+
+  it('loadCPT with AbortSignal respects abort', async () => {
+    store = createStore();
+    const controller = new AbortController();
+    controller.abort();
+    await expect(store.loadCPT('g', 'n', controller.signal)).rejects.toThrow();
+  });
+
+  it('saveCPT with AbortSignal respects abort', async () => {
+    store = createStore();
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      store.saveCPT('g', 'n', { node: 'n', parents: [], entries: {} }, controller.signal)
+    ).rejects.toThrow();
+  });
+
+  it('loadRegressionModel with AbortSignal respects abort', async () => {
+    store = createStore();
+    const controller = new AbortController();
+    controller.abort();
+    await expect(store.loadRegressionModel('g', 'n', controller.signal)).rejects.toThrow();
+  });
+
+  it('saveRegressionModel with AbortSignal respects abort', async () => {
+    store = createStore();
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      store.saveRegressionModel('g', 'n', { coefficients: [], intercept: 0, residualStdDev: 0 }, controller.signal)
+    ).rejects.toThrow();
+  });
+
+  it('queryHistoricalResults returns empty for no results', async () => {
+    store = createStore();
+    expect(await store.queryHistoricalResults({})).toEqual([]);
+  });
 });
 
 // ── EmbedGraphStore (overgraph persistent) ──────────────────────────
@@ -176,5 +242,25 @@ describe('EmbedGraphStore', () => {
     const b = await store.loadGraph('gb');
     expect(a?.nodes).toEqual(['A']);
     expect(b?.nodes).toEqual(['B']);
+  });
+
+  it('findSimilarGraphs with empty graph returns array', async () => {
+    const empty = mg([], []);
+    const results = await store.findSimilarGraphs(empty, 5);
+    expect(Array.isArray(results)).toBe(true);
+  });
+
+  it('loadGraphVersion for nonexistent version returns null', async () => {
+    await store.saveGraph(mg(['A']), { id: 'g-ver', method: 'pc', computedAt: 1, parameters: {}, confidence: 0.9 });
+    const v99 = await store.loadGraphVersion('g-ver', 99);
+    expect(v99).toBeNull();
+  });
+
+  it('saveGraph returns string ID', async () => {
+    const graph = mg(['Z']);
+    const id = await store.saveGraph(graph, { id: 'g-auto', method: 'pc', computedAt: Date.now(), parameters: {}, confidence: 0.9 });
+    expect(typeof id).toBe('string');
+    const loaded = await store.loadGraph(id);
+    expect(loaded?.nodes).toEqual(['Z']);
   });
 });
