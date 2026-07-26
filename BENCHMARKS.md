@@ -1,5 +1,17 @@
 # Causal Discovery Benchmark Results
 
+> v1.1.0 — 6 standard DAGs + 2 extended × 9 algorithms
+
+## Coverage
+
+| Category | DAGs | Algorithms | Configs |
+|----------|------|------------|---------|
+| Standard | ASIA, M-Bias, Butterfly, Child, Sachs, Alarm | PC, GES, BOSS, NOTEARS, LiNGAM, FCI, GFCI | 42 |
+| Extended | Insurance(27), Water(32) | +DAGMA, GOLEM | 18 |
+| **Total** | **8 DAGs** | **9 algorithms** | **60** |
+
+## Standard Benchmarks
+
 | Graph | Nodes | True Edges | Algorithm | SHD | TPR | FPR | F1 | Edges Found | Time (ms) |
 |-------|-------|------------|-----------|-----|-----|-----|----|-------------|-----------|
 | ASIA | 8 | 8 | PC | 6 | 0.625 | 0.375 | 0.625 | 8 | 63 |

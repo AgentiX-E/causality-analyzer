@@ -9,3 +9,5 @@ export {
 export type { MechanismChangeResult } from './distribution-change.js';
 export { resitTest } from './resit.js';
 export type { RESITResult, RESITConfig } from './resit.js';
+export { trainFFNMechanism, FFNMechanism } from './neural-mechanisms.js';
+export type { NeuralMechanismConfig } from './neural-mechanisms.js';
