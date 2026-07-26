@@ -42,3 +42,27 @@ export default tseslint.config(
     },
   },
 );
+
+// Worker files need browser globals (Worker, self, onmessage)
+{
+  files: ['packages/storage-browser/src/sqlite-worker.ts', 'packages/storage-browser/src/worker-sqlite-port.ts'],
+  languageOptions: {
+    globals: {
+      self: 'readonly',
+      Worker: 'readonly',
+      postMessage: 'readonly',
+      onmessage: 'writable',
+      MessageEvent: 'readonly',
+      ErrorEvent: 'readonly',
+      DedicatedWorkerGlobalScope: 'readonly',
+    },
+  },
+  rules: {
+    '@typescript-eslint/no-unsafe-assignment': 'off',
+    '@typescript-eslint/no-unsafe-member-access': 'off',
+    '@typescript-eslint/no-unsafe-call': 'off',
+    '@typescript-eslint/no-unsafe-return': 'off',
+    '@typescript-eslint/no-unsafe-argument': 'off',
+    '@typescript-eslint/no-explicit-any': 'off',
+  },
+},
