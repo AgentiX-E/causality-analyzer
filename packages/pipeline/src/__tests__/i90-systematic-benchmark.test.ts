@@ -149,15 +149,27 @@ describe('Benchmark: Enterprise & Infrastructure', () => {
   it('Stability Selection produces stable graph', () => {
     const truth = butterflyGraph();
     const { data, nodeNames } = generateLinearData(truth, 300, 46);
-    const result = stabilitySelection(new Matrix(data), nodeNames, { nBootstrap: 10 });
+    // stabilitySelection requires a discoverFn as 3rd argument (not an options object)
+    const result = stabilitySelection(
+      new Matrix(data),
+      nodeNames,
+      (d: Matrix, names: string[]) => pcAlgorithm(d, names).graph,
+      { nSubsamples: 10 },
+    );
     expect(result.stableGraph).toBeDefined();
     expect(result.nSubsamples).toBeGreaterThan(0);
   });
 
-  it.skip('StARS selects nonzero regularization', () => {
+  it('StARS selects nonzero regularization', () => {
     const truth = butterflyGraph();
     const { data, nodeNames } = generateLinearData(truth, 300, 47);
-    const result = starsSelection(new Matrix(data), nodeNames, { alphaValues: [0.01, 0.05, 0.1], nBootstrap: 5 });
+    const result = starsSelection(
+      new Matrix(data),
+      nodeNames,
+      (alpha: number) => (d: Matrix, names: string[]) => pcAlgorithm(d, names, { alpha }).graph,
+      [0.01, 0.05, 0.1],
+      { nSubsamples: 5 },
+    );
     expect(result.bestParam).toBeGreaterThanOrEqual(0);
   });
 });
@@ -202,9 +214,10 @@ describe('Benchmark: Time Series', () => {
     expect(result.instantaneousGraph.nodeCount).toBe(3);
   });
 
-  it.skip('TS-ICD produces valid contemporaneous graph', () => {
+  it('TS-ICD produces valid contemporaneous graph', () => {
     const data = generateCoupledTS(200);
-    const result = tsIcdAlgorithm(new Matrix(data), ['X', 'Y', 'Z']);
+    // tsIcdAlgorithm expects number[][], not Matrix
+    const result = tsIcdAlgorithm(data, ['X', 'Y', 'Z']);
     expect(result.contemporaneous).toBeDefined();
     expect(result.contemporaneous.nodeCount).toBe(3);
   });

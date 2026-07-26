@@ -46,11 +46,11 @@ describe('Large Graph Benchmarks', () => {
     });
   }
 
-  it.skip('200-node ultra-large graph RFCI', { timeout: 90000 }, () => {
-    const truth = randomDAG(200, 0.02, 42);
-    const { data, nodeNames } = generateLinearData(truth, 300, 42);
+  it('100-node large graph RFCI', { timeout: 45000 }, () => {
+    const truth = randomDAG(100, 0.03, 42);
+    const { data, nodeNames } = generateLinearData(truth, 200, 42);
     const matrix = new Matrix(data);
     const result = rfciAlgorithm(matrix, nodeNames, { maxDegree: 2 });
-    expect(result.graph.nodes.length).toBe(200);
+    expect(result.graph.nodes.length).toBe(100);
   });
 });
