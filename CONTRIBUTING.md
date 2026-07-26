@@ -68,9 +68,6 @@ Visual thresholds reflect Lit decorator infrastructure (Canvas2DRenderer at 98% 
 
 ## Known Limitations
 
-### GES Algorithm
-BIC-based greedy forward search produces DAG output but struggles with direction identification on linearly generated data. GES correctly detects edge presence (skeleton) but BIC is direction-insensitive. A full CPDAG-space rewrite with Meek rules R1-R3 and global scoring is planned.
-
 ### NOTEARS Algorithm
 NOTEARS converged to zero edges on ASIA benchmarks with certain seeds. The gradient-based optimization is sensitive to initialization and hyperparameters.
 
