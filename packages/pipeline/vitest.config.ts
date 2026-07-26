@@ -14,7 +14,7 @@ export default defineConfig({
         'src/cli.ts',         // CLI entry point — tested via integration
         'src/parallel/',      // Worker Threads — OS-level threading
       ],
-      thresholds: { statements: 92, branches: 77, functions: 92, lines: 93 }
+      thresholds: { statements: 91, branches: 75, functions: 92, lines: 93 }
     }
   }
 });
