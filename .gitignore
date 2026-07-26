@@ -10,3 +10,5 @@ coverage/
 causality-analyzer*.db
 causality-analyzer-graph*
 .env
+# better-sqlite3 build artifacts (core dumps)
+core.[0-9]*

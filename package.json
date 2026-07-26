@@ -12,20 +12,20 @@
     "prepare-pages": "node scripts/prepare-pages.cjs"
   },
   "devDependencies": {
-    "@playwright/test": "^1.61.1",
+    "@playwright/test": "^1.62.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^26.1.1",
     "@types/pg": "^8.20.0",
     "@typescript-eslint/eslint-plugin": "^8.65.0",
     "@typescript-eslint/parser": "^8.65.0",
-    "@vitest/coverage-v8": "^3.0.0",
-    "eslint": "^10.7.0",
-    "playwright": "^1.61.1",
+    "@vitest/coverage-v8": "^4.1.10",
+    "eslint": "^10.8.0",
+    "playwright": "^1.62.0",
     "prettier": "^3.9.6",
     "typedoc": "^0.28.20",
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.65.0",
-    "vitest": "^3.0.0"
+    "vitest": "^4.1.10"
   },
   "engines": {
     "node": ">=20"
