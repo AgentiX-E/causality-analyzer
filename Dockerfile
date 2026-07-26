@@ -1,7 +1,7 @@
 # ── Stage 1: Build ──────────────────────────────────────────────────
-FROM node:22-alpine AS builder
+FROM node:26-alpine AS builder
 
-RUN corepack enable && corepack prepare pnpm@10 --activate
+RUN apk add --no-cache python3 make g++ && npm install -g pnpm@10
 
 WORKDIR /app
 
@@ -24,9 +24,9 @@ RUN pnpm run --filter @agentix-e/causality-analyzer-core build
 RUN pnpm run --filter @agentix-e/causality-analyzer-pipeline build
 
 # ── Stage 2: Production ──────────────────────────────────────────────
-FROM node:22-alpine
+FROM node:26-alpine
 
-RUN corepack enable && corepack prepare pnpm@10 --activate
+RUN apk add --no-cache python3 make g++ && npm install -g pnpm@10
 RUN addgroup -S ca && adduser -S ca -G ca
 
 WORKDIR /app
