@@ -69,6 +69,9 @@ importers:
       '@agentix-e/causality-analyzer-core':
         specifier: workspace:*
         version: link:../core
+      '@kanaries/ml':
+        specifier: ^1.0.1
+        version: 1.0.1
       '@tensorflow/tfjs':
         specifier: ^4.22.0
         version: 4.22.0(seedrandom@3.0.5)
@@ -444,6 +447,10 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
+
+  '@kanaries/ml@1.0.1':
+    resolution: {integrity: sha512-6uwWlbz1Bzn8H+kkri0o4LMGhabhd2LwvzaMWwGQutMgauAKT5Be4sQpQd96e9aR6R7OWCGOqhWT4vk++uV0eg==}
+    engines: {node: '>=20.0.0'}
 
   '@lit-labs/ssr-dom-shim@1.6.0':
     resolution: {integrity: sha512-VHb0ALPMTlgKjM6yIxxoQNnpKyUKLD04VzeQdsiXkMqkvYlAHxq9glGLmgbb889/1GsohSOAjvQYoiBppXFqrQ==}
@@ -1963,6 +1970,8 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
+
+  '@kanaries/ml@1.0.1': {}
 
   '@lit-labs/ssr-dom-shim@1.6.0': {}
 

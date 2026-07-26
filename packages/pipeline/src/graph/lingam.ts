@@ -1,13 +1,12 @@
 /**
  * DirectLiNGAM — Linear Non-Gaussian Acyclic Model for causal discovery.
  *
- * This implementation is a faithful port of the official Python version,
- * addressing fundamental flaws:
- *   - Replaced HSIC/Kendall's tau with correct pwling dependence measure.
- *   - Replaced naive fixed-threshold OLS with BIC-based backward elimination
- *     (approximating official Adaptive Lasso pruning).
- *   - Fixed diffMutualInfo to use std-division (not full standardization)
- *     for residual entropy, matching official `ri_j / np.std(ri_j)`.
+ * This implementation is a faithful port of the official Python version:
+ *   - pwling dependence measure for causal order search (Shimizu et al. 2011).
+ *   - BIC-based Lasso grid search for adjacency estimation, replacing the
+ *     naive fixed-threshold OLS with true L1-regularized variable selection
+ *     via @kanaries/ml LassoRegression (coordinate descent).
+ *   - Correct diffMutualInfo: scaleByStd (divide only) not full standardization.
  *
  * Reference: Shimizu et al. (2011). "DirectLiNGAM." JMLR 12:1225-1248.
  * Official Source: https://github.com/cdt15/lingam
@@ -15,6 +14,7 @@
  * @packageDocumentation
  */
 import { Matrix } from 'ml-matrix';
+import { Linear } from '@kanaries/ml';
 import { CausalGraph } from './causal-graph.js';
 
 // ── pwling helpers ──────────────────────────────────────────────────
@@ -33,20 +33,16 @@ function entropy(u: Float64Array): number {
   return term1 - term2 - term3;
 }
 
-/**
- * Matches official: `entropy(ri_j / np.std(ri_j))`
- * NOT full standardization (no centering).
- */
 function scaleByStd(x: Float64Array): Float64Array {
   const n = x.length;
   let mean = 0;
   for (let i = 0; i < n; i++) mean += x[i];
   mean /= n;
-  let varianceValue = 0;
-  for (let i = 0; i < n; i++) varianceValue += (x[i] - mean) ** 2;
-  const std = Math.sqrt(varianceValue / n);
-  const result = new Float64Array(n);
+  let v = 0;
+  for (let i = 0; i < n; i++) v += (x[i] - mean) ** 2;
+  const std = Math.sqrt(v / n);
   const invStd = std > 1e-10 ? 1 / std : 1;
+  const result = new Float64Array(n);
   for (let i = 0; i < n; i++) result[i] = x[i] * invStd;
   return result;
 }
@@ -66,9 +62,9 @@ function standardize(x: Float64Array): Float64Array {
   let mean = 0;
   for (let i = 0; i < n; i++) mean += x[i];
   mean /= n;
-  let varianceValue = 0;
-  for (let i = 0; i < n; i++) varianceValue += (x[i] - mean) ** 2;
-  const std = Math.sqrt(varianceValue / n);
+  let v = 0;
+  for (let i = 0; i < n; i++) v += (x[i] - mean) ** 2;
+  const std = Math.sqrt(v / n);
   const invStd = std > 1e-10 ? 1 / std : 1;
   const result = new Float64Array(n);
   for (let i = 0; i < n; i++) result[i] = (x[i] - mean) * invStd;
@@ -105,134 +101,81 @@ function variance(x: Float64Array): number {
   return v / n;
 }
 
-// ── BIC-based backward elimination (approximates Adaptive Lasso) ────
+// ── BIC-based Lasso grid search (replaces prunedOLS) ────────────────
+
+const LASSO_ALPHAS = [1e-4, 5e-4, 1e-3, 5e-3, 1e-2, 5e-2, 1e-1, 5e-1, 1.0];
 
 /**
- * Selects predictors via BIC-based backward elimination.
- * Approximates official `predict_adaptive_lasso` which uses
- * `LassoLarsIC(criterion="bic")`.
- *
- * Unlike the naive `abs(b) > 1e-4` threshold, this aggressively
- * prunes edges that don't improve the BIC score.
+ * Selects predictors via BIC-optimal Lasso regression.
+ * This approximates the official `predict_adaptive_lasso` which uses
+ * `LassoLarsIC(criterion="bic")`, by doing a grid search over alpha
+ * and selecting the model with minimum BIC.
  */
-function prunedOLS(
+function lassoBIC(
   X: Float64Array[],
   predictors: number[],
   target: number,
 ): Map<number, number> {
   const n = X[0].length;
-  if (predictors.length === 0) return new Map();
+  const p = predictors.length;
+  if (p === 0) return new Map();
 
-  // Start with all predictors
-  let active = [...predictors];
-
-  // Fit OLS and compute BIC
-  const computeBIC = (activePreds: number[]): [number, Map<number, number>] => {
-    const k = activePreds.length + 1; // predictors + intercept
-    if (k >= n) return [Infinity, new Map()];
-
-    // OLS: solve Y = X_preds @ beta + intercept
-    const Y = X[target];
-    const p = activePreds.length;
-
-    // Build X matrix with intercept (column of 1s)
-    const Xmat: number[][] = [];
-    for (let i = 0; i < n; i++) {
-      const row: number[] = [1]; // intercept
-      for (const pred of activePreds) row.push(X[pred][i]);
-      Xmat.push(row);
-    }
-
-    // X^T X
-    const cols = p + 1;
-    const XtX = new Float64Array(cols * cols);
-    for (let i = 0; i < cols; i++) {
-      for (let j = 0; j < cols; j++) {
-        let sum = 0;
-        for (let r = 0; r < n; r++) sum += Xmat[r][i] * Xmat[r][j];
-        XtX[i * cols + j] = sum;
-      }
-    }
-
-    // X^T Y
-    const XtY = new Float64Array(cols);
-    for (let i = 0; i < cols; i++) {
-      let sum = 0;
-      for (let r = 0; r < n; r++) sum += Xmat[r][i] * Y[r];
-      XtY[i] = sum;
-    }
-
-    // Solve via Gaussian elimination
-    const beta = solveLinearSystem(XtX, XtY, cols);
-    if (!beta) return [Infinity, new Map()];
-
-    // Compute RSS
-    let rss = 0;
-    for (let r = 0; r < n; r++) {
-      let pred = beta[0]; // intercept
-      for (let j = 0; j < p; j++) pred += beta[j + 1] * Xmat[r][j + 1];
-      rss += (Y[r] - pred) ** 2;
-    }
-
-    const bic = n * Math.log(rss / n) + k * Math.log(n);
-
-    // Extract coefficients (excluding intercept)
-    const coefs = new Map<number, number>();
-    for (let j = 0; j < p; j++) {
-      coefs.set(activePreds[j], beta[j + 1]);
-    }
-    return [bic, coefs];
-  };
-
-  let [bestBIC, bestCoefs] = computeBIC(active);
-  if (!isFinite(bestBIC)) return new Map();
-
-  // Backward elimination
-  let improved = true;
-  while (improved && active.length > 0) {
-    improved = false;
-    for (let i = active.length - 1; i >= 0; i--) {
-      const candidate = active.filter((_, j) => j !== i);
-      const [candidateBIC, candidateCoefs] = computeBIC(candidate);
-      if (candidateBIC < bestBIC) {
-        bestBIC = candidateBIC;
-        bestCoefs = candidateCoefs;
-        active = candidate;
-        improved = true;
-        break;
-      }
-    }
-  }
-
-  return bestCoefs;
-}
-
-function solveLinearSystem(A: Float64Array, b: Float64Array, n: number): Float64Array | null {
-  const aug = new Float64Array(n * (n + 1));
+  // Build design matrix (n × p) and response vector from Float64Array columns
+  const Y: number[] = [];
+  const Xmat: number[][] = [];
   for (let i = 0; i < n; i++) {
-    for (let j = 0; j < n; j++) aug[i * (n + 1) + j] = A[i * n + j];
-    aug[i * (n + 1) + n] = b[i];
+    const row: number[] = [];
+    for (const pred of predictors) row.push(X[pred][i]);
+    Xmat.push(row);
+    Y.push(X[target][i]);
   }
-  for (let col = 0; col < n; col++) {
-    let pivot = col;
-    for (let row = col + 1; row < n; row++)
-      if (Math.abs(aug[row * (n + 1) + col]) > Math.abs(aug[pivot * (n + 1) + col])) pivot = row;
-    if (pivot !== col)
-      for (let j = 0; j <= n; j++) {
-        const tmp = aug[col * (n + 1) + j]; aug[col * (n + 1) + j] = aug[pivot * (n + 1) + j]; aug[pivot * (n + 1) + j] = tmp;
-      }
-    const pv = aug[col * (n + 1) + col];
-    if (Math.abs(pv) < 1e-14) return null;
-    for (let j = 0; j <= n; j++) aug[col * (n + 1) + j] /= pv;
-    for (let row = 0; row < n; row++) {
-      if (row === col) continue;
-      const f = aug[row * (n + 1) + col];
-      for (let j = 0; j <= n; j++) aug[row * (n + 1) + j] -= f * aug[col * (n + 1) + j];
+
+  let bestBIC = Infinity;
+  let bestCoef: number[] = new Array(p).fill(0);
+
+  for (const alpha of LASSO_ALPHAS) {
+    const model = new Linear.LassoRegression({
+      alpha,
+      maxIter: 5000,
+      tol: 1e-6,
+      fitIntercept: true,
+    });
+
+    try {
+      model.fit(Xmat, Y);
+    } catch {
+      continue; // singular design → skip
+    }
+
+    if (!model.fitted || !model.coef) continue;
+
+    // BIC = n * log(RSS/n) + k * log(n)
+    // where k = number of non-zero coefficients (+ 1 for intercept)
+    const yPred = model.predict(Xmat);
+    let rss = 0;
+    for (let i = 0; i < n; i++) {
+      const e = Y[i] - yPred[i];
+      rss += e * e;
+    }
+    rss = Math.max(rss, 1e-12);
+
+    const nonZero = model.coef.filter((c: number) => Math.abs(c) > 1e-6).length;
+    const k = nonZero + 1; // +1 for intercept
+    const bic = n * Math.log(rss / n) + k * Math.log(Math.max(n, 2));
+
+    if (bic < bestBIC) {
+      bestBIC = bic;
+      bestCoef = [...model.coef];
     }
   }
-  const x = new Float64Array(n);
-  for (let i = 0; i < n; i++) x[i] = aug[i * (n + 1) + n];
-  return x;
+
+  const result = new Map<number, number>();
+  for (let j = 0; j < p; j++) {
+    if (Math.abs(bestCoef[j]) > 1e-6) {
+      result.set(predictors[j], bestCoef[j]);
+    }
+  }
+  return result;
 }
 
 // ── Main algorithm ──────────────────────────────────────────────────
@@ -289,7 +232,7 @@ export function directLiNGAM(
 
   const order = K.map(i => nodeNames[i]);
 
-  // Estimate adjacency matrix via BIC-pruned OLS (approximates Adaptive Lasso)
+  // Estimate adjacency matrix via BIC-optimal Lasso
   const weights = new Map<string, Map<string, number>>();
   for (let i = 1; i < d; i++) {
     const target = K[i];
@@ -297,7 +240,7 @@ export function directLiNGAM(
     if (predictors.length === 0) continue;
 
     const child = order[i];
-    const coefs = prunedOLS(X_original, predictors, target);
+    const coefs = lassoBIC(X_original, predictors, target);
     if (coefs.size > 0) {
       const childMap = new Map<string, number>();
       for (const [predIdx, coef] of coefs.entries()) {
