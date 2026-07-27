@@ -1,12 +1,14 @@
 # Causality Analyzer
 
-> The most complete causal AI library for TypeScript — 6 modular packages for anomaly detection, causal discovery, root cause analysis, effect estimation, counterfactual reasoning, and visualization. Enterprise-grade security, CI-verified quality, browser + Node.js + PostgreSQL + Neo4j storage.
+> Embeddable causal AI library for TypeScript — 6 modular packages for anomaly detection, causal discovery, root cause analysis, effect estimation, counterfactual reasoning, and visualization.
 
-[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![CI](https://github.com/AgentiX-E/causality-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/AgentiX-E/causality-analyzer/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-core_99.8%25_pipeline_94.1%25-brightgreen)](.)
-[![Tests](https://img.shields.io/badge/tests-1746_passed-brightgreen)](.)
-[![Version](https://img.shields.io/badge/version-1.1.0-blue)](https://github.com/AgentiX-E/causality-analyzer)
+[![Docs](https://img.shields.io/badge/docs-TypeDoc-blue)](https://agentix-e.github.io/causality-analyzer/api/)
+[![Benchmark Report](https://img.shields.io/badge/benchmark-latest-8A2BE2)](https://agentix-e.github.io/causality-analyzer/benchmark/)
+[![Coverage](https://img.shields.io/badge/coverage-latest-brightgreen)](https://agentix-e.github.io/causality-analyzer/coverage/)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D22-green)](https://nodejs.org/)
 
 ## Why Causality Analyzer?
 

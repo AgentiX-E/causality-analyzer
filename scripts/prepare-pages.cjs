@@ -16,6 +16,7 @@ const pages = {
   'API Reference': { path: 'api/', description: 'TypeDoc-generated API documentation for all packages' },
   'User Guide': { path: 'guide/', description: 'From zero to production — comprehensive user guide' },
   Coverage: { path: 'coverage/', description: 'Per-package coverage reports (Istanbul + v8)' },
+  Benchmark: { path: 'benchmark/', description: 'Cross-dataset precision benchmark — 4 datasets × 9 algorithms' },
 };
 
 // Copy user guide into docs/guide/
@@ -76,3 +77,29 @@ const html = `<!DOCTYPE html>
 fs.writeFileSync(path.join(DOCS_DIR, 'index.html'), html);
 console.log('[prepare-pages] Root index.html generated');
 console.log('[prepare-pages] Sections: ' + Object.keys(pages).length);
+
+// Generate benchmark report page if log exists
+const benchLog = path.join(DOCS_DIR, 'benchmark', 'benchmark-output.log');
+if (fs.existsSync(benchLog)) {
+  const logContent = fs.readFileSync(benchLog, 'utf8');
+  const benchHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Benchmark Report — Causality Analyzer</title>
+  <style>
+    body { font-family: monospace; max-width: 900px; margin: 20px auto; padding: 0 20px; background: #1a1a2e; color: #e0e0e0; }
+    h1 { color: #2563eb; }
+    pre { background: #16213e; padding: 16px; border-radius: 8px; overflow-x: auto; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Cross-Dataset Precision Benchmark</h1>
+  <pre>${logContent.replace(/</g, '&lt;')}</pre>
+  <p><a href="../" style="color:#2563eb">← Back to docs</a></p>
+</body>
+</html>`;
+  fs.mkdirSync(path.join(DOCS_DIR, 'benchmark'), { recursive: true });
+  fs.writeFileSync(path.join(DOCS_DIR, 'benchmark', 'index.html'), benchHtml);
+  console.log('[prepare-pages] Benchmark report page generated');
+}

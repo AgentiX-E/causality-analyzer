@@ -28,8 +28,8 @@ jobs:
   # GitHub Pages — publish API docs + coverage on push to main
   # ═══════════════════════════════════════════════════════════════════════
   deploy-pages:
-    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
-    needs: [quality]
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v'))
+    needs: [quality, cross-dataset]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -63,6 +63,13 @@ jobs:
         with:
           name: coverage-report
           path: docs/coverage
+
+      # Download benchmark results from cross-dataset job
+      - name: Download benchmark results
+        uses: actions/download-artifact@v8
+        with:
+          name: benchmark-results
+          path: docs/benchmark
 
       # Build landing page with links to all artifacts
       - name: Prepare pages
