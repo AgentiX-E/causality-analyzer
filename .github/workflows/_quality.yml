@@ -54,8 +54,8 @@ jobs:
         with: { node-version: '${{ inputs.node_version }}', cache: 'pnpm' }
       - run: pnpm config set approve-builds true
       - run: pnpm install --frozen-lockfile
-      - run: pnpm run --filter @agentix-e/causality-analyzer-core test
-      - run: pnpm run --filter @agentix-e/causality-analyzer-pipeline test
+      - run: pnpm run --filter @agentix-e/causality-analyzer-core test -- --no-coverage
+      - run: pnpm run --filter @agentix-e/causality-analyzer-pipeline test -- --no-coverage
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
