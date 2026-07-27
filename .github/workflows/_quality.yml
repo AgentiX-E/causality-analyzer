@@ -39,7 +39,6 @@ jobs:
       - run: pnpm run --filter @agentix-e/causality-analyzer-storage-embed build
       - run: pnpm run --filter @agentix-e/causality-analyzer-storage-remote build
       - run: pnpm run --filter @agentix-e/causality-analyzer-storage-browser build
-        continue-on-error: true  # browser-only package; window/self/MessageEvent unavailable in Node.js CI
       - run: pnpm run --filter @agentix-e/causality-analyzer-visual build
       - run: pnpm -r typecheck 2>/dev/null || true
 
