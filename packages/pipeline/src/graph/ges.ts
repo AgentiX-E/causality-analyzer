@@ -530,7 +530,10 @@ export function gesAlgorithm(
     }
   }
 
-  // ── CI-based edge pruning (marginal + conditional independence) ────
+  // ── PC-style skeleton pruning on GES output ───────────────────────
+  // Tests all subsets of other parents up to depth 3 (PC skeleton).
+  // More aggressive than single-set CI — catches false edges that
+  // pass marginal/global tests but fail with specific conditioning.
   const parentMap = new Map<string, Set<string>>();
   for (const e of result.edges) {
     if (e.directed) {
@@ -538,6 +541,23 @@ export function gesAlgorithm(
       parentMap.get(e.target)!.add(e.source);
     }
   }
+
+  // Generate all subsets of arr with size exactly k
+  const chooseK = (arr: number[], k: number): number[][] => {
+    if (k === 0) return [[]];
+    if (k > arr.length) return [];
+    const result: number[][] = [];
+    const helper = (start: number, current: number[]) => {
+      if (current.length === k) { result.push([...current]); return; }
+      for (let i = start; i < arr.length; i++) {
+        current.push(arr[i]!);
+        helper(i + 1, current);
+        current.pop();
+      }
+    };
+    helper(0, []);
+    return result;
+  };
 
   const edgesToRemove: [string, string][] = [];
   for (const e of result.edges) {
@@ -547,27 +567,22 @@ export function gesAlgorithm(
     const tgtIdx = nodeIdx.get(e.target)!;
     let remove = false;
 
-    try {
-      // Stage 1: marginal independence (empty conditioning set)
-      const pMarginal = fisherZTest(data, srcIdx, tgtIdx, []);
-      if (pMarginal > 0.05) {
-        remove = true;
-      }
-    } catch { /* skip */ }
+    // Gather potential conditioning variables: other parents of target
+    const otherParents = [...(parentMap.get(e.target) ?? [])]
+      .filter(p => p !== e.source)
+      .map(p => nodeIdx.get(p)!);
 
-    // Stage 2: conditional independence given other parents
-    if (!remove) {
-      const otherParents = parentMap.get(e.target);
-      if (otherParents && otherParents.size > 1) {
-        const condSet = [...otherParents]
-          .filter(p => p !== e.source)
-          .map(p => nodeIdx.get(p)!);
-        if (condSet.length > 0) {
-          try {
-            const p = fisherZTest(data, srcIdx, tgtIdx, condSet);
-            if (p > 0.10) remove = true; // more permissive for conditional
-          } catch { /* skip */ }
-        }
+    // PC skeleton: test all subsets up to depth 3
+    const maxDepth = Math.min(3, otherParents.length);
+    for (let depth = 0; depth <= maxDepth && !remove; depth++) {
+      for (const subset of chooseK(otherParents, depth)) {
+        try {
+          const p = fisherZTest(data, srcIdx, tgtIdx, subset);
+          if (p > 0.05) {
+            remove = true;
+            break;
+          }
+        } catch { /* singular → skip this subset */ }
       }
     }
 
