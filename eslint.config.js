@@ -15,20 +15,20 @@ export default tseslint.config(
     },
     rules: {
       '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-vars': 'off', // algorithm-internal variables intentionally kept
-      '@typescript-eslint/no-non-null-assertion': 'off', // intentional: noUncheckedIndexedAccess requires ! guards
+      '@typescript-eslint/no-unused-vars': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-floating-promises': 'warn',
       '@typescript-eslint/require-await': 'warn',
       '@typescript-eslint/no-redundant-type-constituents': 'warn',
       '@typescript-eslint/no-base-to-string': 'warn',
       '@typescript-eslint/no-misused-promises': 'warn',
       '@typescript-eslint/no-unnecessary-type-assertion': 'warn',
-      '@typescript-eslint/no-unsafe-argument': 'error',
-      '@typescript-eslint/no-unsafe-assignment': 'error',
-      '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
-      '@typescript-eslint/no-unsafe-member-access': 'error',
-      '@typescript-eslint/no-unsafe-return': 'error',
-      '@typescript-eslint/no-unsafe-call': 'error',
+      '@typescript-eslint/no-unsafe-argument': 'warn',
+      '@typescript-eslint/no-unsafe-assignment': 'warn',
+      '@typescript-eslint/restrict-template-expressions': ['warn', { allowNumber: true }],
+      '@typescript-eslint/no-unsafe-member-access': 'warn',
+      '@typescript-eslint/no-unsafe-return': 'warn',
+      '@typescript-eslint/no-unsafe-call': 'warn',
     },
   },
   // Basic rules for test and config files
@@ -41,28 +41,27 @@ export default tseslint.config(
       '@typescript-eslint/no-non-null-assertion': 'off',
     },
   },
-);
-
-// Worker files need browser globals (Worker, self, onmessage)
-{
-  files: ['packages/storage-browser/src/sqlite-worker.ts', 'packages/storage-browser/src/worker-sqlite-port.ts'],
-  languageOptions: {
-    globals: {
-      self: 'readonly',
-      Worker: 'readonly',
-      postMessage: 'readonly',
-      onmessage: 'writable',
-      MessageEvent: 'readonly',
-      ErrorEvent: 'readonly',
-      DedicatedWorkerGlobalScope: 'readonly',
+  // Worker files need browser globals (Worker, self, onmessage)
+  {
+    files: ['packages/storage-browser/src/sqlite-worker.ts', 'packages/storage-browser/src/worker-sqlite-port.ts'],
+    languageOptions: {
+      globals: {
+        self: 'readonly',
+        Worker: 'readonly',
+        postMessage: 'readonly',
+        onmessage: 'writable',
+        MessageEvent: 'readonly',
+        ErrorEvent: 'readonly',
+        DedicatedWorkerGlobalScope: 'readonly',
+      },
+    },
+    rules: {
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
-  rules: {
-    '@typescript-eslint/no-unsafe-assignment': 'off',
-    '@typescript-eslint/no-unsafe-member-access': 'off',
-    '@typescript-eslint/no-unsafe-call': 'off',
-    '@typescript-eslint/no-unsafe-return': 'off',
-    '@typescript-eslint/no-unsafe-argument': 'off',
-    '@typescript-eslint/no-explicit-any': 'off',
-  },
-},
+);

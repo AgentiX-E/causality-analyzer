@@ -118,7 +118,7 @@ function searchCausalOrderByCorrelation(
 ): number[] {
   const X_ = X.map(col => new Float64Array(col));
   const order: number[] = [];
-  let remaining = new Set(Array.from({ length: d }, (_, i) => i));
+  const remaining = new Set(Array.from({ length: d }, (_, i) => i));
 
   for (let step = 0; step < d; step++) {
     let bestVar = -1;

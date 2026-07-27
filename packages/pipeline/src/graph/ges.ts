@@ -516,7 +516,7 @@ export function gesAlgorithm(
   }
 
   // Convert any remaining undirected edges (pdag2dag)
-  let result = g.pdag2dag();
+  const result = g.pdag2dag();
   if (domainKnowledge) result.applyDomainKnowledge(domainKnowledge);
 
   // Cycle safety

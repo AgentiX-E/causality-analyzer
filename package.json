@@ -1,6 +1,7 @@
 {
   "name": "causality-analyzer-monorepo",
   "private": true,
+  "type": "module",
   "scripts": {
     "build": "pnpm -r build",
     "test": "pnpm -r test",

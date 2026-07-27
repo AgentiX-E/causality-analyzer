@@ -52,7 +52,7 @@ function matrixExp(A: Matrix): Matrix {
   const s = norm1 > 0 ? Math.max(0, Math.ceil(Math.log2(norm1))) : 0;
 
   // Scale A
-  let As = A.clone();
+  const As = A.clone();
   if (s > 0) {
     const scale = 1 / (1 << s); // 1/2^s
     for (let i = 0; i < d; i++)
