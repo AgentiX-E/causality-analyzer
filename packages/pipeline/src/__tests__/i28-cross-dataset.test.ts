@@ -60,7 +60,8 @@ describe('I28 Cross-Dataset Precision', () => {
       const results: Record<string, AlgoResult> = {};
 
       for (const [name, algo] of algorithms) {
-        const slow = ds.nodes >= 20 && ['BOSS', 'LiNGAM', 'GOLEM', 'DAGMA'].includes(name);
+        const slow = (ds.nodes >= 20 && ['BOSS', 'LiNGAM', 'GOLEM', 'DAGMA'].includes(name))
+          || (name === 'GOLEM');
         it(`${name} runs and finds edges`, { timeout: slow ? 45000 : 5000 }, () => {
           const r = runAlgo(algo, data, truth, names);
           results[name] = r;

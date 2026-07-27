@@ -144,6 +144,10 @@ export function golemAlgorithm(
   const n = XArr.length;
   const d = nodeNames.length;
 
+  // Adaptive threshold: at d=20, max|W|≈0.05. Use 0.02 to capture
+  // ~top 5% strongest edges, then BIC pruning removes false positives.
+  const wThreshold = d > 15 ? 0.02 : cfg.wThreshold;
+
   if (n < 5 || d < 2) {
     return { graph: new CausalGraph([...nodeNames]), W: new Float64Array(d * d) };
   }
@@ -178,7 +182,7 @@ export function golemAlgorithm(
   const g = new CausalGraph([...nodeNames]);
   for (let i = 0; i < d; i++)
     for (let j = 0; j < d; j++)
-      if (i !== j && Math.abs(W[i * d + j]) > cfg.wThreshold)
+      if (i !== j && Math.abs(W[i * d + j]) > wThreshold)
         g.addEdge(nodeNames[i], nodeNames[j]);
 
   // ── BIC post-pruning ────────────────────────────────────────────
