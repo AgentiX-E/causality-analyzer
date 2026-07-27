@@ -3,7 +3,10 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": ".",
-    "types": ["node"]
+    "types": ["node"],
+    "lib": ["es2022", "dom", "webworker"],
+    "skipLibCheck": true
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/__tests__/**", "src/sqlite-worker.ts"]
 }

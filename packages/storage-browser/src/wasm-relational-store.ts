@@ -43,7 +43,8 @@ export class WasmRelationalStore implements IRelationalStore {
 
   private esc(s: string): string { return s.replace(/"/g, '""'); }
 
-  async readMetrics<S extends TableSchema>(query: MetricQuery): Promise<unknown> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async readMetrics<S extends TableSchema>(query: MetricQuery): Promise<any> {
     checkAborted(query.signal);
     const rows = await this.port.all(
       "SELECT ts, metric_name, value FROM metrics WHERE ts >= ? AND ts <= ? ORDER BY ts",
