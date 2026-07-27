@@ -198,6 +198,96 @@ export function dagmaAlgorithm(
       if (i !== j && Math.abs(W_est[i * d + j]) > cfg.wThreshold)
         g.addEdge(nodeNames[i], nodeNames[j]);
 
+  // ── BIC-based backward elimination (reduces FPR) ─────────────
+  const edgeList: [number, number][] = [];
+  for (let i = 0; i < d; i++)
+    for (let j = 0; j < d; j++)
+      if (i !== j && g.hasEdge(nodeNames[i]!, nodeNames[j]!))
+        edgeList.push([i, j]);
+
+  if (edgeList.length > 0) {
+    // Compute BIC for a given edge set
+    const computeBIC = (edges: [number, number][]): number => {
+      const paSets: Set<number>[] = Array.from({ length: d }, () => new Set());
+      for (const [from, to] of edges) paSets[to].add(from);
+      let total = 0;
+      for (let y = 0; y < d; y++) {
+        const pa = [...paSets[y]];
+        const k = pa.length;
+        let sigma = cov[y * d + y];
+        if (k > 0) {
+          // Solve paCov @ coef = yCov
+          const yCov: number[] = pa.map(p => cov[y * d + p]);
+          if (k === 1) {
+            sigma -= yCov[0] * yCov[0] / cov[pa[0] * d + pa[0]];
+          } else {
+            const paCov: number[][] = [];
+            for (let a = 0; a < k; a++) {
+              const row: number[] = [];
+              for (let b = 0; b < k; b++) row.push(cov[pa[a] * d + pa[b]]);
+              paCov.push(row);
+            }
+            const coef = gaussSolve(paCov, yCov);
+            for (let a = 0; a < k; a++) sigma -= (coef[a] ?? 0) * yCov[a];
+          }
+        }
+        sigma = Math.max(sigma, 1e-12);
+        total += -(n * (1 + Math.log(sigma)) + (k + 1) * Math.log(Math.max(n, 2)));
+      }
+      return total;
+    };
+
+    let currentEdges = [...edgeList];
+    let currentBIC = computeBIC(currentEdges);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (let idx = currentEdges.length - 1; idx >= 0; idx--) {
+        const candidate = currentEdges.filter((_, i) => i !== idx);
+        const candidateBIC = computeBIC(candidate);
+        if (candidateBIC > currentBIC) {
+          currentEdges = candidate;
+          currentBIC = candidateBIC;
+          changed = true;
+          break;
+        }
+      }
+    }
+
+    // Rebuild graph with pruned edges
+    const pruned = new CausalGraph([...nodeNames]);
+    for (const [from, to] of currentEdges) {
+      pruned.addEdge(nodeNames[from]!, nodeNames[to]!);
+    }
+    if (domainKnowledge) pruned.applyDomainKnowledge(domainKnowledge);
+    return { graph: pruned, W: W_est, h: finalH };
+  }
+
   if (domainKnowledge) g.applyDomainKnowledge(domainKnowledge);
   return { graph: g, W: W_est, h: finalH };
+}
+
+// Small Gaussian elimination helper for BIC pruning
+function gaussSolve(A: number[][], b: number[]): number[] {
+  const n = A.length;
+  const aug = A.map((row, i) => [...row, b[i]!]);
+  for (let col = 0; col < n; col++) {
+    let maxRow = col;
+    for (let row = col + 1; row < n; row++)
+      if (Math.abs(aug[row]![col]!) > Math.abs(aug[maxRow]![col]!)) maxRow = row;
+    [aug[col], aug[maxRow]] = [aug[maxRow]!, aug[col]!];
+    const pv = aug[col]![col]!;
+    if (Math.abs(pv) < 1e-12) continue;
+    for (let row = col + 1; row < n; row++) {
+      const f = aug[row]![col]! / pv;
+      for (let j = col; j <= n; j++) aug[row]![j] -= f * aug[col]![j]!;
+    }
+  }
+  const x = new Array<number>(n).fill(0);
+  for (let i = n - 1; i >= 0; i--) {
+    let s = aug[i]![n]!;
+    for (let j = i + 1; j < n; j++) s -= aug[i]![j]! * (x[j] ?? 0);
+    x[i] = Math.abs(aug[i]![i]!) < 1e-12 ? 0 : s / aug[i]![i]!;
+  }
+  return x;
 }

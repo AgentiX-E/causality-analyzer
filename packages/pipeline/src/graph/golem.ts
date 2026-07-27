@@ -24,7 +24,7 @@
 import { Matrix, inverse } from 'ml-matrix';
 import { det, expm } from 'mathjs';
 import { CausalGraph } from './causal-graph.js';
-import { adam } from '@agentix-e/causality-analyzer-core';
+import { adam, lbfgs } from '@agentix-e/causality-analyzer-core';
 import type { DomainKnowledge } from '@agentix-e/causality-analyzer-core';
 
 export interface GOLEMConfig {
@@ -33,15 +33,17 @@ export interface GOLEMConfig {
   lr: number;
   maxIter: number;
   wThreshold: number;
+  optimizer: 'adam' | 'lbfgs';
   seed?: number;
 }
 
 const DEFAULTS: GOLEMConfig = {
-  lambda1: 1e-2,   // tuned: lower L1 allows more edges; λ₂=5 keeps DAG constraint strong
-  lambda2: 5.0,    // DAG penalty weight
-  lr: 1e-3,        // Adam learning rate
-  maxIter: 5000,   // reduced from 1e5 for practical runtime
-  wThreshold: 0.3,  // official default
+  lambda1: 1e-2,
+  lambda2: 5.0,
+  lr: 1e-3,
+  maxIter: 5000,
+  wThreshold: 0.3,
+  optimizer: 'adam',  // Adam handles expm non-convexity; LBFGS fails
 };
 
 // ── Analytical loss + gradient ──────────────────────────────────────
@@ -154,11 +156,9 @@ export function golemAlgorithm(
   const lossFn = (w: Float64Array): [number, Float64Array] =>
     golemLossAndGrad(w, d, X, cfg.lambda1, cfg.lambda2);
 
-  const result = adam(lossFn, new Float64Array(d * d), {
-    maxIter: cfg.maxIter,
-    lr: cfg.lr,
-    gtol: 1e-6,
-  });
+  const result = cfg.optimizer === 'lbfgs'
+    ? lbfgs(lossFn, new Float64Array(d * d), { maxIter: cfg.maxIter, gtol: 1e-6, m: 15 })
+    : adam(lossFn, new Float64Array(d * d), { maxIter: cfg.maxIter, lr: cfg.lr, gtol: 1e-6 });
   const W = new Float64Array(result.x);
 
   // Threshold to DAG
