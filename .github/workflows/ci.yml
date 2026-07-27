@@ -130,14 +130,19 @@ jobs:
       - run: pnpm run --filter @agentix-e/causality-analyzer-core build
       - run: pnpm run --filter @agentix-e/causality-analyzer-pipeline build
       - name: Run cross-dataset precision benchmark
-        run: pnpm run --filter @agentix-e/causality-analyzer-pipeline test -- src/__tests__/i28-cross-dataset.test.ts
-      - name: Validate against SHD baselines
         run: |
-          # Baseline thresholds guard against precision regression.
-          # Each algorithm must not exceed its maxSHD per dataset.
-          # Baselines defined in .github/benchmark-baselines.json
-          echo "Cross-dataset SHD validation complete — see test output above."
-          echo "Baselines: .github/benchmark-baselines.json"
+          pnpm run --filter @agentix-e/causality-analyzer-pipeline test \
+            -- src/__tests__/i28-cross-dataset.test.ts \
+            2>&1 | tee benchmark-output.log
+      - name: Validate against SHD baselines
+        run: node scripts/validate-benchmarks.cjs benchmark-output.log
+      - name: Upload benchmark results as artifact
+        if: always()
+        uses: actions/upload-artifact@v8
+        with:
+          name: benchmark-results
+          path: benchmark-output.log
+          retention-days: 90
 
   # ═══════════════════════════════════════════════════════════════════════
   # Docker — verify Dockerfile builds on push to master
