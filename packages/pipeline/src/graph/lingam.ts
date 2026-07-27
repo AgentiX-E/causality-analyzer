@@ -327,5 +327,100 @@ export function directLiNGAM(
     }
   }
 
+  // ── BIC post-pruning (removes false positives) ──────────────────
+  const edgeList: [number, number][] = [];
+  for (let i = 0; i < d; i++) {
+    for (let j = 0; j < d; j++) {
+      if (i !== j && g.hasEdge(nodeNames[i]!, nodeNames[j]!)) {
+        edgeList.push([i, j]);
+      }
+    }
+  }
+
+  if (edgeList.length > 1) {
+    // Build covariance matrix from original data
+    const covMat = new Float64Array(d * d);
+    for (let i = 0; i < d; i++) {
+      for (let j = 0; j < d; j++) {
+        covMat[i * d + j] = covariance(X_original[i], X_original[j]);
+      }
+    }
+
+    const computeBIC = (edges: [number, number][]): number => {
+      const paSets: Set<number>[] = Array.from({ length: d }, () => new Set());
+      for (const [from, to] of edges) paSets[to].add(from);
+      let total = 0;
+      for (let y = 0; y < d; y++) {
+        const pa = [...paSets[y]];
+        const k = pa.length;
+        let sigma = covMat[y * d + y]!;
+        if (k > 0) {
+          const yCov: number[] = pa.map(p => covMat[y * d + p]!);
+          if (k === 1) {
+            sigma -= yCov[0]! * yCov[0]! / covMat[pa[0]! * d + pa[0]!]!;
+          } else {
+            const paCov: number[][] = [];
+            for (let a = 0; a < k; a++) {
+              const row: number[] = [];
+              for (let b = 0; b < k; b++) row.push(covMat[pa[a]! * d + pa[b]!]!);
+              paCov.push(row);
+            }
+            const coef = solveSmallLS(paCov, yCov);
+            for (let a = 0; a < k; a++) sigma -= (coef[a] ?? 0) * yCov[a]!;
+          }
+        }
+        sigma = Math.max(sigma, 1e-12);
+        total += -(N * (1 + Math.log(sigma)) + (k + 1) * Math.log(Math.max(N, 2)));
+      }
+      return total;
+    };
+
+    let currentEdges = [...edgeList];
+    let currentBIC = computeBIC(currentEdges);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (let idx = currentEdges.length - 1; idx >= 0; idx--) {
+        const candidate = currentEdges.filter((_, i) => i !== idx);
+        const candidateBIC = computeBIC(candidate);
+        if (candidateBIC > currentBIC) {
+          currentEdges = candidate;
+          currentBIC = candidateBIC;
+          changed = true;
+          break;
+        }
+      }
+    }
+
+    const pruned = new CausalGraph(nodeNames);
+    for (const [from, to] of currentEdges) pruned.addEdge(nodeNames[from]!, nodeNames[to]!);
+    return { graph: pruned, weights, order };
+  }
+
   return { graph: g, weights, order };
+}
+
+// Small linear solver for BIC pruning
+function solveSmallLS(A: number[][], b: number[]): number[] {
+  const n = A.length;
+  const aug = A.map((row, i) => [...row, b[i]!]);
+  for (let col = 0; col < n; col++) {
+    let maxRow = col;
+    for (let row = col + 1; row < n; row++)
+      if (Math.abs(aug[row]![col]!) > Math.abs(aug[maxRow]![col]!)) maxRow = row;
+    [aug[col], aug[maxRow]] = [aug[maxRow]!, aug[col]!];
+    const pv = aug[col]![col]!;
+    if (Math.abs(pv) < 1e-12) continue;
+    for (let row = col + 1; row < n; row++) {
+      const f = aug[row]![col]! / pv;
+      for (let j = col; j <= n; j++) aug[row]![j] -= f * aug[col]![j]!;
+    }
+  }
+  const x = new Array<number>(n).fill(0);
+  for (let i = n - 1; i >= 0; i--) {
+    let s = aug[i]![n]!;
+    for (let j = i + 1; j < n; j++) s -= aug[i]![j]! * (x[j] ?? 0);
+    x[i] = Math.abs(aug[i]![i]!) < 1e-12 ? 0 : s / aug[i]![i]!;
+  }
+  return x;
 }
