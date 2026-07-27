@@ -276,9 +276,26 @@ function findBestInsert(
         if (!state.adj[x][n]) T_candidates.push(n);
       }
 
-      // Enumerate all subsets of T_candidates
+      // Cap T_candidates to avoid O(2^d) explosion on large graphs.
+      // For d > 12, only consider the top 4 candidates (by |corr| with y).
+      const maxTCandidates = state.d <= 12 ? Infinity : 4;
+      if (T_candidates.length > maxTCandidates) {
+        T_candidates.sort((a, b) =>
+          Math.abs(cov[y]![b]!) - Math.abs(cov[y]![a]!));
+        T_candidates.length = maxTCandidates;
+      }
+
+      // Enumerate subsets of T_candidates, size-limited to ≤2 for d>12
+      const maxSubsetSize = state.d <= 12 ? Infinity : 2;
       const subsetCount = 1 << T_candidates.length;
       for (let mask = 0; mask < subsetCount; mask++) {
+        // Count bits in mask; skip if exceeds maxSubsetSize
+        let bitCount = 0;
+        for (let k = 0; k < T_candidates.length; k++) {
+          if (mask & (1 << k)) bitCount++;
+        }
+        if (bitCount > maxSubsetSize) continue;
+
         const T = new Set<number>();
         for (let k = 0; k < T_candidates.length; k++) {
           if (mask & (1 << k)) T.add(T_candidates[k]!);
@@ -336,8 +353,23 @@ function findBestDelete(
         if (!state.adj[x][n]) H_candidates.push(n);
       }
 
+      // Cap for large graphs (same as insert phase)
+      const maxHCandidates = state.d <= 12 ? Infinity : 4;
+      if (H_candidates.length > maxHCandidates) {
+        H_candidates.sort((a, b) =>
+          Math.abs(cov[y]![b]!) - Math.abs(cov[y]![a]!));
+        H_candidates.length = maxHCandidates;
+      }
+      const maxHSubsetSize = state.d <= 12 ? Infinity : 2;
+
       const subsetCount = 1 << H_candidates.length;
       for (let mask = 0; mask < subsetCount; mask++) {
+        let bitCount = 0;
+        for (let k = 0; k < H_candidates.length; k++) {
+          if (mask & (1 << k)) bitCount++;
+        }
+        if (bitCount > maxHSubsetSize) continue;
+
         const H = new Set<number>();
         for (let k = 0; k < H_candidates.length; k++) {
           if (mask & (1 << k)) H.add(H_candidates[k]!);
