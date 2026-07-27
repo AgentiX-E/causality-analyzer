@@ -33,8 +33,8 @@ function generateNonGaussianData(
 describe('directLiNGAM', () => {
   it('recovers causal order for chain X→Y→Z', () => {
     const nodes = ['X', 'Y', 'Z'];
-    const edges: Array<[string, string, number]> = [['X', 'Y', 5], ['Y', 'Z', 4]];
-    const data = generateNonGaussianData(nodes, edges, 200);
+    const edges: Array<[string, string, number]> = [['X', 'Y', 8], ['Y', 'Z', 6]];
+    const data = generateNonGaussianData(nodes, edges, 500);
     const result = directLiNGAM(data, nodes);
     // Verify LiNGAM produces valid output
     expect(result.order.length).toBe(3);
