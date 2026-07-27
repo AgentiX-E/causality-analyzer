@@ -96,6 +96,14 @@ export function dagmaAlgorithm(
   const n = XArr.length;
   const d = nodeNames.length;
 
+  // Adaptive iteration scaling for large graphs (d>15):
+  // Adam converges slower at higher dimensions; weights stagnate
+  // at ~0.05 for d=20 vs ~0.65 for d=8 with same iteration budget.
+  // Scale iterations approximately with d^2 (parameter space size).
+  const iterScale = d > 15 ? Math.min(4, (d * d) / (15 * 15)) : 1;
+  const warmIter = Math.round(cfg.warmIter * iterScale);
+  const maxIter = Math.round(cfg.maxIter * iterScale);
+
   // Center the data
   const X = new Float64Array(n * d);
   for (let j = 0; j < d; j++) {
@@ -122,7 +130,7 @@ export function dagmaAlgorithm(
   let finalH = 0;
 
   for (let t = 0; t < cfg.T; t++) {
-    const innerIters = t === cfg.T - 1 ? cfg.maxIter : cfg.warmIter;
+    const innerIters = t === cfg.T - 1 ? maxIter : warmIter;
     const s = s_schedule[t]!;
 
     // Build loss function — returns RAW gradient (our adam handles update)
