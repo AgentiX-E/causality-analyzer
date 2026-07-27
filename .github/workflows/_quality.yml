@@ -55,9 +55,9 @@ jobs:
       - run: pnpm config set approve-builds true
       - run: pnpm install --frozen-lockfile
       - name: Core unit tests
-        run: cd packages/core && npx vitest run; true
+        run: cd packages/core && npx vitest run; exit 0
       - name: Pipeline algorithm tests
-        run: cd packages/pipeline && npx vitest run; true
+        run: cd packages/pipeline && npx vitest run; exit 0
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
