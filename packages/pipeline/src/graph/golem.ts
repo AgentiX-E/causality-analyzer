@@ -1,12 +1,11 @@
 /**
  * GOLEM — Gradient-based Optimization of Likelihood for linear sEM.
  *
- * A faithful port of the official NeurIPS 2020 implementation, now using:
- *   - `mathjs` for `expm()` (Padé w/ scaling-and-squaring) and `det()` —
- *     the two operations that blocked full fidelity in prior attempts.
- *   - ANALYTICAL gradients derived from the GOLEM-EV loss function,
- *     avoiding the O(d⁴) cost of numerical finite differences.
- *   - `ml-matrix` for all remaining linear algebra (fast, well-typed).
+ * A faithful port of the official NeurIPS 2020 implementation:
+ *   - Custom Padé(6,6) + scaling-and-squaring for `expm()` —
+ *     eliminates the mathjs dependency for matrix exponential.
+ *   - `ml-matrix.determinant()` for `det()` — consistent API.
+ *   - ANALYTICAL gradients derived from the GOLEM-EV loss function.
  *
  * Loss (GOLEM-EV, equal variances):
  *   L(B) = 0.5·d·log(||X-XB||²) - log|det(I-B)| + λ₁·||B||₁
@@ -21,8 +20,7 @@
  *
  * @packageDocumentation
  */
-import { Matrix, inverse } from 'ml-matrix';
-import { det } from 'mathjs';
+import { Matrix, inverse, determinant } from 'ml-matrix';
 import { CausalGraph } from './causal-graph.js';
 import { adam, lbfgs } from '@agentix-e/causality-analyzer-core';
 
@@ -142,9 +140,9 @@ function golemLossAndGrad(
   const I = Matrix.eye(d);
   const I_minus_B = Matrix.sub(I, B);
 
-  // det(I-B) from mathjs (accepts plain 2D array)
+  // det(I-B) from ml-matrix (direct API, no type conversion)
   let detVal: number;
-  try { detVal = det(I_minus_B.to2DArray()) as number; } catch { detVal = 0; }
+  try { detVal = determinant(I_minus_B); } catch { detVal = 0; }
   const lik2 = detVal > 1e-12 ? -Math.log(detVal) : 1e10;
   const likelihood = lik1 + lik2;
 
