@@ -16,6 +16,7 @@
  */
 import { Matrix } from 'ml-matrix';
 import { CausalGraph } from './causal-graph.js';
+import { fisherZTest } from './pc.js';
 import type { DomainKnowledge } from '@agentix-e/causality-analyzer-core';
 
 export interface GESConfig {
@@ -523,6 +524,54 @@ export function gesAlgorithm(
       const bIdx = topo.indexOf(e.target);
       if (aIdx >= 0 && bIdx >= 0 && aIdx >= bIdx) result.removeEdge(e.source, e.target);
     }
+  }
+
+  // ── CI-based edge pruning (marginal + conditional independence) ────
+  const parentMap = new Map<string, Set<string>>();
+  for (const e of result.edges) {
+    if (e.directed) {
+      if (!parentMap.has(e.target)) parentMap.set(e.target, new Set());
+      parentMap.get(e.target)!.add(e.source);
+    }
+  }
+
+  const edgesToRemove: [string, string][] = [];
+  for (const e of result.edges) {
+    if (!e.directed) continue;
+
+    const srcIdx = nodeIdx.get(e.source)!;
+    const tgtIdx = nodeIdx.get(e.target)!;
+    let remove = false;
+
+    try {
+      // Stage 1: marginal independence (empty conditioning set)
+      const pMarginal = fisherZTest(data, srcIdx, tgtIdx, []);
+      if (pMarginal > 0.05) {
+        remove = true;
+      }
+    } catch { /* skip */ }
+
+    // Stage 2: conditional independence given other parents
+    if (!remove) {
+      const otherParents = parentMap.get(e.target);
+      if (otherParents && otherParents.size > 1) {
+        const condSet = [...otherParents]
+          .filter(p => p !== e.source)
+          .map(p => nodeIdx.get(p)!);
+        if (condSet.length > 0) {
+          try {
+            const p = fisherZTest(data, srcIdx, tgtIdx, condSet);
+            if (p > 0.10) remove = true; // more permissive for conditional
+          } catch { /* skip */ }
+        }
+      }
+    }
+
+    if (remove) edgesToRemove.push([e.source, e.target]);
+  }
+
+  for (const [s, t] of edgesToRemove) {
+    result.removeEdge(s, t);
   }
 
   return result;
