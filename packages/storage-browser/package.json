@@ -20,13 +20,13 @@
   },
   "dependencies": {
     "@agentix-e/causality-analyzer-core": "workspace:*",
-    "@sqlite.org/sqlite-wasm": "^3.53.0-build1"
+    "wa-sqlite": "^1.0.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.0",
+    "@vitest/coverage-v8": "^4.1.10",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.10",
-    "@vitest/coverage-v8": "^4.1.10"
+    "vitest": "^4.1.10"
   },
   "engines": {
     "node": ">=20"

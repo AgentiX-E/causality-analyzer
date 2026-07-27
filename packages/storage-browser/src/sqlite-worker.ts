@@ -1,19 +1,22 @@
 /**
- * SQLite Web Worker — OPFS + WASM SQLite.
+ * SQLite Web Worker — OPFS + WASM SQLite via wa-sqlite.
  *
- * This file runs inside a Web Worker (DedicatedWorkerGlobalScope).
- * It initializes @sqlite.org/sqlite-wasm with OPFS persistence and
- * responds to SQL execution messages from the main thread.
+ * Runs inside a Web Worker. Initializes wa-sqlite with AccessHandlePoolVFS
+ * (synchronous OPFS via createSyncAccessHandle) and responds to SQL
+ * execution messages from the main thread.
  *
  * Message protocol:
  *   Main → Worker: { type: 'run'|'all'|'get'|'exec', id, sql, params }
  *   Worker → Main: { id, result?, error? }
  *
- * OPFS requires synchronous I/O via createSyncAccessHandle,
- * which is ONLY available in Web Workers (not main thread).
+ * Migrated from @sqlite.org/sqlite-wasm to wa-sqlite (I55):
+ *   Same SQLite engine · OPFS persistence · standard npm · MIT license
  *
  * @packageDocumentation
  */
+import SQLiteESMFactory from 'wa-sqlite/dist/wa-sqlite.mjs';
+import * as SQLite from 'wa-sqlite';
+import { AccessHandlePoolVFS } from 'wa-sqlite/src/examples/AccessHandlePoolVFS.js';
 
 // ── Worker message types ────────────────────────────────────────────
 
@@ -30,68 +33,71 @@ interface WorkerResponse {
   error?: string;
 }
 
-// ── OPFS + WASM SQLite initialization ──────────────────────────────
+// ── SQLite state ────────────────────────────────────────────────────
 
-let db: unknown = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let sqlite3: any = null;
+let db: number | null = null;
 
 async function initSqlite(): Promise<void> {
-  // Dynamic import of @sqlite.org/sqlite-wasm inside Worker
-  // The module provides sqlite3InitModule() for OPFS-based persistence
-  const sqlite3 = await import('@sqlite.org/sqlite-wasm');
+  const module = await SQLiteESMFactory();
+  sqlite3 = SQLite.Factory(module);
 
-  // Initialize with OPFS access
-  const sqlite = await (sqlite3 as { default?: { oo1: { OpfsDb: new (path: string, mode: string) => unknown } } }).default?.oo1;
-  if (sqlite) {
-    db = new sqlite.OpfsDb('/causality-analyzer.sqlite3', 'ct');
-  }
+  const vfs = new AccessHandlePoolVFS('causality-analyzer');
+  sqlite3.vfs_register(vfs, true);
+
+  db = await sqlite3.open_v2('causality-analyzer.sqlite3');
 }
+
+// ── SQL execution ───────────────────────────────────────────────────
 
 async function handleMessage(req: WorkerRequest): Promise<WorkerResponse> {
   const { id, type, sql, params } = req;
 
   try {
     if (!db) await initSqlite();
+    if (!sqlite3 || !db) throw new Error('SQLite not initialized');
+
+    const bind = params ?? [];
 
     switch (type) {
       case 'run': {
-        (db as { exec(sql: string, opts: { bind: (number | string | null)[] }): void }).exec(sql!, { bind: params ?? [] });
+        await sqlite3.exec(db, sql!, { bind });
         return { id, result: undefined };
       }
       case 'all': {
         const rows: unknown[] = [];
-        (db as { exec(sql: string, opts: { bind: (number | string | null)[]; rowMode: string; callback: (row: unknown) => void }): void })
-          .exec(sql!, {
-            bind: params ?? [],
-            rowMode: 'object',
-            callback: (row: unknown) => { rows.push(row); },
-          });
+        await sqlite3.exec(db, sql!, {
+          bind,
+          rowMode: 'object',
+          callback: (row: unknown) => { rows.push(row); },
+        });
         return { id, result: rows };
       }
       case 'get': {
         let first: unknown = undefined;
-        (db as { exec(sql: string, opts: { bind: (number | string | null)[]; rowMode: string; callback: (row: unknown) => void }): void })
-          .exec(sql!, {
-            bind: params ?? [],
-            rowMode: 'object',
-            callback: (row: unknown) => { if (first === undefined) first = row; },
-          });
+        await sqlite3.exec(db, sql!, {
+          bind,
+          rowMode: 'object',
+          callback: (row: unknown) => { if (first === undefined) first = row; },
+        });
         return { id, result: first };
       }
       case 'exec': {
-        (db as { exec(sql: string): void }).exec(sql!);
+        await sqlite3.exec(db, sql!);
         return { id, result: undefined };
       }
       case 'close': {
         if (db) {
-          (db as { close(): void }).close();
+          await sqlite3.close(db);
           db = null;
+          sqlite3 = null;
         }
         return { id, result: undefined };
       }
     }
   } catch (e) {
-    const message = e instanceof Error ? e.message : 'Unknown error';
-    return { id, error: message };
+    return { id, error: e instanceof Error ? e.message : 'Unknown error' };
   }
 }
 
