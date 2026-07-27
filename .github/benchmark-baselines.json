@@ -1,0 +1,69 @@
+{
+  "_comment": "Cross-dataset SHD baselines — must not regress. Updated I47 (2025-07-27).",
+  "baselines": {
+    "ASIA": {
+      "nodes": 8,
+      "trueEdges": 8,
+      "samples": 2000,
+      "thresholds": {
+        "BOSS": { "maxSHD": 4 },
+        "GES": { "maxSHD": 6 },
+        "FCI": { "maxSHD": 7 },
+        "GFCI": { "maxSHD": 7 },
+        "PC": { "maxSHD": 9 },
+        "DAGMA": { "maxSHD": 11 },
+        "LiNGAM": { "maxSHD": 12 },
+        "NOTEARS": { "maxSHD": 14 },
+        "GOLEM": { "maxSHD": 15 }
+      }
+    },
+    "M-Bias": {
+      "nodes": 5,
+      "trueEdges": 4,
+      "samples": 1000,
+      "thresholds": {
+        "PC": { "maxSHD": 2 },
+        "BOSS": { "maxSHD": 2 },
+        "FCI": { "maxSHD": 2 },
+        "GES": { "maxSHD": 6 },
+        "DAGMA": { "maxSHD": 6 },
+        "GFCI": { "maxSHD": 6 },
+        "GOLEM": { "maxSHD": 6 },
+        "NOTEARS": { "maxSHD": 7 },
+        "LiNGAM": { "maxSHD": 14 }
+      }
+    },
+    "Butterfly": {
+      "nodes": 4,
+      "trueEdges": 4,
+      "samples": 1000,
+      "thresholds": {
+        "FCI": { "maxSHD": 4 },
+        "DAGMA": { "maxSHD": 5 },
+        "BOSS": { "maxSHD": 6 },
+        "GFCI": { "maxSHD": 6 },
+        "GES": { "maxSHD": 7 },
+        "LiNGAM": { "maxSHD": 7 },
+        "GOLEM": { "maxSHD": 8 },
+        "PC": { "maxSHD": 9 },
+        "NOTEARS": { "maxSHD": 9 }
+      }
+    },
+    "Child": {
+      "nodes": 20,
+      "trueEdges": 25,
+      "samples": 2000,
+      "thresholds": {
+        "BOSS": { "maxSHD": 14 },
+        "FCI": { "maxSHD": 19 },
+        "PC": { "maxSHD": 23 },
+        "GFCI": { "maxSHD": 25 },
+        "GES": { "maxSHD": 26 },
+        "DAGMA": { "maxSHD": 30 },
+        "GOLEM": { "maxSHD": 31 },
+        "NOTEARS": { "maxSHD": 57 },
+        "LiNGAM": { "maxSHD": 58 }
+      }
+    }
+  }
+}

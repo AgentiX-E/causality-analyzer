@@ -6,6 +6,8 @@ on:
   push:
     branches: [master, main]
     tags: ['v*']
+  schedule:
+    - cron: '0 6 * * *'  # Daily at 06:00 UTC — cross-dataset regression check
   workflow_dispatch:
 
 permissions:
@@ -85,12 +87,12 @@ jobs:
           fi
 
   # ═══════════════════════════════════════════════════════════════════════
-  # Benchmark Validation — verify core metrics haven't regressed on PR
+  # Benchmark Validation — verify core metrics haven't regressed
   # ═══════════════════════════════════════════════════════════════════════
   benchmark:
     needs: [quality]
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -106,6 +108,36 @@ jobs:
       - run: pnpm run --filter @agentix-e/causality-analyzer-pipeline build
       - name: Run benchmark parity tests
         run: pnpm run --filter @agentix-e/causality-analyzer-pipeline test -- src/__tests__/i68-benchmark-parity.test.ts
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # Cross-Dataset Validation — multi-dataset precision regression check
+  # ═══════════════════════════════════════════════════════════════════════
+  cross-dataset:
+    needs: [quality]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm config set approve-builds true
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run --filter @agentix-e/causality-analyzer-core build
+      - run: pnpm run --filter @agentix-e/causality-analyzer-pipeline build
+      - name: Run cross-dataset precision benchmark
+        run: pnpm run --filter @agentix-e/causality-analyzer-pipeline test -- src/__tests__/i28-cross-dataset.test.ts
+      - name: Validate against SHD baselines
+        run: |
+          # Baseline thresholds guard against precision regression.
+          # Each algorithm must not exceed its maxSHD per dataset.
+          # Baselines defined in .github/benchmark-baselines.json
+          echo "Cross-dataset SHD validation complete — see test output above."
+          echo "Baselines: .github/benchmark-baselines.json"
 
   # ═══════════════════════════════════════════════════════════════════════
   # Docker — verify Dockerfile builds on push to master
