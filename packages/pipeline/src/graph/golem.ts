@@ -144,6 +144,11 @@ export function golemAlgorithm(
   const n = XArr.length;
   const d = nodeNames.length;
 
+  // Adaptive iteration scaling for large graphs (same as DAGMA I37):
+  // Adam converges slower at higher dimensions; weights stagnate.
+  const iterScale = d > 15 ? Math.min(4, (d * d) / (15 * 15)) : 1;
+  const maxIter = Math.round(cfg.maxIter * iterScale);
+
   // Adaptive threshold: at d=20, max|W|≈0.05. Use 0.02 to capture
   // ~top 5% strongest edges, then BIC pruning removes false positives.
   const wThreshold = d > 15 ? 0.02 : cfg.wThreshold;
@@ -174,8 +179,8 @@ export function golemAlgorithm(
     golemLossAndGrad(w, d, X, cfg.lambda1, cfg.lambda2);
 
   const result = cfg.optimizer === 'lbfgs'
-    ? lbfgs(lossFn, new Float64Array(d * d), { maxIter: cfg.maxIter, gtol: 1e-6, m: 15 })
-    : adam(lossFn, new Float64Array(d * d), { maxIter: cfg.maxIter, lr: cfg.lr, gtol: 1e-6 });
+    ? lbfgs(lossFn, new Float64Array(d * d), { maxIter, gtol: 1e-6, m: 15 })
+    : adam(lossFn, new Float64Array(d * d), { maxIter, lr: cfg.lr, gtol: 1e-6 });
   const W = new Float64Array(result.x);
 
   // Threshold to DAG
