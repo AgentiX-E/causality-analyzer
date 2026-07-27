@@ -80,8 +80,8 @@ jobs:
       - run: pnpm run --filter @agentix-e/causality-analyzer-core build
       - name: Visual browser tests
         run: pnpm run --filter @agentix-e/causality-analyzer-visual browser-test 2>/dev/null || echo "No visual browser tests"
-      - name: Storage-browser Playwright E2E
-        run: pnpm run --filter @agentix-e/causality-analyzer-storage-browser browser-test 2>/dev/null || echo "No storage-browser tests"
+      - name: Storage-browser Playwright E2E (real wa-sqlite + OPFS)
+        run: pnpm run --filter @agentix-e/causality-analyzer-storage-browser browser-test
 
   neo4j-test:
     needs: [build]

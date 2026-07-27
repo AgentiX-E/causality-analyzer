@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Storage-Browser Real E2E — wa-sqlite + OPFS + GraphStore</title>
+</head>
+<body>
+<div id="status">Initializing...</div>
+<script type="module">
+import { WorkerSqlitePort } from '../src/worker-sqlite-port.js';
+import { WasmGraphStore } from '../src/wasm-graph-store.js';
+import { CausalGraph } from '@agentix-e/causality-analyzer-core';
+
+const status = document.getElementById('status');
+function log(msg) { status.textContent = msg; console.log('[e2e-real]', msg); }
+
+async function runTests() {
+  // ── Test 1: WorkerSqlitePort with real wa-sqlite WASM ────────────
+  log('Creating WorkerSqlitePort...');
+  const port = new WorkerSqlitePort(
+    new URL('../src/sqlite-worker.ts', import.meta.url).href
+  );
+
+  // Create table
+  await port.exec('CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY, value TEXT)');
+  log('Test 1a passed: CREATE TABLE');
+
+  // Insert data
+  await port.run('INSERT INTO test (id, value) VALUES (?, ?)', [1, 'hello']);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rows: any[] = await port.all('SELECT * FROM test WHERE id = ?', [1]);
+  if (rows.length !== 1 || rows[0].value !== 'hello') throw new Error('SELECT mismatch');
+  log('Test 1b passed: INSERT + SELECT');
+
+  // Multiple inserts + count
+  await port.run('INSERT INTO test (id, value) VALUES (?, ?)', [2, 'world']);
+  await port.run('INSERT INTO test (id, value) VALUES (?, ?)', [3, 'causality']);
+  const allRows = await port.all('SELECT COUNT(*) as cnt FROM test');
+  if (allRows[0].cnt !== 3) throw new Error(`Expected 3 rows, got ${allRows[0].cnt}`);
+  log('Test 1c passed: 3 rows inserted');
+
+  // ── Test 2: WasmGraphStore — store + retrieve CausalGraph ─────────
+  log('Creating WasmGraphStore...');
+  const store = new WasmGraphStore(port);
+
+  // Build a simple causal graph
+  const g = new CausalGraph(['X', 'Y', 'Z']);
+  g.addEdge('X', 'Y');
+  g.addEdge('Y', 'Z');
+  g.addEdge('X', 'Z');
+
+  // Store
+  const graphId = 'e2e-test-' + Date.now();
+  await store.save(graphId, '1.0.0', g, { algorithm: 'e2e-test', seed: 42 });
+  log('Test 2a passed: graph saved');
+
+  // Retrieve
+  const { graph: retrieved } = await store.load(graphId, '1.0.0');
+  if (!retrieved) throw new Error('Graph not found after save');
+
+  // Verify edges
+  const edges = [...retrieved.edges].filter(e => e.directed);
+  if (edges.length !== 3) throw new Error(`Expected 3 edges, got ${edges.length}`);
+
+  const hasXY = edges.some(e => e.source === 'X' && e.target === 'Y');
+  const hasYZ = edges.some(e => e.source === 'Y' && e.target === 'Z');
+  const hasXZ = edges.some(e => e.source === 'X' && e.target === 'Z');
+  if (!hasXY || !hasYZ || !hasXZ) throw new Error('Stored graph missing expected edges');
+  log('Test 2b passed: graph retrieved with correct edges');
+
+  // ── Test 3: Persistence after close/reopen ───────────────────────
+  port.close();
+  log('Test 3a passed: port closed cleanly');
+
+  // Re-open with same worker
+  const port2 = new WorkerSqlitePort(
+    new URL('../src/sqlite-worker.ts', import.meta.url).href
+  );
+  const reopenRows = await port2.all('SELECT COUNT(*) as cnt FROM test');
+  if (reopenRows[0].cnt !== 3) throw new Error(`After reopen: expected 3 rows, got ${reopenRows[0].cnt}`);
+  log('Test 3b passed: data persisted across close/reopen');
+
+  const store2 = new WasmGraphStore(port2);
+  const { graph: reRetrieved } = await store2.load(graphId, '1.0.0');
+  if (!reRetrieved) throw new Error('Graph lost after reopen');
+
+  const edges2 = [...reRetrieved.edges].filter(e => e.directed);
+  if (edges2.length !== 3) throw new Error('Graph edge count changed after reopen');
+  log('Test 3c passed: graph persisted across close/reopen');
+
+  port2.close();
+
+  // ── Report ───────────────────────────────────────────────────────
+  window.__testResults = {
+    sqliteOk: true,
+    storeOk: true,
+    persistenceOk: true,
+    edgeCount: edges.length,
+    graphId,
+  };
+  log(`ALL TESTS PASSED — ${edges.length} edges, graphId=${graphId}`);
+}
+
+runTests().catch(err => {
+  console.error('[e2e-real] FAILED:', err);
+  window.__testError = err.message;
+  window.__testResults = null;
+  status.textContent = 'FAILED: ' + err.message;
+});
+</script>
+</body>
+</html>
