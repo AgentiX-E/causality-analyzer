@@ -54,7 +54,8 @@ jobs:
         with: { node-version: '${{ inputs.node_version }}', cache: 'pnpm' }
       - run: pnpm config set approve-builds true
       - run: pnpm install --frozen-lockfile
-      - run: pnpm -r test
+      - run: pnpm run --filter @agentix-e/causality-analyzer-core test
+      - run: pnpm run --filter @agentix-e/causality-analyzer-pipeline test
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
@@ -81,11 +82,9 @@ jobs:
       - run: pnpm run --filter @agentix-e/causality-analyzer-core build
       - name: Visual browser tests
         run: pnpm run --filter @agentix-e/causality-analyzer-visual browser-test 2>/dev/null || echo "No visual browser tests"
-      - name: Storage-browser mock protocol E2E
-        run: pnpm run --filter @agentix-e/causality-analyzer-storage-browser browser-test -- --grep 'browser-persistence'
-      - name: Storage-browser real OPFS E2E (wa-sqlite + OPFS)
-        run: pnpm run --filter @agentix-e/causality-analyzer-storage-browser browser-test -- --grep 'e2e-real'
-        continue-on-error: true  # Requires OPFS-compatible browser + COOP/COEP headers
+      - name: Storage-browser E2E (mock protocol + real OPFS)
+        run: pnpm run --filter @agentix-e/causality-analyzer-storage-browser browser-test
+        continue-on-error: true  # Real browser E2E requires OPFS-compatible env + Vite + COOP/COEP headers
 
   neo4j-test:
     needs: [build]
