@@ -1,16 +1,18 @@
 /**
- * I2: 算法精度阈值验证
+ * I2: Algorithm precision threshold verification.
  *
- * 对每个关键算法在标准DAG上设定显式SHD/TPR/FPR阈值。
- * 这些阈值基于学术文献中的预期表现和实际benchmark数据。
+ * Defines explicit SHD/TPR/FPR thresholds for each key algorithm
+ * on standard DAGs, based on expected performance from academic
+ * literature and empirical benchmark data.
  *
- * 验收标准（来自优化计划）：
+ * Acceptance criteria (from optimization plan):
  *   GES on ASIA:    SHD ≤ 12,  TPR ≥ 0.20
  *   LiNGAM on ASIA: SHD ≤ 15,  TPR ≥ 0.30
  *   PC on ASIA:     SHD ≤ 10,  TPR ≥ 0.45
  *   FCI on ASIA:    SHD ≤ 12,  TPR ≥ 0.50
  *
- * 注意：TPR阈值设置为保守可达到的基线值，后续迭代(I3-I5)将提升。
+ * Note: TPR thresholds are conservative, achievable baselines.
+ * Later iterations (I3-I5) will raise them.
  */
 import { describe, it, expect } from 'vitest';
 import { Matrix } from 'ml-matrix';
