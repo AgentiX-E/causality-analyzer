@@ -486,12 +486,15 @@ export function gesAlgorithm(
     applyInsert(state, best);
   }
 
-  // ── Backward Phase ─────────────────────────────────────────────────
-  iter = 0;
-  while (iter++ < 200) {
-    const best = findBestDelete(state, nodeIdx, cov, N, scoreCache);
-    if (!best) break;
-    applyDelete(state, best);
+  // ── Backward Phase (run twice for deeper pruning on large graphs) ──
+  const backwardPasses = d > 15 ? 2 : 1;
+  for (let pass = 0; pass < backwardPasses; pass++) {
+    iter = 0;
+    while (iter++ < 200) {
+      const best = findBestDelete(state, nodeIdx, cov, N, scoreCache);
+      if (!best) break;
+      applyDelete(state, best);
+    }
   }
 
   // ── Convert PDAG to CausalGraph output ────────────────────────────
