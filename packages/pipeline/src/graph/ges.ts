@@ -257,7 +257,7 @@ interface DeleteOp { x: number; y: number; H: Set<number>; delta: number }
 function findBestInsert(
   state: PDAGState, nodeIdx: Map<string, number>,
   cov: number[][], N: number, cache: Map<string, number>,
-  maxDegree: number,
+  maxDegree: number, minDelta: number,
 ): InsertOp | null {
   let best: InsertOp | null = null;
 
@@ -324,7 +324,7 @@ function findBestInsert(
         const newScore = bicLocal(y, [...newParents], cov, N, cache);
         const delta = newScore - oldScore;
 
-        if (delta > 0 && (!best || delta > best.delta)) {
+        if (delta > minDelta && (!best || delta > best.delta)) {
           best = { x, y, T, delta };
         }
       }
@@ -479,10 +479,14 @@ export function gesAlgorithm(
   // Initialize empty PDAG
   const state = buildPDAG(new CausalGraph([...nodeNames]), nodeIdx);
 
+  // Minimum BIC delta for forward insertion: on large graphs, require
+  // meaningful improvement to avoid accumulating marginal false edges.
+  const minDelta = d > 15 ? Math.log(Math.max(N, 2)) / 2 : 0;
+
   // ── Forward Phase ─────────────────────────────────────────────────
   let iter = 0;
   while (iter++ < 200) {
-    const best = findBestInsert(state, nodeIdx, cov, N, scoreCache, maxDegree);
+    const best = findBestInsert(state, nodeIdx, cov, N, scoreCache, maxDegree, minDelta);
     if (!best) break;
     applyInsert(state, best);
   }
