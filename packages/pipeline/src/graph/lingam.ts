@@ -101,7 +101,65 @@ function variance(x: Float64Array): number {
   return v / n;
 }
 
-// ── BIC-based Lasso grid search (replaces prunedOLS) ────────────────
+// ── Correlation-based causal ordering (d > 10 fallback) ────────────
+
+/**
+ * Heuristic causal ordering via total absolute correlation.
+ * O(d²n) vs pwling's O(d²n²). Works well for linear Gaussian systems
+ * and avoids the entropy approximation instability on large graphs.
+ *
+ * For each variable, computes the total absolute correlation with all
+ * other variables. The variable with the LOWEST total dependence is
+ * selected as the most exogenous root. After selection, residuals are
+ * computed and the process repeats.
+ */
+function searchCausalOrderByCorrelation(
+  X: Float64Array[], d: number, n: number,
+): number[] {
+  const X_ = X.map(col => new Float64Array(col));
+  const order: number[] = [];
+  let remaining = new Set(Array.from({ length: d }, (_, i) => i));
+
+  for (let step = 0; step < d; step++) {
+    let bestVar = -1;
+    let bestScore = Infinity;
+
+    for (const i of remaining) {
+      let totalDep = 0;
+      for (const j of remaining) {
+        if (i !== j) {
+          const c = Math.abs(correlation(X_[i], X_[j], n));
+          totalDep += c;
+        }
+      }
+      if (totalDep < bestScore) {
+        bestScore = totalDep;
+        bestVar = i;
+      }
+    }
+
+    if (bestVar === -1) break;
+    order.push(bestVar);
+    remaining.delete(bestVar);
+
+    // Regress out bestVar from all remaining variables
+    for (const j of remaining) {
+      X_[j] = residual(X_[j], X_[bestVar]);
+    }
+  }
+
+  return order;
+}
+
+function correlation(x: Float64Array, y: Float64Array, n: number): number {
+  const cov = covariance(x, y);
+  const vx = variance(x);
+  const vy = variance(y);
+  const denom = Math.sqrt(Math.max(vx, 1e-12) * Math.max(vy, 1e-12));
+  return cov / denom;
+}
+
+// ── BIC-based Lasso grid search ──────────────────────────────────────
 
 const LASSO_ALPHAS = [1e-4, 5e-4, 1e-3, 5e-3, 1e-2, 5e-2, 1e-1, 5e-1, 1.0];
 
@@ -115,6 +173,7 @@ function lassoBIC(
   X: Float64Array[],
   predictors: number[],
   target: number,
+  alphas: number[],
 ): Map<number, number> {
   const n = X[0].length;
   const p = predictors.length;
@@ -133,7 +192,7 @@ function lassoBIC(
   let bestBIC = Infinity;
   let bestCoef: number[] = new Array(p).fill(0);
 
-  for (const alpha of LASSO_ALPHAS) {
+  for (const alpha of alphas) {
     const model = new Linear.LassoRegression({
       alpha,
       maxIter: 5000,
@@ -204,33 +263,43 @@ export function directLiNGAM(
   const K: number[] = [];
   const X_ = X.map(col => new Float64Array(col));
 
-  // Causal order search via pwling
-  for (let step = 0; step < d; step++) {
-    const M_list: number[] = [];
-    for (const i of U) {
-      let M = 0;
-      for (const j of U) {
-        if (i !== j) {
-          const xi_std = standardize(X_[i]);
-          const xj_std = standardize(X_[j]);
-          const ri_j = residual(xi_std, xj_std);
-          const rj_i = residual(xj_std, xi_std);
-          M += Math.min(0, diffMutualInfo(xi_std, xj_std, ri_j, rj_i)) ** 2;
+  // Causal order search: pwling for small graphs, correlation for large
+  const useCorrelationOrder = d > 10;
+  if (useCorrelationOrder) {
+    const corrOrder = searchCausalOrderByCorrelation(X_, d, N);
+    for (const idx of corrOrder) K.push(idx);
+  } else {
+    for (let step = 0; step < d; step++) {
+      const M_list: number[] = [];
+      for (const i of U) {
+        let M = 0;
+        for (const j of U) {
+          if (i !== j) {
+            const xi_std = standardize(X_[i]);
+            const xj_std = standardize(X_[j]);
+            const ri_j = residual(xi_std, xj_std);
+            const rj_i = residual(xj_std, xi_std);
+            M += Math.min(0, diffMutualInfo(xi_std, xj_std, ri_j, rj_i)) ** 2;
+          }
+        }
+        M_list.push(-1.0 * M);
+      }
+      const m = U[M_list.indexOf(Math.max(...M_list))];
+      for (const i of U) {
+        if (i !== m) {
+          X_[i] = residual(X_[i], X_[m]);
         }
       }
-      M_list.push(-1.0 * M);
+      K.push(m);
+      U = U.filter(u => u !== m);
     }
-    const m = U[M_list.indexOf(Math.max(...M_list))];
-    for (const i of U) {
-      if (i !== m) {
-        X_[i] = residual(X_[i], X_[m]);
-      }
-    }
-    K.push(m);
-    U = U.filter(u => u !== m);
   }
 
   const order = K.map(i => nodeNames[i]);
+
+  // Stricter Lasso alphas for large graphs to suppress false positives
+  const BIG_GRAPH_ALPHAS = [1e-3, 5e-3, 1e-2, 5e-2, 1e-1, 5e-1, 1.0, 5.0];
+  const lassoAlphas = d > 10 ? BIG_GRAPH_ALPHAS : LASSO_ALPHAS;
 
   // Estimate adjacency matrix via BIC-optimal Lasso
   const weights = new Map<string, Map<string, number>>();
@@ -240,7 +309,7 @@ export function directLiNGAM(
     if (predictors.length === 0) continue;
 
     const child = order[i];
-    const coefs = lassoBIC(X_original, predictors, target);
+    const coefs = lassoBIC(X_original, predictors, target, lassoAlphas);
     if (coefs.size > 0) {
       const childMap = new Map<string, number>();
       for (const [predIdx, coef] of coefs.entries()) {

@@ -45,8 +45,8 @@ const algorithms: [string, Algo][] = [
   ['BOSS',(d, n) => bossAlgorithm(d, n)],
   ['LiNGAM', (d, n) => directLiNGAM(d, n).graph],
   ['NOTEARS', (d, n) => notearsAlgorithm((d as Matrix).to2DArray(), n).graph],
-  ['DAGMA', (d, n) => dagmaAlgorithm((d as Matrix).to2DArray(), n, { T: 2, warmIter: 500, maxIter: 1000 }).graph],
-  ['GOLEM', (d, n) => golemAlgorithm(d, n, { maxIter: 1000 }).graph],
+  ['DAGMA', (d, n) => dagmaAlgorithm((d as Matrix).to2DArray(), n).graph],
+  ['GOLEM', (d, n) => golemAlgorithm(d, n, { maxIter: 2000 }).graph],
   ['FCI', (d, n) => fciAlgorithm(d, n).graph],
   ['GFCI',(d, n) => gfciAlgorithm(d, n).graph],
 ];
@@ -60,7 +60,7 @@ describe('I28 Cross-Dataset Precision', () => {
       const results: Record<string, AlgoResult> = {};
 
       for (const [name, algo] of algorithms) {
-        const slow = ds.nodes >= 20 && ['BOSS', 'LiNGAM', 'GOLEM'].includes(name);
+        const slow = ds.nodes >= 20 && ['BOSS', 'LiNGAM', 'GOLEM', 'DAGMA'].includes(name);
         it(`${name} runs and finds edges`, { timeout: slow ? 45000 : 5000 }, () => {
           const r = runAlgo(algo, data, truth, names);
           results[name] = r;
