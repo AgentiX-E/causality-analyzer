@@ -131,11 +131,15 @@ function golemLossAndGrad(
 // ── Public API ──────────────────────────────────────────────────────
 
 export function golemAlgorithm(
-  XArr: number[][],
+  rawData: Matrix | number[][],
   nodeNames: string[],
   config: Partial<GOLEMConfig> = {},
   domainKnowledge?: DomainKnowledge,
 ): { graph: CausalGraph; W: Float64Array } {
+  // Accept both Matrix (from benchmark harness) and number[][] (from direct calls)
+  const XArr: number[][] = rawData instanceof Matrix
+    ? (rawData as Matrix).to2DArray()
+    : rawData as number[][];
   const cfg = { ...DEFAULTS, ...config };
   const n = XArr.length;
   const d = nodeNames.length;
