@@ -76,7 +76,7 @@ function residual(xi: Float64Array, xj: Float64Array): Float64Array {
   const cov = covariance(xi, xj);
   const varXj = variance(xj);
   const b = cov / varXj;
-  const result = new Float64Array(n);
+  const result = new Float64Array(n) as unknown as Float64Array;
   for (let i = 0; i < n; i++) result[i] = xi[i] - b * xj[i];
   return result;
 }
@@ -144,7 +144,7 @@ function searchCausalOrderByCorrelation(
 
     // Regress out bestVar from all remaining variables
     for (const j of remaining) {
-      X_[j] = residual(X_[j], X_[bestVar]);
+      X_[j] = Float64Array.from(residual(X_[j], X_[bestVar]));
     }
   }
 
@@ -206,7 +206,7 @@ function lassoBIC(
       continue; // singular design → skip
     }
 
-    if (!model.fitted || !model.coef) continue;
+    if (!(model as any).fitted || !(model as any).coef) continue;
 
     // BIC = n * log(RSS/n) + k * log(n)
     // where k = number of non-zero coefficients (+ 1 for intercept)
@@ -218,13 +218,13 @@ function lassoBIC(
     }
     rss = Math.max(rss, 1e-12);
 
-    const nonZero = model.coef.filter((c: number) => Math.abs(c) > 1e-6).length;
+    const nonZero = (model as any).coef.filter((c: number) => Math.abs(c) > 1e-6).length;
     const k = nonZero + 1; // +1 for intercept
     const bic = n * Math.log(rss / n) + k * Math.log(Math.max(n, 2));
 
     if (bic < bestBIC) {
       bestBIC = bic;
-      bestCoef = [...model.coef];
+      bestCoef = [...(model as any).coef];
     }
   }
 
@@ -287,7 +287,7 @@ export function directLiNGAM(
       const m = U[M_list.indexOf(Math.max(...M_list))];
       for (const i of U) {
         if (i !== m) {
-          X_[i] = residual(X_[i], X_[m]);
+          X_[i] = Float64Array.from(residual(X_[i], X_[m]));
         }
       }
       K.push(m);

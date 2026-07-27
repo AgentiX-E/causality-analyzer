@@ -510,7 +510,7 @@ export function gesAlgorithm(
     }
     for (const n of state.neighbor[i]) {
       if (i < n) {
-        g.addUndirectedEdge(nodeNames[i]!, nodeNames[n]!);
+        g.undirectedEdge(nodeNames[i]!, nodeNames[n]!);
       }
     }
   }
