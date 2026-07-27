@@ -22,9 +22,84 @@
  * @packageDocumentation
  */
 import { Matrix, inverse } from 'ml-matrix';
-import { det, expm } from 'mathjs';
+import { det } from 'mathjs';
 import { CausalGraph } from './causal-graph.js';
 import { adam, lbfgs } from '@agentix-e/causality-analyzer-core';
+
+// ── Custom Padé(6,6) + scaling-and-squaring matrix exponential ─────
+
+const PADE_COEFFS = [1, 1/2, 5/44, 1/66, 1/792, 1/15840, 1/665280];
+
+/**
+ * Matrix exponential via Padé(6,6) with scaling-and-squaring.
+ * Replaces mathjs.expm() for higher precision on DAG constraints.
+ *
+ * Algorithm:
+ *   1. Scale A ← A / 2^s where s = ceil(log2(||A||_1))
+ *   2. Compute Padé(6,6): N(A)/D(A)
+ *   3. Square result s times
+ */
+function matrixExp(A: Matrix): Matrix {
+  const d = A.rows;
+
+  // Compute ||A||_1 (max column sum) for scaling
+  let norm1 = 0;
+  for (let j = 0; j < d; j++) {
+    let colSum = 0;
+    for (let i = 0; i < d; i++) colSum += Math.abs(A.get(i, j));
+    norm1 = Math.max(norm1, colSum);
+  }
+
+  // Scaling factor: s = ceil(log2(norm1))
+  const s = norm1 > 0 ? Math.max(0, Math.ceil(Math.log2(norm1))) : 0;
+
+  // Scale A
+  let As = A.clone();
+  if (s > 0) {
+    const scale = 1 / (1 << s); // 1/2^s
+    for (let i = 0; i < d; i++)
+      for (let j = 0; j < d; j++)
+        As.set(i, j, A.get(i, j) * scale);
+  }
+
+  // Compute powers of As: As^2, As^3, ..., As^6
+  const powers: Matrix[] = [Matrix.eye(d), As.clone()];
+  for (let k = 2; k <= 6; k++) {
+    powers.push(powers[k - 1]!.mmul(As));
+  }
+
+  // Padé numerator: N = sum(c_k * As^k)  for k=0..6
+  const N = Matrix.zeros(d, d);
+  for (let k = 0; k <= 6; k++) {
+    const coef = PADE_COEFFS[k]!;
+    const Pk = powers[k]!;
+    for (let i = 0; i < d; i++)
+      for (let j = 0; j < d; j++)
+        N.set(i, j, N.get(i, j) + coef * Pk.get(i, j));
+  }
+
+  // Padé denominator: D = sum((-1)^k * c_k * As^k) for k=0..6
+  const D = Matrix.zeros(d, d);
+  for (let k = 0; k <= 6; k++) {
+    const sign = k % 2 === 0 ? 1 : -1;
+    const coef = PADE_COEFFS[k]! * sign;
+    const Pk = powers[k]!;
+    for (let i = 0; i < d; i++)
+      for (let j = 0; j < d; j++)
+        D.set(i, j, D.get(i, j) + coef * Pk.get(i, j));
+  }
+
+  // expm(As) = N * D^{-1}
+  const expmAs = N.mmul(inverse(D));
+
+  // Repeated squaring: expm(A) = expm(As)^(2^s)
+  let result = expmAs;
+  for (let i = 0; i < s; i++) {
+    result = result.mmul(result);
+  }
+
+  return result;
+}
 import type { DomainKnowledge } from '@agentix-e/causality-analyzer-core';
 
 export interface GOLEMConfig {
@@ -78,22 +153,16 @@ function golemLossAndGrad(
   for (let i = 0; i < d * d; i++) l1 += Math.abs(w[i]);
 
   // ── DAG penalty: trace(expm(B⊙B)) - d ──────────────────────────────
-  const B_sq_arr: number[][] = [];
-  for (let i = 0; i < d; i++) {
-    const row: number[] = [];
-    for (let j = 0; j < d; j++) row.push(B.get(i, j) ** 2);
-    B_sq_arr.push(row);
-  }
-
-  let expmArr: number[][] = [];
   let h = 1e10;
+  let expmM: Matrix = Matrix.zeros(d, d);
   try {
-    const expmResult = expm(B_sq_arr) as any;
-    expmArr = expmResult.toArray() as number[][];
-    let tr = 0;
-    for (let i = 0; i < d; i++) tr += expmArr[i]?.[i] ?? 0;
-    h = tr - d;
-  } catch { /* expm failed → h stays large */ }
+    const B_sq = B.clone();
+    for (let i = 0; i < d; i++)
+      for (let j = 0; j < d; j++)
+        B_sq.set(i, j, B.get(i, j) ** 2);
+    expmM = matrixExp(B_sq);
+    h = expmM.trace() - d;
+  } catch { /* singular → h stays large */ }
 
   // ── Total loss ────────────────────────────────────────────────────
   const loss = likelihood + lambda1 * l1 + lambda2 * h;
@@ -123,7 +192,7 @@ function golemLossAndGrad(
   // ∇(h) = 2λ₂·B ⊙ expm(B⊙B)ᵀ
   for (let i = 0; i < d; i++)
     for (let j = 0; j < d; j++)
-      G[i * d + j] += 2 * lambda2 * B.get(i, j) * (expmArr[j]?.[i] ?? 0);
+      G[i * d + j] += 2 * lambda2 * B.get(i, j) * expmM.get(j, i);
 
   return [loss, G];
 }
