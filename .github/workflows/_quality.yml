@@ -54,7 +54,9 @@ jobs:
       - name: Core unit tests
         run: cd packages/core && npx vitest run
       - name: Pipeline precision threshold tests
-        run: cd packages/pipeline && pnpm exec vitest run src/__tests__/i91-precision-thresholds.test.ts
+        run: |
+          pnpm run --filter @agentix-e/causality-analyzer-core build
+          cd packages/pipeline && pnpm exec vitest run src/__tests__/i91-precision-thresholds.test.ts
 
   browser-test:
     needs: [build]
