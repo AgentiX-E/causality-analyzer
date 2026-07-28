@@ -71,7 +71,7 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
       - run: pnpm run --filter @agentix-e/causality-analyzer-core build
-      - run: pnpm run --filter @agentix-e/causality-analyzer-storage-browser browser-test -- --grep browser-persistence
+      - run: pnpm run --filter @agentix-e/causality-analyzer-storage-browser browser-test -- browser-persistence.spec.ts
 
   neo4j-test:
     needs: [build]
