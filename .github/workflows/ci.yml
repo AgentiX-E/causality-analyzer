@@ -57,12 +57,13 @@ jobs:
           node-version: '22'
           cache: 'pnpm'
       - run: pnpm config set approve-builds true
-      - name: Install dependencies (skip npm postinstall scripts)
+      - name: Install dependencies
         run: |
-          export npm_config_ignore_scripts=true
-          pnpm install --frozen-lockfile --ignore-scripts
-      - name: Rebuild native deps
-        run: pnpm rebuild
+          # Prevent npm postinstall xdg-open from failing on headless CI
+          mkdir -p "$HOME/.local/bin"
+          ln -sf "$(which true)" "$HOME/.local/bin/xdg-open"
+          export PATH="$HOME/.local/bin:$PATH"
+          pnpm install --frozen-lockfile
       - run: pnpm run --filter @agentix-e/causality-analyzer-core build
       - run: pnpm run --filter @agentix-e/causality-analyzer-pipeline build
       - run: pnpm run --filter @agentix-e/causality-analyzer-visual build
