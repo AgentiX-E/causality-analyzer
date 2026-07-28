@@ -23,10 +23,10 @@ jobs:
       node_version: '22'
 
   # ═══════════════════════════════════════════════════════════════════════
-  # Docker — verify Dockerfile builds on push to master
+  # Docker — verify Dockerfile builds on release tags only
   # ═══════════════════════════════════════════════════════════════════════
   docker:
-    if: github.event_name != 'pull_request'
+    if: startsWith(github.ref, 'refs/tags/v')
     needs: [quality]
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -58,6 +58,8 @@ jobs:
           cache: 'pnpm'
       - run: pnpm config set approve-builds true
       - run: pnpm install --frozen-lockfile
+        env:
+          CI: true
       - run: pnpm run --filter @agentix-e/causality-analyzer-core build
       - run: pnpm run --filter @agentix-e/causality-analyzer-pipeline build
       - run: pnpm run --filter @agentix-e/causality-analyzer-visual build
