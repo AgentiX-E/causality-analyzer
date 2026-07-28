@@ -60,6 +60,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
         env:
           CI: true
+          npm_config_fund: false
+          npm_config_yes: true
       - run: pnpm run --filter @agentix-e/causality-analyzer-core build
       - run: pnpm run --filter @agentix-e/causality-analyzer-pipeline build
       - run: pnpm run --filter @agentix-e/causality-analyzer-visual build
