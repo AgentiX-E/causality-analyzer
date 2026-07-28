@@ -61,7 +61,7 @@ const html = `<!DOCTYPE html>
   </style>
 </head>
 <body>
-  <h1>Causality Analyzer <span>v0.1.0</span></h1>
+  <h1>Causality Analyzer <span>v1.2.0</span></h1>
   <p class="subtitle">Embeddable causal AI library for Node.js — anomaly detection, causal discovery, root cause analysis, effect estimation, and counterfactual reasoning.</p>
 
   ${sections}
