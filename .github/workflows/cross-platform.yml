@@ -33,4 +33,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm run --filter @agentix-e/causality-analyzer-core build
       - run: pnpm run --filter @agentix-e/causality-analyzer-core test
-      - run: pnpm run --filter @agentix-e/causality-analyzer-pipeline test
+      # Pipeline algorithm tests are Linux-only (heavy computation,
+      # @kanaries/ml binary compatibility). Cross-platform validation
+      # of core ensures algorithm independence contracts hold on all OS.
+

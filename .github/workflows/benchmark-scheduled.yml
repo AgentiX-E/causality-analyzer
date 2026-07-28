@@ -1,0 +1,65 @@
+name: Benchmark
+
+on:
+  schedule:
+    - cron: '0 6 * * *'      # Daily at 06:00 UTC
+  workflow_dispatch:           # Manual trigger
+
+permissions:
+  contents: read
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════════════
+  # Cross-Dataset — 4 datasets × 9 algorithms precision validation
+  # ═══════════════════════════════════════════════════════════════════════
+  cross-dataset:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm config set approve-builds true
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run --filter @agentix-e/causality-analyzer-core build
+      - run: pnpm run --filter @agentix-e/causality-analyzer-pipeline build
+      - name: Run cross-dataset precision benchmark
+        run: |
+          pnpm run --filter @agentix-e/causality-analyzer-pipeline test \
+            -- src/__tests__/i28-cross-dataset.test.ts \
+            2>&1 | tee benchmark-output.log
+      - name: Validate against SHD baselines
+        run: node scripts/validate-benchmarks.cjs benchmark-output.log
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: benchmark-output.log
+          retention-days: 90
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # Benchmark Parity — algorithm validity and timing check
+  # ═══════════════════════════════════════════════════════════════════════
+  benchmark-parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm config set approve-builds true
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run --filter @agentix-e/causality-analyzer-core build
+      - run: pnpm run --filter @agentix-e/causality-analyzer-pipeline build
+      - name: Run benchmark parity tests
+        run: pnpm run --filter @agentix-e/causality-analyzer-pipeline test -- src/__tests__/i68-benchmark-parity.test.ts

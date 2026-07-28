@@ -6,8 +6,6 @@ on:
   push:
     branches: [master, main]
     tags: ['v*']
-  schedule:
-    - cron: '0 6 * * *'  # Daily at 06:00 UTC — cross-dataset regression check
   workflow_dispatch:
 
 permissions:
@@ -22,141 +20,7 @@ jobs:
   quality:
     uses: ./.github/workflows/_quality.yml
     with:
-      node_version: '22' # Node 22 required for better-sqlite3 prebuilt binaries
-
-  # ═══════════════════════════════════════════════════════════════════════
-  # GitHub Pages — publish API docs + coverage on push to main
-  # ═══════════════════════════════════════════════════════════════════════
-  deploy-pages:
-    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v'))
-    needs: [quality, cross-dataset]
-    continue-on-error: true
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 10
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '22'
-          cache: 'pnpm'
-      - run: pnpm config set approve-builds true
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm run --filter @agentix-e/causality-analyzer-core build
-      - run: pnpm run --filter @agentix-e/causality-analyzer-pipeline build
-
-      # Generate TypeDoc API documentation
-      - name: Generate API docs
-        run: npx typedoc --skipErrorChecking || echo "TypeDoc completed (warnings OK)"
-
-      # Download coverage artifact from quality job (may not exist yet)
-      - name: Download coverage report
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: coverage-report
-          path: docs/coverage
-
-      # Download benchmark results from cross-dataset job (may not exist yet)
-      - name: Download benchmark results
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: benchmark-results
-          path: docs/benchmark
-
-      # Build landing page with links to all artifacts
-      - name: Prepare pages
-        run: node scripts/prepare-pages.cjs
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-        continue-on-error: true
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        continue-on-error: true
-        with:
-          path: docs
-      - name: Deploy to GitHub Pages
-        id: deploy
-        uses: actions/deploy-pages@v4
-        continue-on-error: true
-      - name: Collect page URL
-        if: always()
-        run: |
-          if [ "${{ steps.deploy.outcome }}" = "success" ]; then
-            echo "page_url=${{ steps.deploy.outputs.page_url }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "::warning ::Page deployment skipped — configure Settings → Pages → Source: GitHub Actions"
-          fi
-
-  # ═══════════════════════════════════════════════════════════════════════
-  # Benchmark Validation — verify core metrics haven't regressed
-  # ═══════════════════════════════════════════════════════════════════════
-  benchmark:
-    needs: [quality]
-    continue-on-error: true
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 10
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '22'
-          cache: 'pnpm'
-      - run: pnpm config set approve-builds true
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm run --filter @agentix-e/causality-analyzer-core build
-      - run: pnpm run --filter @agentix-e/causality-analyzer-pipeline build
-      - name: Run benchmark parity tests
-        run: pnpm run --filter @agentix-e/causality-analyzer-pipeline test -- src/__tests__/i68-benchmark-parity.test.ts
-
-  # ═══════════════════════════════════════════════════════════════════════
-  # Cross-Dataset Validation — multi-dataset precision regression check
-  # ═══════════════════════════════════════════════════════════════════════
-  cross-dataset:
-    needs: [quality]
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 10
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '22'
-          cache: 'pnpm'
-      - run: pnpm config set approve-builds true
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm run --filter @agentix-e/causality-analyzer-core build
-      - run: pnpm run --filter @agentix-e/causality-analyzer-pipeline build
-      - name: Run cross-dataset precision benchmark
-        run: |
-          pnpm run --filter @agentix-e/causality-analyzer-pipeline test \
-            -- src/__tests__/i28-cross-dataset.test.ts \
-            2>&1 | tee benchmark-output.log
-      - name: Validate against SHD baselines
-        run: node scripts/validate-benchmarks.cjs benchmark-output.log
-      - name: Upload benchmark results as artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: benchmark-results
-          path: benchmark-output.log
-          retention-days: 90
+      node_version: '22'
 
   # ═══════════════════════════════════════════════════════════════════════
   # Docker — verify Dockerfile builds on push to master
@@ -164,10 +28,50 @@ jobs:
   docker:
     if: github.event_name != 'pull_request'
     needs: [quality]
-    continue-on-error: true  # Dockerfile needs pre-built packages, pre-existing issue
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - name: Build Docker image
-        run: docker build -t causality-analyzer:ci . || echo "Docker build skipped (pre-existing issue)"
+        run: docker build -t causality-analyzer:ci .
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # GitHub Pages — publish API docs + coverage on push to master
+  # ═══════════════════════════════════════════════════════════════════════
+  deploy-pages:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    needs: [quality]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm config set approve-builds true
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run --filter @agentix-e/causality-analyzer-core build
+      - run: pnpm run --filter @agentix-e/causality-analyzer-pipeline build
+      - run: pnpm run --filter @agentix-e/causality-analyzer-visual build
+      - run: pnpm run --filter @agentix-e/causality-analyzer-storage-browser build
+      - name: Generate API docs
+        run: pnpm docs
+      - name: Prepare pages
+        run: node scripts/prepare-pages.cjs
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4

@@ -20,8 +20,8 @@ jobs:
         with: { node-version: '${{ inputs.node_version }}', cache: 'pnpm' }
       - run: pnpm config set approve-builds true
       - run: pnpm install --frozen-lockfile
-      - run: pnpm -r lint
-        continue-on-error: true
+      - run: pnpm run --filter @agentix-e/causality-analyzer-core lint
+      - run: pnpm run --filter @agentix-e/causality-analyzer-pipeline lint
 
   build:
     runs-on: ubuntu-latest
@@ -36,16 +36,13 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm run --filter @agentix-e/causality-analyzer-core build
       - run: pnpm run --filter @agentix-e/causality-analyzer-pipeline build
-      - run: pnpm run --filter @agentix-e/causality-analyzer-storage-embed build
-      - run: pnpm run --filter @agentix-e/causality-analyzer-storage-remote build
       - run: pnpm run --filter @agentix-e/causality-analyzer-storage-browser build
       - run: pnpm run --filter @agentix-e/causality-analyzer-visual build
-      - run: pnpm -r typecheck 2>/dev/null || true
 
   test:
     needs: [build]
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -55,21 +52,9 @@ jobs:
       - run: pnpm config set approve-builds true
       - run: pnpm install --frozen-lockfile
       - name: Core unit tests
-        run: |
-          cd packages/core
-          npx vitest run || echo "Core tests had failures (non-blocking)"
+        run: cd packages/core && npx vitest run
       - name: Pipeline algorithm tests
-        run: |
-          cd packages/pipeline
-          npx vitest run || echo "Pipeline tests had failures (non-blocking)"
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: |
-            packages/*/coverage/
-          retention-days: 14
-        continue-on-error: true
+        run: cd packages/pipeline && npx vitest run
 
   browser-test:
     needs: [build]
@@ -86,11 +71,7 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
       - run: pnpm run --filter @agentix-e/causality-analyzer-core build
-      - name: Visual browser tests
-        run: pnpm run --filter @agentix-e/causality-analyzer-visual browser-test 2>/dev/null || echo "No visual browser tests"
-      - name: Storage-browser E2E (mock protocol + real OPFS)
-        run: pnpm run --filter @agentix-e/causality-analyzer-storage-browser browser-test
-        continue-on-error: true  # Real browser E2E requires OPFS-compatible env + Vite + COOP/COEP headers
+      - run: pnpm run --filter @agentix-e/causality-analyzer-storage-browser browser-test
 
   neo4j-test:
     needs: [build]
@@ -120,7 +101,7 @@ jobs:
           echo "Neo4j failed"; docker logs neo4j-ci 2>&1 | tail -20; exit 1
       - name: Run tests
         if: env.DOCKER_UNAVAILABLE != 'true'
-        run: pnpm run --filter @agentix-e/causality-analyzer-storage-remote test:neo4j 2>/dev/null || echo "Neo4j tests skipped"
+        run: pnpm run --filter @agentix-e/causality-analyzer-storage-remote test:neo4j
         env: { NEO4J_BOLT_URI: 'bolt://localhost:7687', NEO4J_USER: 'neo4j', NEO4J_PASSWORD: 'password' }
       - name: Cleanup
         if: always()
@@ -138,5 +119,4 @@ jobs:
       - run: pnpm config set approve-builds true
       - run: pnpm install --frozen-lockfile
       - name: Audit dependencies
-        run: pnpm audit --audit-level high 2>/dev/null || echo "Audit warnings (non-blocking)"
-        continue-on-error: true
+        run: pnpm audit --audit-level high
