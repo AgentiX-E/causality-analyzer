@@ -55,6 +55,13 @@ export type { GINResult } from './gin.js';
 export { OnlinePC, type OnlinePCConfig, type StreamingGraphState, type GraphChangeEvent } from './streaming-discovery.js';
 export { detectCausalDrift, detectDriftFromGraphs, type DriftDetectionResult } from './drift-detection.js';
 
+// ── CAM-UV + Meta-Learner ──────────────────────────────────────────────
+
+export { camUVAlgorithm } from './cam-uv.js';
+export type { CAMUVConfig, CAMUVResult } from './cam-uv.js';
+export { extractCharacteristics, recommendAlgorithm } from './meta-learner.js';
+export type { DiscoveryAlgorithm, DataCharacteristics, AlgorithmRecommendation, MetaLearnerResult } from './meta-learner.js';
+
 // ── PCMCI+ ──────────────────────────────────────────────────────────────
 
 export { pcmciPlusAlgorithm } from './pcmci-plus.js';

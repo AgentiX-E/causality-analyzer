@@ -24,6 +24,8 @@ export {
   // PCMCI+
   pcmciPlusAlgorithm, ciTest, parCorrTest, cmiknnTest, gsquaredCITest,
   orientCPDAG,
+  // CAM-UV + Meta-Learner
+  camUVAlgorithm, extractCharacteristics, recommendAlgorithm,
   // Data generators
   generateVARTimeSeries, generateNonlinearVARTimeSeries, generateSCMTimeSeries,
   simpleTestTimeSeries, chainTimeSeries, fullyConnectedVAR1,
@@ -40,6 +42,9 @@ export type {
   DriftDetectionResult,
   // PCMCI+ types
   CIBackend, CITestResult,
+  // CAM-UV + Meta-Learner types
+  CAMUVConfig, CAMUVResult, DiscoveryAlgorithm, DataCharacteristics,
+  AlgorithmRecommendation, MetaLearnerResult,
   // Generator types
   VARGeneratorConfig, NonlinearVARConfig, NonlinearityType,
   SCMMechanism, SCMTimeSeriesConfig, TestTimeSeries,
