@@ -9,7 +9,11 @@
     "test": "vitest run --coverage",
     "lint": "eslint src/ --ext .ts",
     "typecheck": "tsc --noEmit",
-    "test:neo4j": "vitest run --config vitest.neo4j.config.ts"
+    "test:neo4j": "vitest run --config vitest.neo4j.config.ts",
+    "neo4j:test": "bash scripts/run-neo4j-tests.sh all",
+    "neo4j:test:plain": "bash scripts/run-neo4j-tests.sh plain",
+    "neo4j:test:mtls": "bash scripts/run-neo4j-tests.sh mtls",
+    "neo4j:certs": "bash scripts/generate-neo4j-certs.sh"
   },
   "dependencies": {
     "@agentix-e/causality-analyzer-core": "workspace:*",
