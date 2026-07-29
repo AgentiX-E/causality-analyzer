@@ -38,10 +38,11 @@ export function ciTest(
       return parCorrTest(data, xCol, yCol, condCols);
 
     case 'cmiknn': {
-      const cmiConfig: CMIknnConfig = {};
+      const cmiConfig: CMIknnConfig = {
+        seed: params?.seed ?? 42,
+      };
       if (params?.knnK !== undefined) cmiConfig.k = params.knnK;
       if (params?.nPermutations !== undefined) cmiConfig.nPermutations = params.nPermutations;
-      if (params?.seed !== undefined) cmiConfig.seed = params.seed;
       return cmiknnTest(data, xCol, yCol, condCols, cmiConfig);
     }
 

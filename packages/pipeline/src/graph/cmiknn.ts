@@ -71,7 +71,7 @@ export function cmiknnTest(
   const observedCMI = estimateCMI(data, xCol, yCol, condCols, k);
 
   // Permutation test: shuffle Y and recompute CMI
-  const rng = createRNG(config.seed ?? Date.now());
+  const rng = createRNG(config.seed ?? 42);
   const yValues = data.map(row => row[yCol]!);
   let countGreater = 0;
 
