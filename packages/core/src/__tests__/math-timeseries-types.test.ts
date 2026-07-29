@@ -194,3 +194,74 @@ describe('TimeSeries types (compile-time verification)', () => {
     expect(result.testStatistic).toBe(0.42);
   });
 });
+
+// ── Distributed Types + Vector Clock Tests ────────────────────────────
+
+import {
+  compareClocks,
+  mergeClocks,
+  incrementClock,
+  type VectorClock,
+  type DistributedCITask,
+  type DistributedDiscoveryConfig,
+} from '../types/distributed.js';
+
+describe('VectorClock functions', () => {
+  it('compareClocks detects equal', () => {
+    expect(compareClocks({ w1: 1, w2: 2 }, { w1: 1, w2: 2 })).toBe('equal');
+  });
+
+  it('compareClocks detects before', () => {
+    expect(compareClocks({ w1: 1 }, { w1: 2, w2: 1 })).toBe('before');
+  });
+
+  it('compareClocks detects after', () => {
+    expect(compareClocks({ w1: 2, w2: 1 }, { w1: 1, w2: 1 })).toBe('after');
+  });
+
+  it('compareClocks detects concurrent', () => {
+    expect(compareClocks({ w1: 2, w2: 1 }, { w1: 1, w2: 2 })).toBe('concurrent');
+  });
+
+  it('mergeClocks takes max', () => {
+    const m = mergeClocks({ w1: 3, w2: 1 }, { w1: 2, w2: 5, w3: 1 });
+    expect(m.w1).toBe(3);
+    expect(m.w2).toBe(5);
+    expect(m.w3).toBe(1);
+  });
+
+  it('incrementClock advances worker', () => {
+    const c = incrementClock({ w1: 1 }, 'w1');
+    expect(c.w1).toBe(2);
+  });
+
+  it('incrementClock adds new worker', () => {
+    const c = incrementClock({}, 'w3');
+    expect(c.w3).toBe(1);
+  });
+});
+
+describe('Distributed types (compile-time verification)', () => {
+  it('DistributedCITask is well-formed', () => {
+    const task: DistributedCITask = {
+      taskId: 't1', source: 0, target: 1, lag: 0,
+      condSet: [2], alpha: 0.05, ciBackend: 'parcorr',
+    };
+    expect(task.condSet).toEqual([2]);
+    expect(task.ciBackend).toBe('parcorr');
+  });
+
+  it('DistributedDiscoveryConfig has independent sql/graph configs', () => {
+    const cfg: DistributedDiscoveryConfig = {
+      sql: { mode: 'redundancy', nodes: ['pg://1'], consistencyLevel: 'strong', readPreference: 'leader' },
+      graph: { mode: 'sharding', nodes: ['bolt://1'], consistencyLevel: 'strong', readPreference: 'follower' },
+      workers: { count: 3, taskStrategy: 'round-robin', ciBackend: 'parcorr' },
+      coordinator: { mergeStrategy: 'fisher-method', consensusThreshold: 0.5, conflictResolution: 'fisher-method' },
+      alpha: 0.05,
+      maxCondVars: 3,
+    };
+    expect(cfg.sql.mode).toBe('redundancy');
+    expect(cfg.graph.mode).toBe('sharding');
+    expect(cfg.workers.count).toBe(3);
+  });
+});
