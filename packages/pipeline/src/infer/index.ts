@@ -38,6 +38,31 @@ export { CausalForest } from './causal-forest.js';
 export type { CausalForestConfig } from './causal-forest.js';
 export { doubleMLATE, doubleMLCATE } from './double-ml.js';
 
+// ── Refutation Methods ─────────────────────────────────────────
+export { runRefutationBatch, summarizeRefutation } from './refutation-base.js';
+export type { Refuter, RefutationBatch } from './refutation-base.js';
+export { refuteAddUnobservedCommonCause } from './refutation-advanced.js';
+export { refuteRandomCommonCause, refuteDummyOutcome } from './refutation-extensions.js';
+
+// ── Mediation ───────────────────────────────────────────────────
+export { naturalDirectEffect, arrowStrength } from './mediation.js';
+export type { MediationResult } from './mediation.js';
+
+// ── Uplift Modeling ─────────────────────────────────────────────
+export { evaluateUplift, upliftAtK, compareUpliftModels } from './uplift.js';
+export type { UpliftObservation, UpliftCurvePoint, UpliftEvaluation } from './uplift.js';
+
+// ── CATE + Fairness ─────────────────────────────────────────────
+export { estimateCATE, estimateIPW, checkFairness } from './cate-fairness.js';
+
+// ── Unified Refutation Portal ───────────────────────────────────
+export { runAllRefutations, generateRefutationReport } from './refutation-portal.js';
+export type { RefutationPortalResult, RefutationReport } from './refutation-portal.js';
+
+// ── CATE Unification ────────────────────────────────────────────
+export { unifiedCATE, compareCATEModels } from './cate-unified.js';
+export type { CATEstimator, CATEstimate, CATEModelComparison } from './cate-unified.js';
+
 // ── Bayesian Network Inference ─────────────────────────────────
 export {
   cptToFactor,
