@@ -15,11 +15,19 @@ import { cmiknnTest } from '../graph/cmiknn.js';
 import { gsquaredCITest } from '../graph/gsquared-ci.js';
 import { generateVARTimeSeries } from '../graph/ts-data-generators.js';
 
+/** Seeded RNG for deterministic test data */
+function createRNG(seed: number): () => number {
+  let s = seed;
+  return () => { s = (s * 1664525 + 1013904223) & 0x7FFFFFFF; return s / 0x7FFFFFFF; };
+}
+
+const testRNG = createRNG(42);
+
 /** Generate simple independent data: X[t] and Y[t] are uncorrelated noise */
 function independentData(n: number): number[][] {
   const data: number[][] = [];
   for (let i = 0; i < n; i++) {
-    data.push([Math.random(), Math.random()]);
+    data.push([testRNG(), testRNG()]);
   }
   return data;
 }
@@ -28,8 +36,8 @@ function independentData(n: number): number[][] {
 function dependentData(n: number): number[][] {
   const data: number[][] = [];
   for (let i = 0; i < n; i++) {
-    const x = Math.random();
-    const y = 0.7 * x + (Math.random() - 0.5) * 0.3;
+    const x = testRNG();
+    const y = 0.7 * x + (testRNG() - 0.5) * 0.3;
     data.push([x, y]);
   }
   return data;
@@ -39,9 +47,9 @@ function dependentData(n: number): number[][] {
 function mediatedData(n: number): number[][] {
   const data: number[][] = [];
   for (let i = 0; i < n; i++) {
-    const x = Math.random();
-    const z = 0.6 * x + (Math.random() - 0.5) * 0.3;
-    const y = 0.6 * z + (Math.random() - 0.5) * 0.3;
+    const x = testRNG();
+    const z = 0.6 * x + (testRNG() - 0.5) * 0.3;
+    const y = 0.6 * z + (testRNG() - 0.5) * 0.3;
     data.push([x, z, y]);
   }
   return data;

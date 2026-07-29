@@ -152,10 +152,11 @@ describe('Extended Benchmark: Medium DAGs (12-20 nodes)', () => {
     assertValidBench(r, 'PC', 0.3);
   });
 
-  it.skip('BOSS on Child — permutation-based, O(2^d) on 20 nodes', () => {
-    const r = runBench(child, bossAlgorithm, 3000);
-    assertValidBench(r, 'BOSS', 0.3);
-  }, 60000);
+  // NOTE: BOSS on Child (20 nodes) is intentionally excluded.
+  // BOSS is O(2^d) permutation-based search — on 20-node graphs
+  // this exceeds practical runtime limits. The algorithm is tested
+  // on smaller graphs (ASIA, 8 nodes) in benchmark-cross-dataset.
+  // To enable, remove the skip and increase timeout significantly.
 
   it('GES on Child', () => {
     const r = runBench(child, gesAlgorithm, 3000);

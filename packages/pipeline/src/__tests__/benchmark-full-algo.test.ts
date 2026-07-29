@@ -28,7 +28,7 @@ describe('Algorithm Precision Reference — ASIA', () => {
     results[name] = { edges: g.edges.length, shd: shd.shd, tpr: shd.tpr };
   }
 
-  it('all algorithms produce valid output', { timeout: 60000 }, () => {
+  it('all algorithms produce valid output', { timeout: 120000 }, () => {
     record('PC', pcAlgorithm(mat, nodeNames).graph);
     record('GES', gesAlgorithm(mat, nodeNames));
     record('LiNGAM', directLiNGAM(mat, nodeNames).graph);

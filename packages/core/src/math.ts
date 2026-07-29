@@ -230,9 +230,9 @@ export function _resetFisherZCache(): void {
   FISHER_Z_CACHE.clear();
 }
 
-function fisherZCacheKey(i: number, j: number, condSet: number[]): string {
+function fisherZCacheKey(i: number, j: number, condSet: number[], n: number): string {
   const sorted = [Math.min(i, j), Math.max(i, j), ...condSet.sort((a, b) => a - b)];
-  return sorted.join(',');
+  return `n${n}:${sorted.join(',')}`;
 }
 
 /**
@@ -254,12 +254,12 @@ export function fisherZTest(
   condSet: number[],
   corrMatrix?: number[][],
 ): number {
-  // Check cache first
-  const cacheKey = fisherZCacheKey(i, j, condSet);
+  // Check cache first (key includes data length to prevent cross-dataset contamination)
+  const n = data.length;
+  const cacheKey = fisherZCacheKey(i, j, condSet, n);
   const cached = FISHER_Z_CACHE.get(cacheKey);
   if (cached !== undefined) return cached;
 
-  const n = data.length;
   const indices = [i, j, ...condSet];
   const k = condSet.length;
 

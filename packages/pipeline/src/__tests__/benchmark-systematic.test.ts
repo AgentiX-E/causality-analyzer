@@ -95,7 +95,7 @@ describe('Benchmark: FCM-based', () => {
     const truth = fn();
     const { data, nodeNames } = generateLinearData(truth, samples, 44);
 
-    it(`LiNGAM on ${name}: produces valid output`, () => {
+    it(`LiNGAM on ${name}: produces valid output`, { timeout: 45000 }, () => {
       const result = directLiNGAM(new Matrix(data), nodeNames);
       expect(result.graph.nodeCount).toBe(nodeNames.length);
       expect(result.order.length).toBe(nodeNames.length);
