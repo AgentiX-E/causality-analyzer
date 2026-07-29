@@ -86,7 +86,11 @@ export interface CausalityServerTlsConfig {
 function extractBearerToken(req: IncomingMessage): string | null {
   const header = req.headers['authorization'];
   if (!header) return null;
-  const match = /^[Bb]earer\s+(.+)$/.exec(header);
+  // Use simple character-class regex to avoid ReDoS (polynomial backtracking).
+  // Bearer tokens are non-whitespace (typically base64-encoded). Adding a
+  // length guard prevents CPU exhaustion on oversized/malformed input.
+  if (header.length > 8192) return null;
+  const match = /^Bearer\s+(\S+)/i.exec(header);
   return match ? (match[1] ?? null) : null;
 }
 
