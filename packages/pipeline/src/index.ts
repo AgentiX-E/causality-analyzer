@@ -122,6 +122,24 @@ export {
   explainEstimateWithLLM,
 } from './explain/llm-explainer.js';
 
+// ── LLM-Enhanced Causal Reasoning ──────────────────────────────
+export {
+  proposeCausalGraph,
+  fuseDomainKnowledge,
+  applyDomainKnowledge,
+  explainAnalysis,
+  generateHypotheses,
+  CausalDialogue,
+} from './explain/llm-causal.js';
+export type {
+  GraphProposal,
+  DomainFusionResult,
+  UnifiedExplanation,
+  LLMCausalConfig,
+  AnalysisResultType,
+  AnalysisInput,
+} from './explain/llm-causal.js';
+
 // ── Observability ──────────────────────────────────────────────
 export { AuditLogger, MetricsRegistry } from './observability.js';
 export type { AuditEntry, MetricCounter, MetricHistogram } from './observability.js';
