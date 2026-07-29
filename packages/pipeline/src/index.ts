@@ -21,6 +21,12 @@ export {
   imagesAlgorithm, discoverClusters,
   stabilitySelection, starsSelection, exactSearch, kciTest,
   growShrink, targetedDiscovery, OnlinePC, detectCausalDrift, detectDriftFromGraphs,
+  // PCMCI+
+  pcmciPlusAlgorithm, ciTest, parCorrTest, cmiknnTest, gsquaredCITest,
+  orientCPDAG,
+  // Data generators
+  generateVARTimeSeries, generateNonlinearVARTimeSeries, generateSCMTimeSeries,
+  simpleTestTimeSeries, chainTimeSeries, fullyConnectedVAR1,
 } from './graph/index.js';
 export type {
   PCConfig, GESConfig, TSConfig, TimeSeriesEdge, TSResult,
@@ -32,6 +38,11 @@ export type {
   VARLiNGAMConfig, VARLiNGAMResult, TsFCIResult, TsFCIConfig,
   TiMINoResult, GINResult, OnlinePCConfig, StreamingGraphState, GraphChangeEvent,
   DriftDetectionResult,
+  // PCMCI+ types
+  CIBackend, CITestResult,
+  // Generator types
+  VARGeneratorConfig, NonlinearVARConfig, NonlinearityType,
+  SCMMechanism, SCMTimeSeriesConfig, TestTimeSeries,
 } from './graph/index.js';
 
 // Analyze (RCA)

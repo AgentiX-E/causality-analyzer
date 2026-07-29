@@ -54,3 +54,29 @@ export { ginDetect } from './gin.js';
 export type { GINResult } from './gin.js';
 export { OnlinePC, type OnlinePCConfig, type StreamingGraphState, type GraphChangeEvent } from './streaming-discovery.js';
 export { detectCausalDrift, detectDriftFromGraphs, type DriftDetectionResult } from './drift-detection.js';
+
+// ── PCMCI+ ──────────────────────────────────────────────────────────────
+
+export { pcmciPlusAlgorithm } from './pcmci-plus.js';
+export { ciTest } from './ci-backend.js';
+export type { CIBackend, CITestResult } from './ci-backend.js';
+export { parCorrTest } from './parcorr.js';
+export { cmiknnTest, type CMIknnConfig } from './cmiknn.js';
+export { gsquaredCITest, type GsquaredConfig } from './gsquared-ci.js';
+export { orientCPDAG } from './cpdag.js';
+export {
+  generateVARTimeSeries,
+  generateNonlinearVARTimeSeries,
+  generateSCMTimeSeries,
+  simpleTestTimeSeries,
+  chainTimeSeries,
+  fullyConnectedVAR1,
+} from './ts-data-generators.js';
+export type {
+  VARGeneratorConfig,
+  NonlinearVARConfig,
+  NonlinearityType,
+  SCMMechanism,
+  SCMTimeSeriesConfig,
+  TestTimeSeries,
+} from './ts-data-generators.js';

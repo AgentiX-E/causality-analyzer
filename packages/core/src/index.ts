@@ -87,7 +87,7 @@ export {
 export type { ErrorCodeType } from './errors.js';
 
 // â”€â”€ Math â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-export { solveLinear, solveLinearSafe, normalTail, normalCDFTail, normalCDF, erf, colMean, createRNG, combinations, fisherZTest, precomputeCorrelation, isMatrixSingular, partialCorrelationFromCov, invertMatrix, solveOLS, bicScore, gicScore, isBicScore, chiSquareTest, gSquareTest, _resetFisherZCache, _setFisherZCacheMax } from './math.js';
+export { solveLinear, solveLinearSafe, normalTail, normalCDFTail, normalCDF, erf, colMean, createRNG, combinations, fisherZTest, precomputeCorrelation, isMatrixSingular, partialCorrelationFromCov, invertMatrix, solveOLS, bicScore, gicScore, isBicScore, chiSquareTest, gSquareTest, _resetFisherZCache, _setFisherZCacheMax, digamma, partialCorrelationRaw, chiSquareCDF } from './math.js';
 export { logGamma, bdeuScore, discretizeBDeu } from './bdeu.js';
 
 // â”€â”€ Visualization Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -113,3 +113,17 @@ export type { TelemetrySpan, TelemetryTracer, TelemetrySpanOptions, TelemetryCou
 // ©¤©¤ Graph Similarity ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
 export { computeFingerprint, cosineSimilarity, graphSimilarity } from './graph-similarity.js';
 export type { CausalFingerprint } from './graph-similarity.js';
+
+// ©¤©¤ Time-Series Types ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
+export type {
+  EdgeMark,
+  CIBackend,
+  CITestResult,
+  CITestObserver,
+  CPDAGInput,
+  PCMCIPlusConfig,
+  PCMCIPlusEdgeSummary,
+  PCMCIPlusResult,
+  TimeSeriesEdge,
+  TimeSeriesGraph,
+} from './types/timeseries.js';

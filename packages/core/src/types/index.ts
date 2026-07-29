@@ -262,3 +262,18 @@ export interface TimeSeriesChartData { series: Array<{ name: string; data: TimeS
 export interface RankingEntry { rank: number; name: string; score: number; confidence: number; evidence: Evidence[]; }
 export interface PropagationPath { root: string; path: string[]; score: number; }
 export interface RCARankingData { rootCauses: RankingEntry[]; propagationPaths: PropagationPath[]; }
+
+// ── Re-export time-series types ─────────────────────────────────────────
+
+export type {
+  EdgeMark,
+  CIBackend,
+  CITestResult,
+  CITestObserver,
+  CPDAGInput,
+  PCMCIPlusConfig,
+  PCMCIPlusEdgeSummary,
+  PCMCIPlusResult,
+  TimeSeriesEdge,
+  TimeSeriesGraph,
+} from './timeseries.js';

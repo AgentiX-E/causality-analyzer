@@ -656,3 +656,322 @@ export function gSquareTest(observed: number[][]): number {
   const df = (rows - 1) * (cols - 1);
   return chiSquarePValue(g2, df);
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Extended Math Utilities for Time-Series & CI Tests
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Digamma function ψ(x) — logarithmic derivative of the gamma function.
+ *
+ * Used by the CMIknn KSG estimator for conditional mutual information.
+ * Implementation follows the asymptotic expansion from Abramowitz & Stegun
+ * §6.3.18. For x < 8, uses the recurrence relation ψ(x+1) = ψ(x) + 1/x
+ * to shift the argument into the asymptotic region.
+ *
+ * Maximum error < 3×10⁻⁷ for x > 0.
+ *
+ * Reference: Abramowitz, M. & Stegun, I. A. (1964). *Handbook of
+ *   Mathematical Functions*, §6.3.18.
+ */
+export function digamma(x: number): number {
+  if (x <= 0) {
+    // For non-positive integers, ψ has poles; return a large negative
+    // value to signal the singularity rather than throwing.
+    if (Math.abs(x - Math.round(x)) < 1e-12) return -Infinity;
+    // Use reflection formula ψ(1-x) = ψ(x) + π·cot(πx)
+    return digamma(1 - x) - Math.PI / Math.tan(Math.PI * x);
+  }
+
+  // Shift small arguments into the asymptotic region
+  let result = 0;
+  let y = x;
+  while (y < 8) {
+    result -= 1 / y;
+    y += 1;
+  }
+
+  // Asymptotic expansion (Abramowitz & Stegun 6.3.18)
+  const invY = 1 / y;
+  const invY2 = invY * invY;
+  result += Math.log(y) - 0.5 * invY
+    - invY2 * (1 / 12)
+    + invY2 * invY2 * (1 / 120)
+    - invY2 * invY2 * invY2 * (1 / 252);
+
+  return result;
+}
+
+/**
+ * Chi-squared cumulative distribution function (survival function).
+ *
+ * Returns P(χ²(df) ≥ x) — the upper-tail probability.
+ * Used by the G-squared CI test to convert the test statistic to a p-value.
+ *
+ * Computes the regularized gamma function Q(a, x) via the continued fraction
+ * representation (Press et al. 2007, *Numerical Recipes* §6.2).
+ *
+ * @param x - test statistic value (must be ≥ 0)
+ * @param df - degrees of freedom (must be > 0)
+ * @returns p-value in [0, 1]
+ */
+export function chiSquareCDF(x: number, df: number): number {
+  if (x <= 0) return 1;
+  if (df <= 0) return 1;
+  if (!isFinite(x) || !isFinite(df)) return 1;
+
+  return regularizedGammaQ(df / 2, x / 2);
+}
+
+/**
+ * Regularized upper incomplete gamma function Q(a, x).
+ *
+ * Computed via the continued fraction representation:
+ *   Q(a, x) = Γ(a, x) / Γ(a)
+ *
+ * Uses Lentz's algorithm for numerical stability.
+ *
+ * @internal
+ */
+function regularizedGammaQ(a: number, x: number): number {
+  if (x < a + 1) {
+    // Series expansion: γ(a, x) → Q = 1 - P
+    return 1 - regularizedGammaP(a, x);
+  }
+  // Continued fraction
+  return gammaQ_CF(a, x);
+}
+
+/**
+ * Regularized lower incomplete gamma function P(a, x) via series expansion.
+ *
+ * @internal
+ */
+function regularizedGammaP(a: number, x: number): number {
+  if (x <= 0) return 0;
+
+  let sum = 1 / a;
+  let term = sum;
+  for (let n = 1; n <= 200; n++) {
+    term *= x / (a + n);
+    sum += term;
+    if (Math.abs(term) < Math.abs(sum) * 1e-15) break;
+  }
+  return sum * Math.exp(-x + a * Math.log(x) - logGamma(a));
+}
+
+/**
+ * Upper incomplete gamma Q(a, x) via continued fraction (Lentz).
+ *
+ * @internal
+ */
+function gammaQ_CF(a: number, x: number): number {
+  // Lentz's modified continued fraction for Γ(a, x)
+  const fpMin = 1e-30;
+  let f = fpMin;
+  let c = fpMin;
+  let d = 0;
+  let b = x + 1 - a;
+  let prevD = 1;
+
+  for (let i = 1; i <= 200; i++) {
+    // a_n = i * (a - i) [odd] or i [even]
+    const an = (i % 2 === 1) ? i * (a - (i + 1) / 2) : (i / 2) * (i / 2);
+    b += 2;
+    d = an * d + b;
+    if (Math.abs(d) < fpMin) d = fpMin;
+    c = an / c + b;
+    if (Math.abs(c) < fpMin) c = fpMin;
+    d = 1 / d;
+    const delta = c * d;
+    f *= delta;
+    if (Math.abs(delta - 1) < 1e-12 && prevD < 1e-12) break;
+    prevD = Math.abs(delta - 1);
+  }
+
+  if (f === 0) return 1;
+  return Math.exp(-x + a * Math.log(x) - logGamma(a)) * f;
+}
+
+/**
+ * Log-gamma function ln(Γ(x)) via Stirling's series.
+ *
+ * Reference: Lanczos, C. (1964). "A Precision Approximation of the Gamma
+ *   Function." *SIAM Journal on Numerical Analysis*, 1(1), 86–96.
+ *
+ * @internal
+ */
+function logGamma(x: number): number {
+  if (x <= 0) return Infinity;
+
+  const g = 7;
+  const c = [
+    0.99999999999980993,
+    676.5203681218851,
+    -1259.1392167224028,
+    771.32342877765313,
+    -176.61502916214059,
+    12.507343278686905,
+    -0.13857109526572012,
+    9.9843695780195716e-6,
+    1.5056327351493116e-7,
+  ];
+
+  let z = x;
+  let base = z + g + 0.5;
+  let s = c[0]!;
+  for (let i = 1; i < c.length; i++) {
+    s += c[i]! / (z + i - 1);
+  }
+  return Math.log(Math.sqrt(2 * Math.PI)) + (z + 0.5) * Math.log(base) - base + Math.log(s);
+}
+
+/**
+ * Raw partial correlation coefficient without Fisher Z transform.
+ *
+ * Computes ρ(X_i, X_j | Z) directly from the data matrix. This is the
+ * internal workhorse for CI tests — it returns the correlation coefficient
+ * rather than a p-value, enabling the caller to apply whichever transform
+ * is appropriate (Fisher Z, t-test, permutation, etc.).
+ *
+ * Implementation: OLS residual correlation.
+ *   1. Regress X_i on Z → residuals r_i
+ *   2. Regress X_j on Z → residuals r_j
+ *   3. ρ = corr(r_i, r_j)
+ *
+ * When Z is empty, this reduces to ordinary Pearson correlation.
+ *
+ * @param data - (n × p) design matrix where data[row][col]
+ * @param i - column index of variable X
+ * @param j - column index of variable Y
+ * @param condSet - column indices of conditioning variables Z
+ * @returns partial correlation coefficient in [-1, 1], or NaN if degenerate
+ */
+export function partialCorrelationRaw(
+  data: number[][],
+  i: number,
+  j: number,
+  condSet: number[],
+): number {
+  const n = data.length;
+
+  // Quick path: unconditional correlation
+  if (condSet.length === 0) {
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
+    for (let row = 0; row < n; row++) {
+      const x = data[row]![i]!;
+      const y = data[row]![j]!;
+      sumX += x; sumY += y;
+      sumXY += x * y; sumX2 += x * x; sumY2 += y * y;
+    }
+    const denom = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+    if (denom === 0 || !isFinite(denom)) return NaN;
+    return (n * sumXY - sumX * sumY) / denom;
+  }
+
+  // Build design matrix for Z (n × k)
+  const k = condSet.length;
+  // Compute OLS regression X ~ Z via normal equations
+  const residualsX = computeResiduals(data, i, condSet, n, k);
+  const residualsY = computeResiduals(data, j, condSet, n, k);
+
+  // Correlation of residuals
+  let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
+  for (let row = 0; row < n; row++) {
+    const x = residualsX[row]!;
+    const y = residualsY[row]!;
+    sumX += x; sumY += y;
+    sumXY += x * y; sumX2 += x * x; sumY2 += y * y;
+  }
+  const denom = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+  if (denom === 0 || !isFinite(denom)) return NaN;
+  return (n * sumXY - sumX * sumY) / denom;
+}
+
+/**
+ * Compute OLS residuals: regress data[:, targetCol] on data[:, condCols].
+ *
+ * Uses normal equations (X'X)β = X'y with Gauss-Jordan for the solve.
+ *
+ * @internal
+ */
+function computeResiduals(
+  data: number[][],
+  targetCol: number,
+  condCols: number[],
+  n: number,
+  k: number,
+): number[] {
+  // Build X'X (k × k) and X'y (k × 1)
+  const xtx: number[][] = Array.from({ length: k }, () => new Array(k).fill(0));
+  const xty: number[] = new Array(k).fill(0);
+
+  for (let row = 0; row < n; row++) {
+    const rowData = data[row]!;
+    for (let ci = 0; ci < k; ci++) {
+      const xVal = rowData[condCols[ci]!]!;
+      xty[ci]! += xVal * rowData[targetCol]!;
+      for (let cj = 0; cj <= ci; cj++) {
+        xtx[ci]![cj]! += xVal * rowData[condCols[cj]!]!;
+      }
+    }
+  }
+  // Symmetrize
+  for (let ci = 0; ci < k; ci++) {
+    for (let cj = ci + 1; cj < k; cj++) {
+      xtx[cj]![ci] = xtx[ci]![cj]!;
+    }
+  }
+
+  // Solve X'X β = X'y via Gauss-Jordan
+  const augmented: number[][] = Array.from({ length: k }, (_, r) => {
+    const row = [...xtx[r]!, xty[r]!];
+    return row;
+  });
+
+  for (let col = 0; col < k; col++) {
+    // Partial pivoting
+    let maxRow = col;
+    let maxVal = Math.abs(augmented[col]![col]!);
+    for (let r = col + 1; r < k; r++) {
+      const v = Math.abs(augmented[r]![col]!);
+      if (v > maxVal) { maxVal = v; maxRow = r; }
+    }
+    if (maxVal < 1e-12) continue; // singular — leave coefficients as zero
+    if (maxRow !== col) {
+      [augmented[col], augmented[maxRow]] = [augmented[maxRow]!, augmented[col]!];
+    }
+
+    const pivot = augmented[col]![col]!;
+    for (let c = col; c <= k; c++) {
+      augmented[col]![c]! /= pivot;
+    }
+
+    for (let r = 0; r < k; r++) {
+      if (r === col) continue;
+      const factor = augmented[r]![col]!;
+      if (factor === 0) continue;
+      for (let c = col; c <= k; c++) {
+        augmented[r]![c]! -= factor * augmented[col]![c]!;
+      }
+    }
+  }
+
+  // Extract β
+  const beta: number[] = new Array(k).fill(0);
+  for (let ci = 0; ci < k; ci++) {
+    beta[ci] = augmented[ci]![k]!;
+  }
+
+  // Compute residuals
+  const residuals: number[] = new Array(n);
+  for (let row = 0; row < n; row++) {
+    const rowData = data[row]!;
+    let yHat = 0;
+    for (let ci = 0; ci < k; ci++) {
+      yHat += beta[ci]! * rowData[condCols[ci]!]!;
+    }
+    residuals[row] = rowData[targetCol]! - yHat;
+  }
+  return residuals;
+}
