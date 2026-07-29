@@ -76,6 +76,25 @@ export type { DRConfig } from './dr-estimators.js';
 export { SLearner, TLearner, XLearner } from './meta-learners.js';
 export type { BaseLearner, MetaLearnerConfig } from './meta-learners.js';
 
+// ── Policy Learning (I8-P3) ───────────────────────────────────────
+export { PolicyTree, PolicyForest } from './policy-learning.js';
+export type { PolicyConfig, PolicyEvaluation } from './policy-learning.js';
+
+// ── Federated Learning + DP (I8-P3) ───────────────────────────────
+export {
+  laplaceMechanism,
+  gaussianMechanism,
+  computeATESensitivity,
+  federatedDMLWithDP,
+  secureAggregate,
+  totalPrivacyCost,
+} from './federated-dp.js';
+export type {
+  FederatedLearningConfig,
+  FederatedNodeResult,
+  FederatedAggregation,
+} from './federated-dp.js';
+
 // ── Bayesian Network Inference ─────────────────────────────────
 export {
   cptToFactor,
