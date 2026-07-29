@@ -35,8 +35,9 @@ export type { ColliderBiasWarning } from './collider-bias.js';
 
 // ── Causal Forest + Double ML ───────────────────────────────────
 export { CausalForest } from './causal-forest.js';
-export type { CausalForestConfig } from './causal-forest.js';
-export { doubleMLATE, doubleMLCATE } from './double-ml.js';
+export type { CausalForestConfig, CausalForestPrediction, FeatureImportance, CausalForestResult } from './causal-forest.js';
+export { doubleMLATE, doubleMLCATE, testHeterogeneity, linearModel, polynomialModel } from './double-ml.js';
+export type { NuisanceModel, DMLOptions } from './double-ml.js';
 
 // ── Refutation Methods ─────────────────────────────────────────
 export { runRefutationBatch, summarizeRefutation } from './refutation-base.js';
