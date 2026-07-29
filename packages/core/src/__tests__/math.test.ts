@@ -915,3 +915,57 @@ describe('gSquareTest edge cases', () => {
     expect(r).toBe(1);
   });
 });
+
+// ── solveLinearCholesky Tests ──────────────────────────────────────
+
+import { solveLinearCholesky } from '../math.js';
+
+describe('solveLinearCholesky', () => {
+  it('solves 2×2 SPD system correctly', () => {
+    // [4 1; 1 3] x = [1; 2] → x ≈ [0.09, 0.636]
+    const A = [[4, 1], [1, 3]];
+    const b = [1, 2];
+    const x = solveLinearCholesky(A, b);
+    expect(x).not.toBeNull();
+    // Verify: A·x ≈ b
+    expect(A[0]![0]! * x![0]! + A[0]![1]! * x![1]!).toBeCloseTo(b[0]!, 5);
+    expect(A[1]![0]! * x![0]! + A[1]![1]! * x![1]!).toBeCloseTo(b[1]!, 5);
+  });
+
+  it('produces same result as solveLinear for SPD matrix', () => {
+    const A = [[5, 2, 1], [2, 6, 2], [1, 2, 7]];
+    const b = [3, 4, 5];
+    const chol = solveLinearCholesky(A, b);
+    const ge = solveLinear(A, b);
+    expect(chol).not.toBeNull();
+    for (let i = 0; i < 3; i++) {
+      expect(chol![i]!).toBeCloseTo(ge[i]!, 8);
+    }
+  });
+
+  it('returns null for non-SPD matrix', () => {
+    // Non-symmetric matrix is not SPD
+    const A = [[1, 3], [2, 4]];
+    const b = [1, 2];
+    expect(solveLinearCholesky(A, b)).toBeNull();
+  });
+
+  it('solves identity matrix', () => {
+    const A = [[1, 0], [0, 1]];
+    const b = [5, 10];
+    const x = solveLinearCholesky(A, b);
+    expect(x).toEqual([5, 10]);
+  });
+
+  it('handles 1×1', () => {
+    const A = [[7]];
+    const b = [21];
+    const x = solveLinearCholesky(A, b);
+    expect(x).not.toBeNull();
+    expect(x![0]!).toBeCloseTo(3, 10);
+  });
+
+  it('handles empty input', () => {
+    expect(solveLinearCholesky([], [])).toEqual([]);
+  });
+});
