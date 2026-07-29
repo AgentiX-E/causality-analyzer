@@ -16,6 +16,7 @@ export default defineConfig({
         'src/di/index.ts',
         'src/interfaces/index.ts',
         'src/types/index.ts',
+        'src/registry/**',        // Experimental decorator-based registry, not yet used
       ],
       thresholds: {
         statements: 95,

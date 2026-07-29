@@ -33,9 +33,9 @@ function parseArgs(argv: string[]): { cmd: string; args: CliArgs } {
   let i = 1;
   while (i < argv.length) {
     const a = argv[i];
-    if (a === '--nodes' && i + 1 < argv.length) { args.nodes = argv[++i]!.split(','); }
-    else if (a === '--slis' && i + 1 < argv.length) { args.slis = argv[++i]!.split(','); }
-    else if (a === '--port' && i + 1 < argv.length) { args.port = parseInt(argv[++i]!, 10); }
+    if (a === '--nodes' && i + 1 < argv.length) { args.nodes = argv[++i].split(','); }
+    else if (a === '--slis' && i + 1 < argv.length) { args.slis = argv[++i].split(','); }
+    else if (a === '--port' && i + 1 < argv.length) { args.port = parseInt(argv[++i], 10); }
     else if (!a.startsWith('--')) { args.file = a; }
     i++;
   }
@@ -74,7 +74,7 @@ function execDiscover(args: CliArgs): void {
     console.error('Usage: causal-analyzer discover <file.json> --nodes A,B,C');
     process.exit(1);
   }
-  const raw: unknown = JSON.parse(readFileSync(args.file!, 'utf-8'));
+  const raw: unknown = JSON.parse(readFileSync(args.file, 'utf-8'));
   const rawObj = raw as Record<string, unknown>;
   const data = new Matrix((rawObj.data ?? rawObj) as ArrayLike<ArrayLike<number>>);
   const result = pcAlgorithm(data, args.nodes, { alpha: 0.05, stable: true });
@@ -90,7 +90,7 @@ function execAnalyze(args: CliArgs): void {
     console.error('Usage: causal-analyzer analyze <file.json> --slis CPU,Latency');
     process.exit(1);
   }
-  const raw: unknown = JSON.parse(readFileSync(args.file!, 'utf-8'));
+  const raw: unknown = JSON.parse(readFileSync(args.file, 'utf-8'));
   const rawObj = raw as Record<string, unknown>;
   const data = rawObj.data as Record<string, unknown> ?? rawObj;
   const graphData = (rawObj.graph as Record<string, unknown>) ?? { nodes: [] as string[], edges: [] as Array<{ from: string; to: string }> };

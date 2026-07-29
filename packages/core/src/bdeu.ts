@@ -104,7 +104,7 @@ export function discretizeBDeu(data: number[][], numBins: number = 3): {
   const d = data[0]?.length ?? 0;
   if (d === 0) return { discretized: [], domainSizes: [] };
 
-  const domainSizes: number[] = new Array<number>(d).fill(numBins) as number[];
+  const domainSizes: number[] = new Array<number>(d).fill(numBins);
   const discretized: number[][] = data.map((row: number[]): number[] => [...row]);
 
   for (let col = 0; col < d; col++) {

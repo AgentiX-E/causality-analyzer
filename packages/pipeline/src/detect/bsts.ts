@@ -41,7 +41,7 @@ export interface BSTSResult {
 export function exponentialSmoothingDetect(y: number[], period: number = 0, threshold: number = 3.0): BSTSResult {
   const n = y.length;
   if (n < 4) {
-    return { residuals: y.slice(), trend: y.slice(), scores: new Array<number>(n).fill(0) as number[], anomalies: new Array<boolean>(n).fill(false) as boolean[] };
+    return { residuals: y.slice(), trend: y.slice(), scores: new Array<number>(n).fill(0), anomalies: new Array<boolean>(n).fill(false) };
   }
 
   // Step 1: Estimate trend via exponential smoothing (NOT Kalman filtering)
@@ -49,10 +49,10 @@ export function exponentialSmoothingDetect(y: number[], period: number = 0, thre
 
   // Step 2: Estimate and remove seasonal component (if period > 0)
   const detrended = y.map((v, i) => v - trend[i]);
-  const seasonal = period > 0 ? estimateSeasonal(detrended, period) : new Array<number>(n).fill(0) as number[];
+  const seasonal = period > 0 ? estimateSeasonal(detrended, period) : new Array<number>(n).fill(0);
 
   // Step 3: Compute residuals
-  const residuals = y.map((v, i) => v - trend[i] - seasonal[i]!);
+  const residuals = y.map((v, i) => v - trend[i] - seasonal[i]);
 
   // Step 4: Compute rolling statistics for anomaly scoring
   const window = Math.min(30, Math.floor(n / 3));
@@ -82,19 +82,19 @@ export { exponentialSmoothingDetect as bstsDetect };
 
 function exponentialSmooth(y: number[], alpha: number): number[] {
   const n = y.length;
-  const result: number[] = new Array<number>(n).fill(0) as number[];
+  const result: number[] = new Array<number>(n).fill(0);
   result[0] = y[0]!;
 
   for (let i = 1; i < n; i++) {
-    result[i] = alpha * y[i] + (1 - alpha) * result[i - 1]!;
+    result[i] = alpha * y[i] + (1 - alpha) * result[i - 1];
   }
   return result;
 }
 
 function estimateSeasonal(detrended: number[], period: number): number[] {
   const n = detrended.length;
-  const seasonalPattern: number[] = new Array<number>(period).fill(0) as number[];
-  const counts: number[] = new Array<number>(period).fill(0) as number[];
+  const seasonalPattern: number[] = new Array<number>(period).fill(0);
+  const counts: number[] = new Array<number>(period).fill(0);
 
   // Average values at each seasonal position
   for (let i = 0; i < n; i++) {
@@ -103,9 +103,9 @@ function estimateSeasonal(detrended: number[], period: number): number[] {
     counts[pos]++;
   }
   for (let i = 0; i < period; i++) {
-    seasonalPattern[i] = counts[i]! > 0 ? seasonalPattern[i]! / counts[i]! : 0;
+    seasonalPattern[i] = counts[i] > 0 ? seasonalPattern[i] / counts[i] : 0;
   }
 
   // Replicate seasonal pattern across the series
-  return Array.from({ length: n }, (_, i) => seasonalPattern[i % period]!);
+  return Array.from({ length: n }, (_, i) => seasonalPattern[i % period]);
 }

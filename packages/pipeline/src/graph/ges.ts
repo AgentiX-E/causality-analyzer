@@ -123,7 +123,7 @@ function isClique(state: PDAGState, nodes: Set<number>): boolean {
   const arr = [...nodes];
   for (let i = 0; i < arr.length; i++) {
     for (let j = i + 1; j < arr.length; j++) {
-      if (!state.adj[arr[i]]![arr[j]!]) return false;
+      if (!state.adj[arr[i]][arr[j]]) return false;
     }
   }
   return true;
@@ -178,7 +178,7 @@ function pdagToCpdag(state: PDAGState): void {
         if (cParents.length >= 2) {
           for (let i = 0; i < cParents.length; i++) {
             for (let j = i + 1; j < cParents.length; j++) {
-              if (!state.adj[cParents[i]!]![cParents[j]!]) {
+              if (!state.adj[cParents[i]][cParents[j]]) {
                 state.neighbor[a].delete(b);
                 state.neighbor[b].delete(a);
                 state.pa[b].add(a);
@@ -206,18 +206,18 @@ function bicLocal(
   if (cache.has(key)) return cache.get(key)!;
 
   const k = paIdx.length;
-  let sigma = cov[yIdx]![yIdx]!;
+  let sigma = cov[yIdx][yIdx];
 
   if (k > 0) {
     const paCov: number[][] = [];
     for (let i = 0; i < k; i++) {
       const row: number[] = [];
-      for (let j = 0; j < k; j++) row.push(cov[paIdx[i]!]![paIdx[j]!]!);
+      for (let j = 0; j < k; j++) row.push(cov[paIdx[i]][paIdx[j]]);
       paCov.push(row);
     }
-    const yCov: number[] = paIdx.map(p => cov[yIdx]![p]!);
+    const yCov: number[] = paIdx.map(p => cov[yIdx][p]);
     const coef = solveLinear(paCov, yCov);
-    for (let i = 0; i < k; i++) sigma -= (coef[i] ?? 0) * yCov[i]!;
+    for (let i = 0; i < k; i++) sigma -= (coef[i] ?? 0) * yCov[i];
   }
 
   const bic = -(N * (1 + Math.log(Math.max(1e-12, sigma))) + (k + 1) * Math.log(Math.max(2, N)));
@@ -227,24 +227,24 @@ function bicLocal(
 
 function solveLinear(A: number[][], b: number[]): number[] {
   const n = A.length;
-  const augmented: number[][] = A.map((row, i) => [...row, b[i]!]);
+  const augmented: number[][] = A.map((row, i) => [...row, b[i]]);
   for (let col = 0; col < n; col++) {
     let maxRow = col;
     for (let row = col + 1; row < n; row++)
-      if (Math.abs(augmented[row]![col]!) > Math.abs(augmented[maxRow]![col]!)) maxRow = row;
-    [augmented[col], augmented[maxRow]] = [augmented[maxRow]!, augmented[col]!];
-    const pivot = augmented[col]![col]!;
+      if (Math.abs(augmented[row][col]) > Math.abs(augmented[maxRow][col])) maxRow = row;
+    [augmented[col], augmented[maxRow]] = [augmented[maxRow], augmented[col]];
+    const pivot = augmented[col][col];
     if (Math.abs(pivot) < 1e-12) continue;
     for (let row = col + 1; row < n; row++) {
-      const factor = augmented[row]![col]! / pivot;
-      for (let j = col; j <= n; j++) augmented[row]![j] -= factor * augmented[col]![j]!;
+      const factor = augmented[row][col] / pivot;
+      for (let j = col; j <= n; j++) augmented[row][j] -= factor * augmented[col][j];
     }
   }
   const x: number[] = new Array(n).fill(0);
   for (let i = n - 1; i >= 0; i--) {
-    let s = augmented[i]![n]!;
-    for (let j = i + 1; j < n; j++) s -= augmented[i]![j]! * (x[j] ?? 0);
-    x[i] = Math.abs(augmented[i]![i]!) < 1e-12 ? 0 : s / augmented[i]![i]!;
+    let s = augmented[i][n];
+    for (let j = i + 1; j < n; j++) s -= augmented[i][j] * (x[j] ?? 0);
+    x[i] = Math.abs(augmented[i][i]) < 1e-12 ? 0 : s / augmented[i][i];
   }
   return x;
 }
@@ -282,7 +282,7 @@ function findBestInsert(
       const maxTCandidates = state.d <= 12 ? Infinity : 4;
       if (T_candidates.length > maxTCandidates) {
         T_candidates.sort((a, b) =>
-          Math.abs(cov[y]![b]!) - Math.abs(cov[y]![a]!));
+          Math.abs(cov[y][b]) - Math.abs(cov[y][a]));
         T_candidates.length = maxTCandidates;
       }
 
@@ -299,7 +299,7 @@ function findBestInsert(
 
         const T = new Set<number>();
         for (let k = 0; k < T_candidates.length; k++) {
-          if (mask & (1 << k)) T.add(T_candidates[k]!);
+          if (mask & (1 << k)) T.add(T_candidates[k]);
         }
 
         const T_u_NAyx = new Set([...T, ...NAyx]);
@@ -358,7 +358,7 @@ function findBestDelete(
       const maxHCandidates = state.d <= 12 ? Infinity : 4;
       if (H_candidates.length > maxHCandidates) {
         H_candidates.sort((a, b) =>
-          Math.abs(cov[y]![b]!) - Math.abs(cov[y]![a]!));
+          Math.abs(cov[y][b]) - Math.abs(cov[y][a]));
         H_candidates.length = maxHCandidates;
       }
       const maxHSubsetSize = state.d <= 12 ? Infinity : 2;
@@ -373,7 +373,7 @@ function findBestDelete(
 
         const H = new Set<number>();
         for (let k = 0; k < H_candidates.length; k++) {
-          if (mask & (1 << k)) H.add(H_candidates[k]!);
+          if (mask & (1 << k)) H.add(H_candidates[k]);
         }
 
         const remainingNAyx = new Set([...NAyx].filter(n => !H.has(n)));
@@ -465,8 +465,8 @@ export function gesAlgorithm(
     cov[i] = new Array(d).fill(0);
     for (let j = 0; j <= i; j++) {
       let val = 0;
-      for (let r = 0; r < N; r++) val += (data.get(r, i) - means[i]!) * (data.get(r, j) - means[j]!);
-      cov[i]![j] = cov[j]![i] = val / N;
+      for (let r = 0; r < N; r++) val += (data.get(r, i) - means[i]) * (data.get(r, j) - means[j]);
+      cov[i][j] = cov[j][i] = val / N;
     }
   }
 
@@ -506,11 +506,11 @@ export function gesAlgorithm(
   const g = new CausalGraph([...nodeNames]);
   for (let i = 0; i < d; i++) {
     for (const p of state.pa[i]) {
-      g.addEdge(nodeNames[p]!, nodeNames[i]!);
+      g.addEdge(nodeNames[p], nodeNames[i]);
     }
     for (const n of state.neighbor[i]) {
       if (i < n) {
-        g.undirectedEdge(nodeNames[i]!, nodeNames[n]!);
+        g.undirectedEdge(nodeNames[i], nodeNames[n]);
       }
     }
   }
@@ -550,7 +550,7 @@ export function gesAlgorithm(
     const helper = (start: number, current: number[]) => {
       if (current.length === k) { result.push([...current]); return; }
       for (let i = start; i < arr.length; i++) {
-        current.push(arr[i]!);
+        current.push(arr[i]);
         helper(i + 1, current);
         current.pop();
       }

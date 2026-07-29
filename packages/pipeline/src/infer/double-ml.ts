@@ -99,7 +99,7 @@ export function doubleMLCATE(
   // This provides a simple parametric approximation to τ(x)
   // Pre-fill with zeros to avoid sparse array NaN — only test-fold positions
   // are populated during cross-fitting below.
-  const scores: number[] = new Array<number>(n).fill(0) as number[];
+  const scores: number[] = new Array<number>(n).fill(0);
   const foldSize = Math.floor(n / nFolds);
   const indices = shuffle(Array.from({ length: n }, (_, i) => i));
 
@@ -200,22 +200,22 @@ function fitLinearRegression(X: number[][], target: number[], idx: number[], p: 
   // Simple OLS: solve XtX * beta = Xty
   const k = p + 1;
   const A: number[][] = [];
-  for (let _j = 0; _j < k; _j++) A.push(new Array<number>(k + 1).fill(0) as number[]);
-  for (let i = 0; i < k; i++) { for (let j = 0; j < k; j++) A[i]![j] = XtX[i]?.[j] ?? 0; A[i]![k] = Xty[i] ?? 0; }
+  for (let _j = 0; _j < k; _j++) A.push(new Array<number>(k + 1).fill(0));
+  for (let i = 0; i < k; i++) { for (let j = 0; j < k; j++) A[i][j] = XtX[i]?.[j] ?? 0; A[i][k] = Xty[i] ?? 0; }
 
   for (let col = 0; col < k; col++) {
     let pivot = col;
-    for (let row = col + 1; row < k; row++) if (Math.abs(A[row]![col]!) > Math.abs(A[pivot]![col]!)) pivot = row;
-    [A[col], A[pivot]] = [A[pivot]!, A[col]!];
-    if (Math.abs(A[col]![col]!) < 1e-12) continue;
-    for (let j = col; j <= k; j++) A[col]![j] = (A[col]![j] ?? 0) / (A[col]![col] ?? 1);
+    for (let row = col + 1; row < k; row++) if (Math.abs(A[row][col]) > Math.abs(A[pivot][col])) pivot = row;
+    [A[col], A[pivot]] = [A[pivot], A[col]];
+    if (Math.abs(A[col][col]) < 1e-12) continue;
+    for (let j = col; j <= k; j++) A[col][j] = (A[col][j] ?? 0) / (A[col][col] ?? 1);
     for (let row = 0; row < k; row++) {
       if (row === col) continue;
-      const f = A[row]![col]!;
-      for (let j = col; j <= k; j++) A[row]![j] = (A[row]![j] ?? 0) - f * (A[col]![j] ?? 0);
+      const f = A[row][col];
+      for (let j = col; j <= k; j++) A[row][j] = (A[row][j] ?? 0) - f * (A[col][j] ?? 0);
     }
   }
-  return A.map(r => r[k]!);
+  return A.map(r => r[k]);
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────

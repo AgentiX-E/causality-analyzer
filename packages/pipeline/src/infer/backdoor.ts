@@ -310,7 +310,7 @@ export function verifyBackdoorBlock(
   const n = nodes.length;
   const tIdx = idx.get(treatment)!;
 
-  const adj: number[][] = []; for (let _i=0; _i<n; _i++) adj.push(new Array<number>(n).fill(0) as number[]);
+  const adj: number[][] = []; for (let _i=0; _i<n; _i++) adj.push(new Array<number>(n).fill(0));
 
   for (let i = 0; i < n; i++) {
     for (let j = 0; j < n; j++) {

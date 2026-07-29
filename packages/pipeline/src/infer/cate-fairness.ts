@@ -89,7 +89,7 @@ function fitLogistic(
     const XtWX2d: number[][] = new Array<number[]>(k);
     const XtWz1d: number[] = new Array<number>(k);
     for (let i = 0; i < k; i++) {
-      XtWX2d[i] = new Array<number>(k).fill(0) as number[];
+      XtWX2d[i] = new Array<number>(k).fill(0);
       for (let j = 0; j < k; j++) XtWX2d[i][j] = XtWX[i * k + j]!;
       XtWz1d[i] = XtWz[i]!;
     }

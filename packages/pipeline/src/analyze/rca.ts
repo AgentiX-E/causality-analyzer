@@ -235,13 +235,13 @@ export class HTRCA {
       const X = Array.from({ length: n }, (_, r) => pIdx.map(i => data.get(r, i)));
       // Compute X^T X and X^T y
       const k = pIdx.length;
-      const XtX: number[][] = []; for (let _i=0; _i<k; _i++) XtX.push(new Array<number>(k).fill(0) as number[]);
+      const XtX: number[][] = []; for (let _i=0; _i<k; _i++) XtX.push(new Array<number>(k).fill(0));
       const Xty: number[] = new Array<number>(k).fill(0);
       for (let r = 0; r < n; r++) {
         const xr = X[r];
         for (let i = 0; i < k; i++) {
           Xty[i] += xr[i] * (data.get(r, yIdx) - yMean);
-          for (let j = 0; j < k; j++) XtX[i][j]! += xr[i] * xr[j];
+          for (let j = 0; j < k; j++) XtX[i][j] += xr[i] * xr[j];
         }
       }
       const coef = solveLinear(XtX, Xty);

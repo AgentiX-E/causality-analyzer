@@ -242,7 +242,7 @@ export class AuditTrail {
     this.entries = this.entries.slice(keepFrom);
     // Re-index entries and reset genesis hash
     for (let i = 0; i < this.entries.length; i++) {
-      const entry = { ...this.entries[i]!, index: i, previousHash: i === 0 ? '0' : this.entries[i - 1]!.hash };
+      const entry = { ...this.entries[i], index: i, previousHash: i === 0 ? '0' : this.entries[i - 1].hash };
       this.entries[i] = Object.freeze(entry);
     }
     this.lastHash = this.entries[this.entries.length - 1]?.hash ?? '0';

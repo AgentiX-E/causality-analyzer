@@ -194,7 +194,7 @@ export function combinations<T>(arr: T[], k: number): T[][] {
 function makeZeroMatrix(rows: number, cols: number): number[][] {
   const m: number[][] = [];
   for (let i = 0; i < rows; i++) {
-    m.push(new Array<number>(cols).fill(0) as number[]);
+    m.push(new Array<number>(cols).fill(0));
   }
   return m;
 }
@@ -362,8 +362,8 @@ export function precomputeCorrelation(data: number[][]): number[][] {
   if (d === 0) return [];
 
   const n = data.length;
-  const means = new Array<number>(d).fill(0) as number[];
-  const stds = new Array<number>(d).fill(0) as number[];
+  const means = new Array<number>(d).fill(0);
+  const stds = new Array<number>(d).fill(0);
 
   // Means
   for (let j = 0; j < d; j++) {

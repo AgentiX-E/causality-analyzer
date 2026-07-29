@@ -48,7 +48,7 @@ export function discoverClusters(
   const corr = correlationMatrix(data);
 
   // Build clustering graph: connect i,j if they share a latent parent
-  const adj: boolean[][] = []; for (let _i=0; _i<d; _i++) adj.push(new Array<boolean>(d).fill(false) as boolean[]);
+  const adj: boolean[][] = []; for (let _i=0; _i<d; _i++) adj.push(new Array<boolean>(d).fill(false));
 
   for (let i = 0; i < d; i++) {
     for (let j = i + 1; j < d; j++) {
@@ -124,24 +124,24 @@ export function discoverClusters(
 function correlationMatrix(data: Matrix): number[][] {
   const d = data.columns;
   const n = data.rows;
-  const means: number[] = new Array<number>(d).fill(0) as number[];
-  const stds: number[] = new Array<number>(d).fill(0) as number[];
+  const means: number[] = new Array<number>(d).fill(0);
+  const stds: number[] = new Array<number>(d).fill(0);
 
   for (let j = 0; j < d; j++) {
     let sum = 0; for (let i = 0; i < n; i++) sum += data.get(i, j);
     means[j] = sum / n;
-    let sq = 0; for (let i = 0; i < n; i++) sq += (data.get(i, j) - means[j]!) ** 2;
+    let sq = 0; for (let i = 0; i < n; i++) sq += (data.get(i, j) - means[j]) ** 2;
     stds[j] = Math.sqrt(sq / n);
   }
 
-  const corr: number[][] = []; for (let _i=0; _i<d; _i++) corr.push(new Array<number>(d).fill(0) as number[]);
+  const corr: number[][] = []; for (let _i=0; _i<d; _i++) corr.push(new Array<number>(d).fill(0));
   for (let i = 0; i < d; i++) {
     corr[i][i] = 1;
     for (let j = i + 1; j < d; j++) {
       let cov = 0;
-      for (let r = 0; r < n; r++) cov += (data.get(r, i) - means[i]!) * (data.get(r, j) - means[j]!);
+      for (let r = 0; r < n; r++) cov += (data.get(r, i) - means[i]) * (data.get(r, j) - means[j]);
       cov /= n;
-      const denom = stds[i]! * stds[j]!;
+      const denom = stds[i] * stds[j];
       corr[i][j] = corr[j][i] = denom > 0 ? cov / denom : 0;
     }
   }

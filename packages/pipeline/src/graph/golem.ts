@@ -63,14 +63,14 @@ function matrixExp(A: Matrix): Matrix {
   // Compute powers of As: As^2, As^3, ..., As^6
   const powers: Matrix[] = [Matrix.eye(d), As.clone()];
   for (let k = 2; k <= 6; k++) {
-    powers.push(powers[k - 1]!.mmul(As));
+    powers.push(powers[k - 1].mmul(As));
   }
 
   // Padé numerator: N = sum(c_k * As^k)  for k=0..6
   const N = Matrix.zeros(d, d);
   for (let k = 0; k <= 6; k++) {
-    const coef = PADE_COEFFS[k]!;
-    const Pk = powers[k]!;
+    const coef = PADE_COEFFS[k];
+    const Pk = powers[k];
     for (let i = 0; i < d; i++)
       for (let j = 0; j < d; j++)
         N.set(i, j, N.get(i, j) + coef * Pk.get(i, j));
@@ -80,8 +80,8 @@ function matrixExp(A: Matrix): Matrix {
   const D = Matrix.zeros(d, d);
   for (let k = 0; k <= 6; k++) {
     const sign = k % 2 === 0 ? 1 : -1;
-    const coef = PADE_COEFFS[k]! * sign;
-    const Pk = powers[k]!;
+    const coef = PADE_COEFFS[k] * sign;
+    const Pk = powers[k];
     for (let i = 0; i < d; i++)
       for (let j = 0; j < d; j++)
         D.set(i, j, D.get(i, j) + coef * Pk.get(i, j));
@@ -205,8 +205,8 @@ export function golemAlgorithm(
 ): { graph: CausalGraph; W: Float64Array } {
   // Accept both Matrix (from benchmark harness) and number[][] (from direct calls)
   const XArr: number[][] = rawData instanceof Matrix
-    ? (rawData as Matrix).to2DArray()
-    : rawData as number[][];
+    ? (rawData).to2DArray()
+    : rawData;
   const cfg = { ...DEFAULTS, ...config };
   const n = XArr.length;
   const d = nodeNames.length;
@@ -261,7 +261,7 @@ export function golemAlgorithm(
   const edgeList: [number, number][] = [];
   for (let i = 0; i < d; i++)
     for (let j = 0; j < d; j++)
-      if (i !== j && g.hasEdge(nodeNames[i]!, nodeNames[j]!))
+      if (i !== j && g.hasEdge(nodeNames[i], nodeNames[j]))
         edgeList.push([i, j]);
 
   if (edgeList.length > 1) {
@@ -312,7 +312,7 @@ export function golemAlgorithm(
 
     // Rebuild pruned graph
     const pruned = new CausalGraph([...nodeNames]);
-    for (const [from, to] of currentEdges) pruned.addEdge(nodeNames[from]!, nodeNames[to]!);
+    for (const [from, to] of currentEdges) pruned.addEdge(nodeNames[from], nodeNames[to]);
     if (domainKnowledge) pruned.applyDomainKnowledge(domainKnowledge);
     return { graph: pruned, W };
   }
@@ -324,24 +324,24 @@ export function golemAlgorithm(
 // Small linear solver for BIC pruning
 function solveSmall(A: number[][], b: number[]): number[] {
   const n = A.length;
-  const aug = A.map((row, i) => [...row, b[i]!]);
+  const aug = A.map((row, i) => [...row, b[i]]);
   for (let col = 0; col < n; col++) {
     let maxRow = col;
     for (let row = col + 1; row < n; row++)
-      if (Math.abs(aug[row]![col]!) > Math.abs(aug[maxRow]![col]!)) maxRow = row;
-    [aug[col], aug[maxRow]] = [aug[maxRow]!, aug[col]!];
-    const pv = aug[col]![col]!;
+      if (Math.abs(aug[row][col]) > Math.abs(aug[maxRow][col])) maxRow = row;
+    [aug[col], aug[maxRow]] = [aug[maxRow], aug[col]];
+    const pv = aug[col][col];
     if (Math.abs(pv) < 1e-12) continue;
     for (let row = col + 1; row < n; row++) {
-      const f = aug[row]![col]! / pv;
-      for (let j = col; j <= n; j++) aug[row]![j] -= f * aug[col]![j]!;
+      const f = aug[row][col] / pv;
+      for (let j = col; j <= n; j++) aug[row][j] -= f * aug[col][j];
     }
   }
   const x = new Array<number>(n).fill(0);
   for (let i = n - 1; i >= 0; i--) {
-    let s = aug[i]![n]!;
-    for (let j = i + 1; j < n; j++) s -= aug[i]![j]! * (x[j] ?? 0);
-    x[i] = Math.abs(aug[i]![i]!) < 1e-12 ? 0 : s / aug[i]![i]!;
+    let s = aug[i][n];
+    for (let j = i + 1; j < n; j++) s -= aug[i][j] * (x[j] ?? 0);
+    x[i] = Math.abs(aug[i][i]) < 1e-12 ? 0 : s / aug[i][i];
   }
   return x;
 }

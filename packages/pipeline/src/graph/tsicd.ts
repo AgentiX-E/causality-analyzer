@@ -224,17 +224,17 @@ function fisherZ(data: Matrix, i: number, j: number, condSet: number[]): number 
   const N = data.rows;
   const sub = data.subMatrixColumn(indices);
 
-  const means: number[] = new Array<number>(indices.length).fill(0) as number[];
+  const means: number[] = new Array<number>(indices.length).fill(0);
   for (let c = 0; c < indices.length; c++) {
     let sum = 0; for (let r = 0; r < N; r++) sum += sub.get(r, c);
     means[c] = sum / N;
   }
 
-  const cov: number[][] = []; for (let _i=0; _i<indices.length; _i++) cov.push(new Array<number>(indices.length).fill(0) as number[]);
+  const cov: number[][] = []; for (let _i=0; _i<indices.length; _i++) cov.push(new Array<number>(indices.length).fill(0));
   for (let a = 0; a < indices.length; a++)
     for (let b = a; b < indices.length; b++) {
       let sum = 0;
-      for (let r = 0; r < N; r++) sum += (sub.get(r, a) - means[a]!) * (sub.get(r, b) - means[b]!);
+      for (let r = 0; r < N; r++) sum += (sub.get(r, a) - means[a]) * (sub.get(r, b) - means[b]);
       cov[a][b] = sum / (N - 1); cov[b][a] = cov[a][b]!;
     }
 
@@ -274,7 +274,7 @@ function partialCorrCI(data: Matrix, i: number, j: number, _N: number): number {
 function invert2D(m: number[][]): number[][] {
   const n = m.length;
   const aug = m.map((r, ri) => {
-    const idCol: number[] = new Array<number>(n).fill(0) as number[];
+    const idCol: number[] = new Array<number>(n).fill(0);
     idCol[ri] = 1;
     return [...r, ...idCol];
   });

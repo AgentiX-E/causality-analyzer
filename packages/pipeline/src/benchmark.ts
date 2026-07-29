@@ -173,7 +173,7 @@ export function generateLinearData(graph: CausalGraph, n: number, seed: number, 
   const rng = createRNG(seed);
   const nodes = [...graph.nodes];
   const order = graph.topologicalSort();
-  const data: number[][] = []; for (let _i=0; _i<n; _i++) data.push(new Array<number>(nodes.length).fill(0) as number[]);
+  const data: number[][] = []; for (let _i=0; _i<n; _i++) data.push(new Array<number>(nodes.length).fill(0));
   const rootNoise = 1.0; // standard deviation for root nodes (unit variance)
 
   for (let i = 0; i < n; i++) {

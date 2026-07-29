@@ -32,8 +32,7 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y -qq build-essential python3 make g++
       - run: pnpm install --frozen-lockfile
       - run: pnpm run --filter @agentix-e/causality-analyzer-core build
-      - run: pnpm run --filter @agentix-e/causality-analyzer-core test
-      # Pipeline algorithm tests are Linux-only (heavy computation,
-      # @kanaries/ml binary compatibility). Cross-platform validation
-      # of core ensures algorithm independence contracts hold on all OS.
+      - run: cd packages/core && npx vitest run
+      # Core unit tests only — verifies cross-platform algorithm contracts.
+      # Coverage thresholds validated separately on CI quality gate (Ubuntu).
 

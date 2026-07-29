@@ -65,7 +65,7 @@ export function estimateLinearRegression(
   const X = allPred.map(i => data.map(r => r[i] ?? 0));
   const y = data.map(r => r[outcomeIdx] ?? 0);
 
-  const XtX: number[][] = []; for (let _i=0; _i<k; _i++) XtX.push(new Array<number>(k).fill(0) as number[]);
+  const XtX: number[][] = []; for (let _i=0; _i<k; _i++) XtX.push(new Array<number>(k).fill(0));
   const Xty: number[] = new Array<number>(k).fill(0);
   let ySum = 0;
 

@@ -137,7 +137,7 @@ export function trainFFNMechanism(
   if (inputDim === 0) {
     const mean = y.reduce((a, b) => a + b, 0) / Math.max(1, n);
     let ss = 0;
-    for (let i = 0; i < n; i++) ss += (y[i]! - mean) ** 2;
+    for (let i = 0; i < n; i++) ss += (y[i] - mean) ** 2;
     const std = Math.sqrt(ss / Math.max(1, n - 1)) || 1;
     const w = new Float64Array([0]);
     const b = new Float64Array([mean]);
@@ -148,7 +148,7 @@ export function trainFFNMechanism(
   if (n < inputDim * 4) {
     const mean = y.reduce((a, b) => a + b, 0) / Math.max(1, n);
     let ss = 0;
-    for (let i = 0; i < n; i++) ss += (y[i]! - mean) ** 2;
+    for (let i = 0; i < n; i++) ss += (y[i] - mean) ** 2;
     const std = Math.sqrt(ss / Math.max(1, n - 1)) || 1;
     // Output = mean regardless of input
     const w = new Float64Array(inputDim);
@@ -163,8 +163,8 @@ export function trainFFNMechanism(
 
   // Xavier initialization
   for (let l = 0; l < layerSizes.length - 1; l++) {
-    const fanIn = layerSizes[l]!;
-    const fanOut = layerSizes[l + 1]!;
+    const fanIn = layerSizes[l];
+    const fanOut = layerSizes[l + 1];
     const scale = Math.sqrt(2 / (fanIn + fanOut));
     const w = new Float64Array(fanIn * fanOut);
     const b = new Float64Array(fanOut);
@@ -189,12 +189,12 @@ export function trainFFNMechanism(
     const bTmp: Float64Array[] = [];
     let off = 0;
     for (let l = 0; l < weights.length; l++) {
-      const wLen = weights[l]!.length;
+      const wLen = weights[l].length;
       wTmp.push(theta.slice(off, off + wLen));
       off += wLen;
     }
     for (let l = 0; l < biases.length; l++) {
-      const bLen = biases[l]!.length;
+      const bLen = biases[l].length;
       bTmp.push(theta.slice(off, off + bLen));
       off += bLen;
     }
@@ -215,23 +215,23 @@ export function trainFFNMechanism(
       let current: Float64Array = row;
 
       for (let l = 0; l < weights.length; l++) {
-        const w = wTmp[l]!;
-        const b = bTmp[l]!;
+        const w = wTmp[l];
+        const b = bTmp[l];
         const fanIn = l === 0 ? inputDim : (hiddenLayers[l - 1] ?? inputDim);
-        const fanOut = layerSizes[l + 1]!;
+        const fanOut = layerSizes[l + 1];
 
         const preAct = new Float64Array(fanOut);
         // W^T × current + b
         for (let o = 0; o < fanOut; o++) {
-          let sum = b[o]!;
-          for (let j = 0; j < fanIn; j++) sum += w[j * fanOut + o]! * current[j]!;
+          let sum = b[o];
+          for (let j = 0; j < fanIn; j++) sum += w[j * fanOut + o] * current[j];
           preAct[o] = sum;
         }
 
         const postAct = new Float64Array(fanOut);
         if (l < weights.length - 1) {
           // ReLU for hidden layers
-          for (let o = 0; o < fanOut; o++) postAct[o] = Math.max(0, preAct[o]!);
+          for (let o = 0; o < fanOut; o++) postAct[o] = Math.max(0, preAct[o]);
         } else {
           // Identity for output layer
           for (let o = 0; o < fanOut; o++) postAct[o] = preAct[o]!;
@@ -242,36 +242,36 @@ export function trainFFNMechanism(
       }
 
       // MSE loss: (pred - y)²
-      const pred = current[0]!;
-      const err = pred - y[i]!;
+      const pred = current[0];
+      const err = pred - y[i];
       loss += 0.5 * err * err;
 
       // Backprop
       let delta = new Float64Array([err]); // output layer delta
 
       for (let l = weights.length - 1; l >= 0; l--) {
-        const w = wTmp[l]!;
-        const state = states[l]!;
+        const w = wTmp[l];
+        const state = states[l];
         const fanIn = l === 0 ? inputDim : (hiddenLayers[l - 1] ?? inputDim);
-        const fanOut = layerSizes[l + 1]!;
-        const prevAct = l === 0 ? row : states[l - 1]!.postAct;
+        const fanOut = layerSizes[l + 1];
+        const prevAct = l === 0 ? row : states[l - 1].postAct;
 
         // Gradient for ReLU: multiply by indicator(preAct > 0)
         if (l < weights.length - 1) {
           const deltaNew = new Float64Array(fanOut);
           for (let o = 0; o < fanOut; o++) {
-            deltaNew[o] = state.preAct[o]! > 0 ? delta[o]! : 0;
+            deltaNew[o] = state.preAct[o] > 0 ? delta[o] : 0;
           }
           delta = deltaNew;
         }
 
         // Accumulate gradients
-        const gW = gradW[l]!;
-        const gB = gradB[l]!;
+        const gW = gradW[l];
+        const gB = gradB[l];
         for (let o = 0; o < fanOut; o++) {
-          gB[o] = (gB[o] ?? 0) + delta[o]!;
+          gB[o] = (gB[o] ?? 0) + delta[o];
           for (let j = 0; j < fanIn; j++) {
-            gW[j * fanOut + o] = (gW[j * fanOut + o] ?? 0) + prevAct[j]! * delta[o]!;
+            gW[j * fanOut + o] = (gW[j * fanOut + o] ?? 0) + prevAct[j] * delta[o];
           }
         }
 
@@ -280,7 +280,7 @@ export function trainFFNMechanism(
           const deltaPrev = new Float64Array(fanIn);
           for (let j = 0; j < fanIn; j++) {
             let sum = 0;
-            for (let o = 0; o < fanOut; o++) sum += w[j * fanOut + o]! * delta[o]!;
+            for (let o = 0; o < fanOut; o++) sum += w[j * fanOut + o] * delta[o];
             deltaPrev[j] = sum;
           }
           delta = deltaPrev;
@@ -291,20 +291,20 @@ export function trainFFNMechanism(
     // Average and add L2 regularization
     loss /= n;
     for (const w of wTmp) {
-      for (let i = 0; i < w.length; i++) loss += 0.5 * l2Reg * w[i]! * w[i]!;
+      for (let i = 0; i < w.length; i++) loss += 0.5 * l2Reg * w[i] * w[i];
     }
 
     // Pack gradients
     const grad = new Float64Array(paramCount);
     let gOff = 0;
     for (let l = 0; l < gradW.length; l++) {
-      const g = gradW[l]!;
-      for (let i = 0; i < g.length; i++) grad[gOff + i] = g[i]! / n + l2Reg * wTmp[l]![i]!;
+      const g = gradW[l];
+      for (let i = 0; i < g.length; i++) grad[gOff + i] = g[i] / n + l2Reg * wTmp[l][i];
       gOff += g.length;
     }
     for (let l = 0; l < gradB.length; l++) {
-      const g = gradB[l]!;
-      for (let i = 0; i < g.length; i++) grad[gOff + i] = g[i]! / n;
+      const g = gradB[l];
+      for (let i = 0; i < g.length; i++) grad[gOff + i] = g[i] / n;
       gOff += g.length;
     }
 
@@ -332,7 +332,7 @@ export function trainFFNMechanism(
     const row = new Float64Array(inputDim);
     for (let j = 0; j < inputDim; j++) row[j] = X[i * inputDim + j]!;
     const pred = forwardPass(row, optWeights, optBiases);
-    residuals.push(y[i]! - pred);
+    residuals.push(y[i] - pred);
   }
   let noiseSs = 0;
   for (const r of residuals) noiseSs += r * r;
@@ -353,25 +353,25 @@ function forwardPass(
   let current: Float64Array = input;
 
   for (let l = 0; l < weights.length; l++) {
-    const w = weights[l]!;
-    const b = biases[l]!;
+    const w = weights[l];
+    const b = biases[l];
     const fanIn = current.length;
     const fanOut = b.length;
 
     const next = new Float64Array(fanOut);
     for (let o = 0; o < fanOut; o++) {
-      let sum = b[o]!;
-      for (let j = 0; j < fanIn; j++) sum += w[j * fanOut + o]! * current[j]!;
+      let sum = b[o];
+      for (let j = 0; j < fanIn; j++) sum += w[j * fanOut + o] * current[j];
       next[o] = sum;
     }
 
     // ReLU for hidden, identity for output
     if (l < weights.length - 1) {
-      for (let o = 0; o < fanOut; o++) next[o] = Math.max(0, next[o]!);
+      for (let o = 0; o < fanOut; o++) next[o] = Math.max(0, next[o]);
     }
 
     current = next;
   }
 
-  return current[0]!;
+  return current[0];
 }

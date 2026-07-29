@@ -143,7 +143,7 @@ export class CausalityServer {
         if (this.tlsConfig.requestCert) tlsOpts.requestCert = true;
         if (this.tlsConfig.rejectUnauthorized) tlsOpts.rejectUnauthorized = true;
 
-        this.server = createSecureServer(tlsOpts, handler) as unknown as Server;
+        this.server = createSecureServer(tlsOpts, handler);
         if (this.logger.info) this.logger.info('mTLS enabled: client certificate auth active');
       } else {
         this.server = createServer(handler);

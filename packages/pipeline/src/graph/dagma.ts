@@ -131,7 +131,7 @@ export function dagmaAlgorithm(
 
   for (let t = 0; t < cfg.T; t++) {
     const innerIters = t === cfg.T - 1 ? maxIter : warmIter;
-    const s = s_schedule[t]!;
+    const s = s_schedule[t];
 
     // Build loss function — returns RAW gradient (our adam handles update)
     const lossFn = (w: Float64Array): [number, Float64Array] => {
@@ -210,7 +210,7 @@ export function dagmaAlgorithm(
   const edgeList: [number, number][] = [];
   for (let i = 0; i < d; i++)
     for (let j = 0; j < d; j++)
-      if (i !== j && g.hasEdge(nodeNames[i]!, nodeNames[j]!))
+      if (i !== j && g.hasEdge(nodeNames[i], nodeNames[j]))
         edgeList.push([i, j]);
 
   if (edgeList.length > 0) {
@@ -265,7 +265,7 @@ export function dagmaAlgorithm(
     // Rebuild graph with pruned edges
     const pruned = new CausalGraph([...nodeNames]);
     for (const [from, to] of currentEdges) {
-      pruned.addEdge(nodeNames[from]!, nodeNames[to]!);
+      pruned.addEdge(nodeNames[from], nodeNames[to]);
     }
     if (domainKnowledge) pruned.applyDomainKnowledge(domainKnowledge);
     return { graph: pruned, W: W_est, h: finalH };
@@ -278,24 +278,24 @@ export function dagmaAlgorithm(
 // Small Gaussian elimination helper for BIC pruning
 function gaussSolve(A: number[][], b: number[]): number[] {
   const n = A.length;
-  const aug = A.map((row, i) => [...row, b[i]!]);
+  const aug = A.map((row, i) => [...row, b[i]]);
   for (let col = 0; col < n; col++) {
     let maxRow = col;
     for (let row = col + 1; row < n; row++)
-      if (Math.abs(aug[row]![col]!) > Math.abs(aug[maxRow]![col]!)) maxRow = row;
-    [aug[col], aug[maxRow]] = [aug[maxRow]!, aug[col]!];
-    const pv = aug[col]![col]!;
+      if (Math.abs(aug[row][col]) > Math.abs(aug[maxRow][col])) maxRow = row;
+    [aug[col], aug[maxRow]] = [aug[maxRow], aug[col]];
+    const pv = aug[col][col];
     if (Math.abs(pv) < 1e-12) continue;
     for (let row = col + 1; row < n; row++) {
-      const f = aug[row]![col]! / pv;
-      for (let j = col; j <= n; j++) aug[row]![j] -= f * aug[col]![j]!;
+      const f = aug[row][col] / pv;
+      for (let j = col; j <= n; j++) aug[row][j] -= f * aug[col][j];
     }
   }
   const x = new Array<number>(n).fill(0);
   for (let i = n - 1; i >= 0; i--) {
-    let s = aug[i]![n]!;
-    for (let j = i + 1; j < n; j++) s -= aug[i]![j]! * (x[j] ?? 0);
-    x[i] = Math.abs(aug[i]![i]!) < 1e-12 ? 0 : s / aug[i]![i]!;
+    let s = aug[i][n];
+    for (let j = i + 1; j < n; j++) s -= aug[i][j] * (x[j] ?? 0);
+    x[i] = Math.abs(aug[i][i]) < 1e-12 ? 0 : s / aug[i][i];
   }
   return x;
 }

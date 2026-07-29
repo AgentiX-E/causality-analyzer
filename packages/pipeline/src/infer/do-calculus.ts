@@ -302,8 +302,8 @@ function fullID(
     for (let a = 0; a < restrictedComponents.length && !hedgeFound; a++) {
       for (let b = 0; b < restrictedComponents.length && !hedgeFound; b++) {
         if (a === b) continue;
-        const Fa = restrictedComponents[a]!;
-        const Fb = restrictedComponents[b]!;
+        const Fa = restrictedComponents[a];
+        const Fb = restrictedComponents[b];
         // Check Fb ⊂ Fa (proper subset, not equal)
         if (Fb.size < Fa.size && [...Fb].every(n => Fa.has(n))) {
           hedgeFound = true;
