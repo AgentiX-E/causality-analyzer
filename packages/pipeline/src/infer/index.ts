@@ -72,6 +72,10 @@ export type { EffectInterval, DMLEstimatorConfig } from './dml-estimators.js';
 export { LinearDRLearner, ForestDRLearner } from './dr-estimators.js';
 export type { DRConfig } from './dr-estimators.js';
 
+// ── Meta-Learner Family (I8-P2) ───────────────────────────────────
+export { SLearner, TLearner, XLearner } from './meta-learners.js';
+export type { BaseLearner, MetaLearnerConfig } from './meta-learners.js';
+
 // ── Bayesian Network Inference ─────────────────────────────────
 export {
   cptToFactor,
