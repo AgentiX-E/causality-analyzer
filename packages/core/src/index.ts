@@ -127,3 +127,26 @@ export type {
   TimeSeriesEdge,
   TimeSeriesGraph,
 } from './types/timeseries.js';
+
+// ©¤©¤ Distributed Types ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
+export type {
+  VectorClock,
+  ClockOrder,
+  DistributedCITask,
+  DistributedCIResult,
+  DistributedCITaskBatch,
+  DistributedCIBatchResult,
+  DistributedGraphVersion,
+  DistributedDiscoveryConfig,
+  SQLClusterConfig,
+  GraphClusterConfig,
+  FederatedConfig,
+  FederatedStatistic,
+  ClusterMode,
+} from './types/distributed.js';
+
+export {
+  compareClocks,
+  mergeClocks,
+  incrementClock,
+} from './types/distributed.js';

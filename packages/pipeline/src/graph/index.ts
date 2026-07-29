@@ -62,6 +62,18 @@ export type { CAMUVConfig, CAMUVResult } from './cam-uv.js';
 export { extractCharacteristics, recommendAlgorithm } from './meta-learner.js';
 export type { DiscoveryAlgorithm, DataCharacteristics, AlgorithmRecommendation, MetaLearnerResult } from './meta-learner.js';
 
+// ── Distributed CI ──────────────────────────────────────────────────────
+
+export {
+  partitionCITasks,
+  fisherMethodMerge,
+  weightedFisherZMerge,
+  mergeDistributedCIResults,
+} from './distributed-ci.js';
+export { StatelessDistributedWorker, executeCITask } from './distributed-worker.js';
+export type { WorkerConfig } from './distributed-worker.js';
+export { DistributedCoordinator } from './distributed-coordinator.js';
+
 // ── PCMCI+ ──────────────────────────────────────────────────────────────
 
 export { pcmciPlusAlgorithm } from './pcmci-plus.js';
