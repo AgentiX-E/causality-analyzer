@@ -123,7 +123,7 @@ export function orientCPDAG(
     // Lexicographically consistent: always store from the lexicographically
     // smaller node. The marks describe "from → to" relation.
     const [a, b] = key.split('|') as [string, string];
-    if (a! < b!) {
+    if (a < b) {
       result.set(key, { sourceMark: edge.sourceMark, targetMark: edge.targetMark });
     } else {
       // Swap: the mark at the "from" end is the targetMark of the stored edge
@@ -330,7 +330,7 @@ function orientEdge(
   mark: EdgeMark,
 ): void {
   const key = edgeKey(from, to);
-  let entry = oriented.get(key);
+  const entry = oriented.get(key);
   if (!entry) return;
 
   // Ensure the edge is stored with predictable orientation

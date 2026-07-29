@@ -120,12 +120,12 @@ export function pcmciPlusAlgorithm(
     const row: number[] = [];
     // Current values (cols 0..d-1)
     for (let j = 0; j < d; j++) {
-      row.push(data[t]![j]!);
+      row.push(data[t][j]);
     }
     // Lagged values (cols d..d+numLaggedCols-1)
     for (let vi = 0; vi < d; vi++) {
       for (let lag = 1; lag <= tauMax; lag++) {
-        row.push(data[t - lag]![vi]!);
+        row.push(data[t - lag][vi]);
       }
     }
     augData.push(row);
@@ -166,7 +166,7 @@ export function pcmciPlusAlgorithm(
       cand.pValue = result.pValue;
       if (onCITest) {
         onCITest(
-          nodeNames[cand.varIdx]!, nodeNames[j]!, cand.lag,
+          nodeNames[cand.varIdx], nodeNames[j], cand.lag,
           [], result.pValue, result.testStatistic,
         );
       }
@@ -204,7 +204,7 @@ export function pcmciPlusAlgorithm(
             return '?';
           });
           onCITest(
-            nodeNames[cand.varIdx]!, nodeNames[j]!, cand.lag,
+            nodeNames[cand.varIdx], nodeNames[j], cand.lag,
             condNames, result.pValue, result.testStatistic,
           );
         }
@@ -234,8 +234,8 @@ export function pcmciPlusAlgorithm(
 
     // Build parent set for target (as TimeSeriesEdges)
     const targetParentEdges: TimeSeriesEdge[] = acceptedTargetParents.map(cand => ({
-      source: nodeNames[cand.varIdx]!,
-      target: nodeNames[j]!,
+      source: nodeNames[cand.varIdx],
+      target: nodeNames[j],
       lag: cand.lag,
       strength: Math.max(0, Math.min(1, 1 - cand.pValue)),
       pValue: cand.pValue,
@@ -243,7 +243,7 @@ export function pcmciPlusAlgorithm(
       targetMark: 'arrow' as const,
       phase: 'pc1' as const,
     }));
-    parentEdges.set(nodeNames[j]!, targetParentEdges);
+    parentEdges.set(nodeNames[j], targetParentEdges);
 
     // MCI+ test for each accepted target parent
     for (const cand of acceptedTargetParents) {
@@ -307,7 +307,7 @@ export function pcmciPlusAlgorithm(
 
       if (onCITest) {
         onCITest(
-          nodeNames[cand.varIdx]!, nodeNames[j]!, cand.lag,
+          nodeNames[cand.varIdx], nodeNames[j], cand.lag,
           uniqueCondSet.map(String), result.pValue, result.testStatistic,
         );
       }
@@ -315,8 +315,8 @@ export function pcmciPlusAlgorithm(
       if (result.pValue < alpha) {
         const strength = Math.max(0, Math.min(1, 1 - result.pValue));
         mciEdges.push({
-          source: nodeNames[cand.varIdx]!,
-          target: nodeNames[j]!,
+          source: nodeNames[cand.varIdx],
+          target: nodeNames[j],
           lag: cand.lag,
           strength,
           pValue: result.pValue,

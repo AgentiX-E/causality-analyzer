@@ -344,7 +344,7 @@ export class NonParamDML {
       let weightTotal = 0;
 
       for (let i = 0; i < nTrain; i++) {
-        const xi = this.XTrain![i]!;
+        const xi = this.XTrain![i];
         let dist2 = 0;
         for (let j = 0; j < xi.length; j++) {
           const diff = (xQuery[j] ?? 0) - (xi[j] ?? 0);
@@ -352,7 +352,7 @@ export class NonParamDML {
         }
         // Gaussian kernel: K(d) = exp(-d² / 2h²)
         const weight = Math.exp(-dist2 / (2 * h2));
-        weightedSum += weight * this.scores![i]!;
+        weightedSum += weight * this.scores![i];
         weightTotal += weight;
       }
 

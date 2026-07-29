@@ -38,46 +38,46 @@ class LinearBaseLearner implements BaseLearner {
     const xty: number[] = new Array(k).fill(0);
 
     for (let i = 0; i < n; i++) {
-      xtx[0]![0]! += 1;
-      xty[0]! += y[i]!;
+      xtx[0][0] += 1;
+      xty[0] += y[i];
       for (let j = 0; j < p; j++) {
-        const xv = X[i]![j]!;
-        xtx[0]![j + 1]! += xv;
-        xtx[j + 1]![0]! += xv;
-        xty[j + 1]! += xv * y[i]!;
+        const xv = X[i][j];
+        xtx[0][j + 1] += xv;
+        xtx[j + 1][0] += xv;
+        xty[j + 1] += xv * y[i];
       }
     }
     for (let ci = 0; ci < k; ci++) {
       for (let cj = ci + 1; cj < k; cj++) {
-        xtx[cj]![ci] = xtx[ci]![cj]!;
+        xtx[cj][ci] = xtx[ci][cj]!;
       }
     }
-    for (let ci = 0; ci < k; ci++) xtx[ci]![ci]! += 1e-8;
+    for (let ci = 0; ci < k; ci++) xtx[ci][ci] += 1e-8;
 
-    const aug = xtx.map((row, ri) => [...row, xty[ri]!]);
+    const aug = xtx.map((row, ri) => [...row, xty[ri]]);
     for (let col = 0; col < k; col++) {
-      let mr = col, mv = Math.abs(aug[col]![col]!);
+      let mr = col, mv = Math.abs(aug[col][col]);
       for (let r = col + 1; r < k; r++) {
-        if (Math.abs(aug[r]![col]!) > mv) { mv = Math.abs(aug[r]![col]!); mr = r; }
+        if (Math.abs(aug[r][col]) > mv) { mv = Math.abs(aug[r][col]); mr = r; }
       }
       if (mv < 1e-12) continue;
-      if (mr !== col) [aug[col], aug[mr]] = [aug[mr]!, aug[col]!];
-      const piv = aug[col]![col]!;
-      for (let c = col; c <= k; c++) aug[col]![c]! /= piv;
+      if (mr !== col) [aug[col], aug[mr]] = [aug[mr], aug[col]];
+      const piv = aug[col][col];
+      for (let c = col; c <= k; c++) aug[col][c] /= piv;
       for (let r = 0; r < k; r++) {
         if (r === col) continue;
-        const f = aug[r]![col]!;
+        const f = aug[r][col];
         if (f === 0) continue;
-        for (let c = col; c <= k; c++) aug[r]![c]! -= f * aug[col]![c]!;
+        for (let c = col; c <= k; c++) aug[r][c] -= f * aug[col][c];
       }
     }
-    this.beta = aug.map(r => r[k]!);
+    this.beta = aug.map(r => r[k]);
   }
 
   predict(X: number[][]): number[] {
     if (!this.beta) throw new Error('Not fitted');
     return X.map(x => {
-      let s = this.beta![0]!;
+      let s = this.beta![0];
       for (let j = 0; j < x.length; j++) s += (this.beta![j + 1] ?? 0) * (x[j] ?? 0);
       return s;
     });
@@ -144,7 +144,7 @@ export class SLearner {
    */
   fit(X: number[][], y: number[], t: number[]): void {
     // Augment features with treatment indicator: [X | T]
-    const augmented = X.map((row, i) => [...row, t[i]!]);
+    const augmented = X.map((row, i) => [...row, t[i]]);
     this.learner.fit(augmented, y);
     this.fitted = true;
   }
@@ -158,7 +158,7 @@ export class SLearner {
     if (!this.fitted) throw new Error('SLearner not fitted.');
     const y1 = this.learner.predict(X.map(row => [...row, 1]));
     const y0 = this.learner.predict(X.map(row => [...row, 0]));
-    return y1.map((v, i) => v - y0[i]!);
+    return y1.map((v, i) => v - y0[i]);
   }
 
   /** Baseline ATE: average of predicted CATE */
@@ -203,8 +203,8 @@ export class TLearner {
     const yC: number[] = [];
 
     for (let i = 0; i < X.length; i++) {
-      if (t[i]! > 0.5) { XT.push(X[i]!); yT.push(y[i]!); }
-      else { XC.push(X[i]!); yC.push(y[i]!); }
+      if (t[i] > 0.5) { XT.push(X[i]); yT.push(y[i]); }
+      else { XC.push(X[i]); yC.push(y[i]); }
     }
 
     this.modelT.fit(XT, yT);
@@ -221,7 +221,7 @@ export class TLearner {
     if (!this.fitted) throw new Error('TLearner not fitted.');
     const y1 = this.modelT.predict(X);
     const y0 = this.modelC.predict(X);
-    return y1.map((v, i) => v - y0[i]!);
+    return y1.map((v, i) => v - y0[i]);
   }
 
   ate(X: number[][], t: number[]): number {
@@ -286,8 +286,8 @@ export class XLearner {
     const XC: number[][] = [], yC: number[] = [];
 
     for (let i = 0; i < n; i++) {
-      if (t[i]! > 0.5) { XT.push(X[i]!); yT.push(y[i]!); }
-      else { XC.push(X[i]!); yC.push(y[i]!); }
+      if (t[i] > 0.5) { XT.push(X[i]); yT.push(y[i]); }
+      else { XC.push(X[i]); yC.push(y[i]); }
     }
 
     // Stage 1: T-learner
@@ -301,13 +301,13 @@ export class XLearner {
     // τ̃₁ = Y - f̂₀(X) for treated
     const y0pred = XT.length > 0 ? this.modelC.predict(XT) : [];
     for (let i = 0; i < XT.length; i++) {
-      imputedT.push(yT[i]! - y0pred[i]!);
+      imputedT.push(yT[i] - y0pred[i]);
     }
 
     // τ̃₀ = f̂₁(X) - Y for control
     const y1pred = XC.length > 0 ? this.modelT.predict(XC) : [];
     for (let i = 0; i < XC.length; i++) {
-      imputedC.push(y1pred[i]! - yC[i]!);
+      imputedC.push(y1pred[i] - yC[i]);
     }
 
     // Stage 3: Fit CATE models
@@ -337,7 +337,7 @@ export class XLearner {
     const eBar = this.propensity!.reduce((a, b) => a + b, 0) / this.propensity!.length;
 
     return g1.map((v1, i) => {
-      const v0 = g0[i]!;
+      const v0 = g0[i];
       return (1 - eBar) * v1 + eBar * v0;
     });
   }
@@ -365,42 +365,42 @@ function estimatePropensity(X: number[][], t: number[]): number[] {
     const xtz = new Array(k).fill(0);
 
     for (let i = 0; i < n; i++) {
-      const eta = predictLinear(X[i]!, beta);
+      const eta = predictLinear(X[i], beta);
       const mu = sigmoid(eta);
       const w = Math.max(1e-6, mu * (1 - mu));
-      const z = eta + (t[i]! - mu) / w;
+      const z = eta + (t[i] - mu) / w;
 
-      xtx[0]![0]! += w; xtz[0]! += w * z;
+      xtx[0][0]! += w; xtz[0]! += w * z;
       for (let j = 0; j < p; j++) {
-        const xv = X[i]![j]!;
-        xtx[0]![j + 1]! += w * xv;
-        xtx[j + 1]![0]! += w * xv;
+        const xv = X[i][j];
+        xtx[0][j + 1]! += w * xv;
+        xtx[j + 1][0]! += w * xv;
         xtz[j + 1]! += w * xv * z;
       }
     }
 
     for (let ci = 0; ci < k; ci++) {
       for (let cj = ci + 1; cj < k; cj++) {
-        xtx[cj]![ci]! = xtx[ci]![cj]!;
+        xtx[cj][ci] = xtx[ci][cj]!;
       }
     }
-    for (let ci = 0; ci < k; ci++) xtx[ci]![ci]! += 1e-8;
+    for (let ci = 0; ci < k; ci++) xtx[ci][ci]! += 1e-8;
 
     const aug = xtx.map((row, ri) => [...row, xtz[ri]!]);
     for (let col = 0; col < k; col++) {
-      let mr = col, mv = Math.abs(aug[col]![col]!);
+      let mr = col, mv = Math.abs(aug[col][col]);
       for (let r = col + 1; r < k; r++) {
-        if (Math.abs(aug[r]![col]!) > mv) { mv = Math.abs(aug[r]![col]!); mr = r; }
+        if (Math.abs(aug[r][col]) > mv) { mv = Math.abs(aug[r][col]); mr = r; }
       }
       if (mv < 1e-12) continue;
-      if (mr !== col) [aug[col], aug[mr]] = [aug[mr]!, aug[col]!];
-      const piv = aug[col]![col]!;
-      for (let c = col; c <= k; c++) aug[col]![c]! /= piv;
+      if (mr !== col) [aug[col], aug[mr]] = [aug[mr], aug[col]];
+      const piv = aug[col][col]!;
+      for (let c = col; c <= k; c++) aug[col][c]! /= piv;
       for (let r = 0; r < k; r++) {
         if (r === col) continue;
-        const f = aug[r]![col]!;
+        const f = aug[r][col]!;
         if (f === 0) continue;
-        for (let c = col; c <= k; c++) aug[r]![c]! -= f * aug[col]![c]!;
+        for (let c = col; c <= k; c++) aug[r][c]! -= f * aug[col][c]!;
       }
     }
     beta = aug.map(r => r[k]!);
@@ -410,7 +410,7 @@ function estimatePropensity(X: number[][], t: number[]): number[] {
 }
 
 function predictLinear(x: number[], beta: number[]): number {
-  let s = beta[0]!;
+  let s = beta[0];
   for (let j = 0; j < x.length; j++) s += (beta[j + 1] ?? 0) * (x[j] ?? 0);
   return s;
 }

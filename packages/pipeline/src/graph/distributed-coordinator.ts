@@ -108,9 +108,9 @@ export class DistributedCoordinator {
 
       if (merged.keepEdge) {
         mergedEdges.push({
-          source: source!,
-          target: target!,
-          lag: lag!,
+          source: source,
+          target: target,
+          lag: lag,
           pValue: merged.pValue,
           strength: merged.testStatistic,
           consensus: merged.consensus,

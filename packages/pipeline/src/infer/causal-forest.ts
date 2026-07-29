@@ -114,7 +114,7 @@ export class CausalForest {
    */
   train(X: number[][], y: number[], t: number[]): void {
     const n = X.length;
-    const p = n > 0 ? X[0]!.length : 0;
+    const p = n > 0 ? X[0].length : 0;
     const cfg = this.config;
     this.nSamples = n;
     this.trees = [];
@@ -147,15 +147,15 @@ export class CausalForest {
       // Accumulate in-bag predictions (for feature importance)
       for (let i = 0; i < n; i++) {
         if (!oobFlags[i]) {
-          this._inBagPreds[i] += predictTree(tree, X[i]!);
+          this._inBagPreds[i] += predictTree(tree, X[i]);
         }
       }
     }
 
     // Average in-bag predictions
     for (let i = 0; i < n; i++) {
-      const nInBag = this.oobMask.reduce((c, mask) => c + (mask[i]! ? 0 : 1), 0);
-      this._inBagPreds[i] = nInBag > 0 ? this._inBagPreds[i]! / nInBag : 0;
+      const nInBag = this.oobMask.reduce((c, mask) => c + (mask[i] ? 0 : 1), 0);
+      this._inBagPreds[i] = nInBag > 0 ? this._inBagPreds[i] / nInBag : 0;
     }
   }
 
@@ -185,12 +185,12 @@ export class CausalForest {
    * providing an unbiased estimate of τ(x_i).
    */
   predictOOBOne(i: number, X: number[][]): number {
-    const xi = X[i]!;
+    const xi = X[i];
     let sum = 0;
     let count = 0;
     for (let b = 0; b < this.trees.length; b++) {
-      if (this.oobMask[b]![i]) {
-        sum += predictTree(this.trees[b]!, xi);
+      if (this.oobMask[b][i]) {
+        sum += predictTree(this.trees[b], xi);
         count++;
       }
     }
@@ -217,8 +217,8 @@ export class CausalForest {
     const treePredsPerSample: number[][] = Array.from({ length: n }, () => []);
     for (let b = 0; b < this.trees.length; b++) {
       for (let i = 0; i < n; i++) {
-        if (this.oobMask[b]![i]) {
-          treePredsPerSample[i]!.push(predictTree(this.trees[b]!, X[i]!));
+        if (this.oobMask[b][i]) {
+          treePredsPerSample[i].push(predictTree(this.trees[b], X[i]));
         }
       }
     }
@@ -229,7 +229,7 @@ export class CausalForest {
     let sumSq = 0;
     for (let i = 0; i < n; i++) {
       // Approximate Δ_i as the deviation of sample i's OOB preds from overall
-      const sampleOOBs = treePredsPerSample[i]!;
+      const sampleOOBs = treePredsPerSample[i];
       if (sampleOOBs.length === 0) continue;
       const sampleMean = sampleOOBs.reduce((a, b) => a + b, 0) / sampleOOBs.length;
       const delta = sampleMean - overallMean;
@@ -304,13 +304,13 @@ function buildCausalTree(
 
   for (const v of vars) {
     for (const s of randomSplitPoints(structIdx, v, X, 10)) {
-      const left = structIdx.filter(i => (X[i]![v] ?? 0) <= s);
-      const right = structIdx.filter(i => (X[i]![v] ?? 0) > s);
+      const left = structIdx.filter(i => (X[i][v] ?? 0) <= s);
+      const right = structIdx.filter(i => (X[i][v] ?? 0) > s);
 
       if (left.length < minLeaf || right.length < minLeaf) continue;
 
-      const leftEst = estIdx.filter(i => (X[i]![v] ?? 0) <= s);
-      const rightEst = estIdx.filter(i => (X[i]![v] ?? 0) > s);
+      const leftEst = estIdx.filter(i => (X[i][v] ?? 0) <= s);
+      const rightEst = estIdx.filter(i => (X[i][v] ?? 0) > s);
 
       if (leftEst.length < minLeaf || rightEst.length < minLeaf) continue;
 
@@ -324,10 +324,10 @@ function buildCausalTree(
 
   if (bestVar < 0) return { isLeaf: true, tau, n: estIdx.length };
 
-  const leftStruct = structIdx.filter(i => (X[i]![bestVar] ?? 0) <= bestVal);
-  const rightStruct = structIdx.filter(i => (X[i]![bestVar] ?? 0) > bestVal);
-  const leftEst = estIdx.filter(i => (X[i]![bestVar] ?? 0) <= bestVal);
-  const rightEst = estIdx.filter(i => (X[i]![bestVar] ?? 0) > bestVal);
+  const leftStruct = structIdx.filter(i => (X[i][bestVar] ?? 0) <= bestVal);
+  const rightStruct = structIdx.filter(i => (X[i][bestVar] ?? 0) > bestVal);
+  const leftEst = estIdx.filter(i => (X[i][bestVar] ?? 0) <= bestVal);
+  const rightEst = estIdx.filter(i => (X[i][bestVar] ?? 0) > bestVal);
 
   return {
     isLeaf: false, splitVar: bestVar, splitVal: bestVal,
@@ -347,7 +347,7 @@ function computeFeatureImportance(
 ): FeatureImportance[] {
   const n = X.length;
   if (n === 0) return [];
-  const p = X[0]!.length;
+  const p = X[0].length;
   if (p === 0) return [];
   const rng = mulberry(seed + 9999);
 
@@ -362,7 +362,7 @@ function computeFeatureImportance(
     // (features that drive τ heterogeneity would change predictions when permuted)
     let baselineError = 0;
     for (let i = 0; i < n; i++) {
-      baselineError += oobPreds[i]! * oobPreds[i]!;
+      baselineError += oobPreds[i] * oobPreds[i];
     }
 
     // Permute feature v and recompute
@@ -378,7 +378,7 @@ function computeFeatureImportance(
       // Assign random OOB pred from another sample (crude permutation)
       const j = Math.floor(rng() * n);
       permOobPreds[i] = oobPreds[j]!;
-      permutedError += permOobPreds[i]! * permOobPreds[i]!;
+      permutedError += permOobPreds[i] * permOobPreds[i];
     }
 
     // Importance = increase in MSE / total MSE
@@ -408,10 +408,10 @@ function permuteColumn(X: number[][], col: number, rng: () => number): number[][
   // Fisher-Yates shuffle
   for (let i = n - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
-    [values[i], values[j]] = [values[j]!, values[i]!];
+    [values[i], values[j]] = [values[j], values[i]];
   }
   for (let i = 0; i < n; i++) {
-    permuted[i]![col] = values[i]!;
+    permuted[i][col] = values[i]!;
   }
   return permuted;
 }
@@ -421,8 +421,8 @@ function permuteColumn(X: number[][], col: number, rng: () => number): number[][
 function estimateATE(X: number[][], y: number[], t: number[], indices: number[]): number {
   let tSum = 0, tN = 0, cSum = 0, cN = 0;
   for (const i of indices) {
-    if ((t[i] ?? 0) > 0.5) { tSum += y[i]!; tN++; }
-    else { cSum += y[i]!; cN++; }
+    if ((t[i] ?? 0) > 0.5) { tSum += y[i]; tN++; }
+    else { cSum += y[i]; cN++; }
   }
   return (tN > 0 ? tSum / tN : 0) - (cN > 0 ? cSum / cN : 0);
 }
@@ -448,12 +448,12 @@ function subsample(n: number, size: number, seed: number): number[] {
 
 function randomSplitPoints(indices: number[], varIdx: number, X: number[][], k: number): number[] {
   if (indices.length === 0) return [];
-  const vals = indices.map(i => X[i]![varIdx]!).filter(v => v != null);
+  const vals = indices.map(i => X[i][varIdx]).filter(v => v != null);
   vals.sort((a, b) => a - b);
   if (vals.length <= 1) return [vals[0] ?? 0];
   const pts: number[] = [];
   for (let j = 1; j <= k && j < vals.length; j++) {
-    pts.push(vals[Math.floor(j * vals.length / (k + 1))]!);
+    pts.push(vals[Math.floor(j * vals.length / (k + 1))]);
   }
   return pts;
 }

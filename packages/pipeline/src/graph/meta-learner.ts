@@ -267,7 +267,7 @@ export function recommendAlgorithm(
   return {
     characteristics: chars,
     recommendations: ranked.slice(0, 3),
-    best: ranked[0]!.algorithm,
+    best: ranked[0].algorithm,
   };
 }
 
@@ -279,9 +279,9 @@ function pearsonCorrelation(data: Matrix, colA: number, colB: number): number {
   const b = data.getColumn(colB);
   let sumA = 0, sumB = 0, sumAB = 0, sumA2 = 0, sumB2 = 0;
   for (let i = 0; i < n; i++) {
-    sumA += a[i]!; sumB += b[i]!;
-    sumAB += a[i]! * b[i]!;
-    sumA2 += a[i]! * a[i]!; sumB2 += b[i]! * b[i]!;
+    sumA += a[i]; sumB += b[i];
+    sumAB += a[i] * b[i];
+    sumA2 += a[i] * a[i]; sumB2 += b[i] * b[i];
   }
   const denom = Math.sqrt((n * sumA2 - sumA * sumA) * (n * sumB2 - sumB * sumB));
   return denom > 0 ? (n * sumAB - sumA * sumB) / denom : 0;
@@ -293,7 +293,7 @@ function rankArray(values: number[]): number[] {
   indexed.sort((a, b) => a.v - b.v);
   const ranks = new Array(n);
   for (let i = 0; i < n; i++) {
-    ranks[indexed[i]!.i] = (i + 1) / n;
+    ranks[indexed[i].i] = (i + 1) / n;
   }
   return ranks as number[];
 }
@@ -304,8 +304,8 @@ function kendallTau(ranksA: number[], ranksB: number[]): number {
   let discordant = 0;
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
-      const da = ranksA[i]! - ranksA[j]!;
-      const db = ranksB[i]! - ranksB[j]!;
+      const da = ranksA[i] - ranksA[j];
+      const db = ranksB[i] - ranksB[j];
       if (da * db > 0) concordant++;
       else if (da * db < 0) discordant++;
     }

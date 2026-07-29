@@ -877,8 +877,8 @@ function logGamma(x: number): number {
     1.5056327351493116e-7,
   ];
 
-  let z = x;
-  let base = z + g + 0.5;
+  const z = x;
+  const base = z + g + 0.5;
   let s = c[0]!;
   for (let i = 1; i < c.length; i++) {
     s += c[i]! / (z + i - 1);

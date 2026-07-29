@@ -77,8 +77,8 @@ function simpleCorrelation(data: number[][], a: number, b: number): number {
   const n = data.length;
   let sumA = 0, sumB = 0, sumAB = 0, sumA2 = 0, sumB2 = 0;
   for (let i = 0; i < n; i++) {
-    const va = data[i]![a]!;
-    const vb = data[i]![b]!;
+    const va = data[i][a];
+    const vb = data[i][b];
     sumA += va; sumB += vb;
     sumAB += va * vb; sumA2 += va * va; sumB2 += vb * vb;
   }
@@ -110,8 +110,8 @@ function partialViaResiduals(
   // Correlation of residuals
   let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
   for (let i = 0; i < n; i++) {
-    const x = rX[i]!;
-    const y = rY[i]!;
+    const x = rX[i];
+    const y = rY[i];
     sumX += x; sumY += y;
     sumXY += x * y; sumX2 += x * x; sumY2 += y * y;
   }
@@ -137,51 +137,51 @@ function olsResiduals(
   const xty: number[] = new Array(k).fill(0) as number[];
 
   for (let row = 0; row < n; row++) {
-    const rd = data[row]!;
+    const rd = data[row];
     for (let ci = 0; ci < k; ci++) {
-      const xv = rd[condCols[ci]!]!;
-      xty[ci] += xv * rd[targetCol]!;
+      const xv = rd[condCols[ci]];
+      xty[ci] += xv * rd[targetCol];
       for (let cj = 0; cj <= ci; cj++) {
-        xtx[ci]![cj] += xv * rd[condCols[cj]!]!;
+        xtx[ci][cj] += xv * rd[condCols[cj]];
       }
     }
   }
   for (let ci = 0; ci < k; ci++) {
     for (let cj = ci + 1; cj < k; cj++) {
-      xtx[cj]![ci] = xtx[ci]![cj]!;
+      xtx[cj][ci] = xtx[ci][cj]!;
     }
   }
 
   // Gauss-Jordan solve
-  const aug: number[][] = Array.from({ length: k }, (_, r) => [...xtx[r]!, xty[r]!]);
+  const aug: number[][] = Array.from({ length: k }, (_, r) => [...xtx[r], xty[r]]);
   for (let col = 0; col < k; col++) {
     let maxRow = col;
-    let maxV = Math.abs(aug[col]![col]!);
+    let maxV = Math.abs(aug[col][col]);
     for (let r = col + 1; r < k; r++) {
-      const v = Math.abs(aug[r]![col]!);
+      const v = Math.abs(aug[r][col]);
       if (v > maxV) { maxV = v; maxRow = r; }
     }
     if (maxV < 1e-12) continue;
-    if (maxRow !== col) [aug[col], aug[maxRow]] = [aug[maxRow]!, aug[col]!];
-    const piv = aug[col]![col]!;
-    for (let c = col; c <= k; c++) aug[col]![c]! /= piv;
+    if (maxRow !== col) [aug[col], aug[maxRow]] = [aug[maxRow], aug[col]];
+    const piv = aug[col][col];
+    for (let c = col; c <= k; c++) aug[col][c] /= piv;
     for (let r = 0; r < k; r++) {
       if (r === col) continue;
-      const f = aug[r]![col]!;
+      const f = aug[r][col];
       if (f === 0) continue;
-      for (let c = col; c <= k; c++) aug[r]![c]! -= f * aug[col]![c]!;
+      for (let c = col; c <= k; c++) aug[r][c] -= f * aug[col][c];
     }
   }
 
   const beta: number[] = new Array(k).fill(0) as number[];
-  for (let ci = 0; ci < k; ci++) beta[ci] = aug[ci]![k]!;
+  for (let ci = 0; ci < k; ci++) beta[ci] = aug[ci][k]!;
 
   const res: number[] = new Array(n);
   for (let row = 0; row < n; row++) {
-    const rd = data[row]!;
+    const rd = data[row];
     let yh = 0;
-    for (let ci = 0; ci < k; ci++) yh += beta[ci]! * rd[condCols[ci]!]!;
-    res[row] = rd[targetCol]! - yh;
+    for (let ci = 0; ci < k; ci++) yh += beta[ci] * rd[condCols[ci]];
+    res[row] = rd[targetCol] - yh;
   }
   return res;
 }

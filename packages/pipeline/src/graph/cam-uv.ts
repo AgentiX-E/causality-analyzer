@@ -103,7 +103,7 @@ export function camUVAlgorithm(
   // ── Step 2: Causal ordering via score maximization ────────────────────
   const remaining = new Set(pairwiseScores);
   const order: number[] = [];
-  let remainingVars = new Set(Array.from({ length: d }, (_, i) => i));
+  const remainingVars = new Set(Array.from({ length: d }, (_, i) => i));
 
   while (remainingVars.size > 0) {
     // Find variable with highest "sink" score (most likely to be at end of chain)
@@ -150,8 +150,8 @@ export function camUVAlgorithm(
     for (const c of kept) {
       if (c.score > 0) {
         keptEdges.push({
-          source: nodeNames[c.from]!,
-          target: nodeNames[j]!,
+          source: nodeNames[c.from],
+          target: nodeNames[j],
           weight: Math.min(1, Math.max(0, c.score)),
         });
       }
@@ -160,7 +160,7 @@ export function camUVAlgorithm(
     // Track removed edges as potential unobserved confounders
     for (const c of candidates.slice(cfg.maxParents)) {
       if (c.score > 0) {
-        removedPairs.push([nodeNames[c.from]!, nodeNames[j]!]);
+        removedPairs.push([nodeNames[c.from], nodeNames[j]]);
       }
     }
   }
@@ -190,7 +190,7 @@ export function camUVAlgorithm(
     graph,
     edgeScores,
     removedEdges: removedPairs,
-    order: order.map(i => nodeNames[i]!),
+    order: order.map(i => nodeNames[i]),
   };
 }
 
@@ -225,7 +225,7 @@ function fitAdditivePair(
 
   // Build B-spline basis matrix (n × nKnots+2)
   const basis = buildBSplineBasis(xNorm, nKnots);
-  const k = basis[0]!.length;
+  const k = basis[0].length;
 
   // OLS: y_norm = B * beta + ε
   const XtX = Array.from({ length: k }, () => new Array(k).fill(0));
@@ -234,21 +234,21 @@ function fitAdditivePair(
 
   for (let row = 0; row < n; row++) {
     for (let ci = 0; ci < k; ci++) {
-      Xty[ci] += basis[row]![ci]! * yNorm[row]!;
+      Xty[ci] += basis[row][ci] * yNorm[row];
       for (let cj = 0; cj <= ci; cj++) {
-        XtX[ci]![cj] += basis[row]![ci]! * basis[row]![cj]!;
+        XtX[ci][cj] += basis[row][ci] * basis[row][cj];
       }
     }
   }
   for (let ci = 0; ci < k; ci++) {
     for (let cj = ci + 1; cj < k; cj++) {
-      XtX[cj]![ci] = XtX[ci]![cj]!;
+      XtX[cj][ci] = XtX[ci][cj]!;
     }
   }
 
   // Regularized solve: (XtX + λI)β = Xty
   const lambda = 0.01;
-  for (let ci = 0; ci < k; ci++) XtX[ci]![ci]! += lambda;
+  for (let ci = 0; ci < k; ci++) XtX[ci][ci]! += lambda;
 
   const beta = gaussJordanSolve(XtX, Xty);
 
@@ -258,19 +258,19 @@ function fitAdditivePair(
   for (let row = 0; row < n; row++) {
     let yHat = 0;
     for (let ci = 0; ci < k; ci++) {
-      yHat += basis[row]![ci]! * beta[ci]!;
+      yHat += basis[row][ci] * beta[ci];
     }
-    const resid = yNorm[row]! - yHat;
+    const resid = yNorm[row] - yHat;
     residuals.push(resid);
     rss += resid * resid;
-    tss += yNorm[row]! * yNorm[row]!;
+    tss += yNorm[row] * yNorm[row];
   }
 
   // Strength = R² of the additive fit
   const rSquared = tss > 0 ? Math.max(0, Math.min(1, 1 - rss / tss)) : 0;
 
   // Test residual independence: Fisher Z test on residuals vs X_i
-  const testData = residuals.map((r, i) => [r, xNorm[i]!]);
+  const testData = residuals.map((r, i) => [r, xNorm[i]]);
 
   // Build a design matrix for Fisher Z test
   const pValue = fisherZHelper(testData, 0, 1, []);
@@ -300,8 +300,8 @@ function fisherZHelper(
     // Simple correlation
     let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
     for (const row of data) {
-      const x = row[colA]!;
-      const y = row[colB]!;
+      const x = row[colA];
+      const y = row[colB];
       sumX += x; sumY += y;
       sumXY += x * y; sumX2 += x * x; sumY2 += y * y;
     }
@@ -322,8 +322,8 @@ function fisherZHelper(
 
   let sumA = 0, sumB = 0, sumAB = 0, sumA2 = 0, sumB2 = 0;
   for (let i = 0; i < n; i++) {
-    const a = residA[i]!;
-    const b = residB[i]!;
+    const a = residA[i];
+    const b = residB[i];
     sumA += a; sumB += b;
     sumAB += a * b; sumA2 += a * a; sumB2 += b * b;
   }
@@ -344,28 +344,28 @@ function olsResiduals(data: number[][], targetCol: number, condCols: number[]): 
 
   for (let row = 0; row < n; row++) {
     for (let ci = 0; ci < k; ci++) {
-      Xty[ci] += (data[row]![condCols[ci]!]!) * (data[row]![targetCol]!);
+      Xty[ci] += (data[row][condCols[ci]]) * (data[row][targetCol]);
       for (let cj = 0; cj <= ci; cj++) {
-        XtX[ci]![cj] += (data[row]![condCols[ci]!]!) * (data[row]![condCols[cj]!]!);
+        XtX[ci][cj] += (data[row][condCols[ci]]) * (data[row][condCols[cj]]);
       }
     }
   }
   for (let ci = 0; ci < k; ci++) {
     for (let cj = ci + 1; cj < k; cj++) {
-      XtX[cj]![ci] = XtX[ci]![cj]!;
+      XtX[cj][ci] = XtX[ci][cj]!;
     }
   }
 
-  for (let ci = 0; ci < k; ci++) XtX[ci]![ci]! += 1e-10;
+  for (let ci = 0; ci < k; ci++) XtX[ci][ci]! += 1e-10;
   const beta = gaussJordanSolve(XtX, Xty);
 
   const res: number[] = [];
   for (let row = 0; row < n; row++) {
     let yh = 0;
     for (let ci = 0; ci < k; ci++) {
-      yh += beta[ci]! * (data[row]![condCols[ci]!]!);
+      yh += beta[ci] * (data[row][condCols[ci]]);
     }
-    res.push((data[row]![targetCol]!) - yh);
+    res.push((data[row][targetCol]) - yh);
   }
   return res;
 }
@@ -386,21 +386,21 @@ function buildBSplineBasis(x: number[], nKnots: number): number[][] {
   const xs = [...x].sort((a, b) => a - b);
   const innerKnots: number[] = [];
   for (let i = 1; i <= nKnots; i++) {
-    innerKnots.push(xs[Math.floor(i * xs.length / (nKnots + 1))]!);
+    innerKnots.push(xs[Math.floor(i * xs.length / (nKnots + 1))]);
   }
 
   // Full knot vector with clamped boundaries
   const knots: number[] = [];
-  for (let i = 0; i <= degree; i++) knots.push(xs[0]!);
+  for (let i = 0; i <= degree; i++) knots.push(xs[0]);
   knots.push(...innerKnots);
-  for (let i = 0; i <= degree; i++) knots.push(xs[xs.length - 1]!);
+  for (let i = 0; i <= degree; i++) knots.push(xs[xs.length - 1]);
 
   const nBasis = knots.length - degree - 1; // = nKnots + degree + 1 => nKnots + 4
 
   // Build basis matrix using de Boor recursion
   const basis: number[][] = [];
   for (let row = 0; row < n; row++) {
-    const xi = x[row]!;
+    const xi = x[row];
     // Compute all basis values at xi
     const N: number[][] = Array.from(
       { length: degree + 1 },
@@ -409,32 +409,32 @@ function buildBSplineBasis(x: number[], nKnots: number): number[][] {
 
     // Degree 0: step functions
     for (let j = 0; j < nBasis; j++) {
-      N[0]![j]! = (xi >= knots[j]! && xi < knots[j + 1]!) ? 1 : 0;
+      N[0][j] = (xi >= knots[j] && xi < knots[j + 1]) ? 1 : 0;
       // Handle right boundary (include the last point)
-      if (j === nBasis - 1 && xi >= knots[j]! && xi <= knots[j + 1]!) {
-        N[0]![j]! = 1;
+      if (j === nBasis - 1 && xi >= knots[j] && xi <= knots[j + 1]) {
+        N[0][j] = 1;
       }
     }
 
     // Higher degrees via de Boor recursion
     for (let d = 1; d <= degree; d++) {
       for (let j = 0; j < nBasis - d; j++) {
-        const left = knots[j + d]! - knots[j]!;
-        const right = knots[j + d + 1]! - knots[j + 1]!;
+        const left = knots[j + d] - knots[j];
+        const right = knots[j + d + 1] - knots[j + 1];
 
         let term = 0;
         if (left > 1e-10) {
-          term += ((xi - knots[j]!) / left) * N[d - 1]![j]!;
+          term += ((xi - knots[j]) / left) * N[d - 1][j];
         }
         if (right > 1e-10) {
-          term += ((knots[j + d + 1]! - xi) / right) * N[d - 1]![j + 1]!;
+          term += ((knots[j + d + 1] - xi) / right) * N[d - 1][j + 1];
         }
-        N[d]![j]! = term;
+        N[d][j] = term;
       }
     }
 
     // Use degree-d values (N[degree]) as basis functions
-    basis.push(N[degree]!.slice(0, nKnots + 2));
+    basis.push(N[degree].slice(0, nKnots + 2));
   }
 
   return basis;
@@ -444,29 +444,29 @@ function buildBSplineBasis(x: number[], nKnots: number): number[][] {
 
 function gaussJordanSolve(A: number[][], b: number[]): number[] {
   const k = A.length;
-  const aug: number[][] = A.map((row, ri) => [...row, b[ri]!]);
+  const aug: number[][] = A.map((row, ri) => [...row, b[ri]]);
 
   for (let col = 0; col < k; col++) {
     let maxRow = col;
-    let maxV = Math.abs(aug[col]![col]!);
+    let maxV = Math.abs(aug[col][col]);
     for (let r = col + 1; r < k; r++) {
-      if (Math.abs(aug[r]![col]!) > maxV) { maxV = Math.abs(aug[r]![col]!); maxRow = r; }
+      if (Math.abs(aug[r][col]) > maxV) { maxV = Math.abs(aug[r][col]); maxRow = r; }
     }
     if (maxV < 1e-12) continue;
-    if (maxRow !== col) [aug[col], aug[maxRow]] = [aug[maxRow]!, aug[col]!];
+    if (maxRow !== col) [aug[col], aug[maxRow]] = [aug[maxRow], aug[col]];
 
-    const piv = aug[col]![col]!;
-    for (let c = col; c <= k; c++) aug[col]![c]! /= piv;
+    const piv = aug[col][col];
+    for (let c = col; c <= k; c++) aug[col][c] /= piv;
 
     for (let r = 0; r < k; r++) {
       if (r === col) continue;
-      const f = aug[r]![col]!;
+      const f = aug[r][col];
       if (f === 0) continue;
-      for (let c = col; c <= k; c++) aug[r]![c]! -= f * aug[col]![c]!;
+      for (let c = col; c <= k; c++) aug[r][c] -= f * aug[col][c];
     }
   }
 
-  return aug.map(row => row[k]!);
+  return aug.map(row => row[k]);
 }
 
 function normalCDFApprox(z: number): number {

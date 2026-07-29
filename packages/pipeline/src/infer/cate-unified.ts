@@ -49,7 +49,7 @@ export function unifiedCATE(
   switch (estimator) {
     case 'linear': {
       // Build combined data: [T, Y, X...]
-      const data = X.map((row, i) => [t[i]!, y[i]!, ...row]);
+      const data = X.map((row, i) => [t[i], y[i], ...row]);
       const featureIndices = Array.from({ length: X[0]?.length ?? 0 }, (_, j) => j + 2);
       const { cateFn } = estimateCATE(data, 0, 1, featureIndices);
       const cate = X.map(row => cateFn(row));
@@ -66,7 +66,7 @@ export function unifiedCATE(
     }
 
     case 'causal-forest': {
-      const forest = new CausalForest(config as unknown as CausalForestConfig);
+      const forest = new CausalForest(config);
       forest.train(X, y, t);
       const cate = forest.predict(X);
       const baselineATE = cate.reduce((a, b) => a + b, 0) / cate.length;
@@ -99,19 +99,19 @@ export function compareCATEModels(
   const correlations: Array<{ modelA: string; modelB: string; correlation: number }> = [];
   for (let i = 0; i < results.length; i++) {
     for (let j = i + 1; j < results.length; j++) {
-      const a = results[i]!.cate;
-      const b = results[j]!.cate;
+      const a = results[i].cate;
+      const b = results[j].cate;
       const n = a.length;
       let sumA = 0, sumB = 0, sumAB = 0, sumA2 = 0, sumB2 = 0;
       for (let k = 0; k < n; k++) {
-        sumA += a[k]!; sumB += b[k]!;
-        sumAB += a[k]! * b[k]!;
-        sumA2 += a[k]! * a[k]!; sumB2 += b[k]! * b[k]!;
+        sumA += a[k]; sumB += b[k];
+        sumAB += a[k] * b[k];
+        sumA2 += a[k] * a[k]; sumB2 += b[k] * b[k];
       }
       const denom = Math.sqrt((n * sumA2 - sumA * sumA) * (n * sumB2 - sumB * sumB));
       correlations.push({
-        modelA: results[i]!.name,
-        modelB: results[j]!.name,
+        modelA: results[i].name,
+        modelB: results[j].name,
         correlation: denom === 0 ? 0 : (n * sumAB - sumA * sumB) / denom,
       });
     }
@@ -125,13 +125,13 @@ export function compareCATEModels(
     return rank;
   });
 
-  const n = ranks[0]!.length;
+  const n = ranks[0].length;
   const m = ranks.length;
   let sumRSq = 0;
   const meanRank = (n + 1) / 2;
   for (let i = 0; i < n; i++) {
     let total = 0;
-    for (let j = 0; j < m; j++) total += ranks[j]![i]!;
+    for (let j = 0; j < m; j++) total += ranks[j][i];
     sumRSq += (total - m * meanRank) ** 2;
   }
   const concordance = n > 1 ? (12 * sumRSq) / (m * m * (n * n * n - n)) : 1;

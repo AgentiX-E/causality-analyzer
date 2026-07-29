@@ -66,7 +66,7 @@ export function polynomialModel(degree: number = 2): NuisanceModel {
       const expanded = [...x];
       for (let d = 2; d <= degree; d++) {
         for (let i = 0; i < x.length; i++) {
-          expanded.push(Math.pow(x[i]!, d));
+          expanded.push(Math.pow(x[i], d));
         }
         // Interaction terms for degree 2 only (to keep it manageable)
         if (d === 2) {
@@ -80,7 +80,7 @@ export function polynomialModel(degree: number = 2): NuisanceModel {
       return expanded;
     };
 
-    const expandedDim = expandX(X[0]!).length;
+    const expandedDim = expandX(X[0]).length;
     const beta = fitLinearRegression(
       X.map(expandX),
       y,
@@ -120,7 +120,7 @@ function resolveNuisanceModels(options: DMLOptions): {
 function simplePropensityModel(): NuisanceModel {
   return (X: number[][], t: number[], trainIdx: number[]): ((x: number[]) => number) => {
     let sum = 0;
-    for (const i of trainIdx) sum += t[i]!;
+    for (const i of trainIdx) sum += t[i];
     const prop = Math.max(0.1, Math.min(0.9, sum / trainIdx.length));
     return () => prop;
   };
@@ -164,11 +164,11 @@ export function doubleMLATE(
 
     let num = 0, den = 0;
     for (const i of testIdx) {
-      const rY = y[i]! - yPred(X[i]!);
-      const rawTPred = tPred(X[i]!);
+      const rY = y[i] - yPred(X[i]);
+      const rawTPred = tPred(X[i]);
       // Clamp propensity and apply sigmoid for logistic-like calibration
       const clampedTPred = rawTPred > 10 ? 0.95 : rawTPred < -10 ? 0.05 : sigmoidFn(rawTPred);
-      const rT = t[i]! - clampedTPred;
+      const rT = t[i] - clampedTPred;
       num += rY * rT;
       den += rT * rT;
     }
@@ -225,10 +225,10 @@ export function doubleMLCATE(
     const tPred = propensityModel(X, t, trainIdx);
 
     for (const i of testIdx) {
-      const rY = y[i]! - yPred(X[i]!);
-      const rawTPred = tPred(X[i]!);
+      const rY = y[i] - yPred(X[i]);
+      const rawTPred = tPred(X[i]);
       const clampedTPred = rawTPred > 10 ? 0.95 : rawTPred < -10 ? 0.05 : sigmoidFn(rawTPred);
-      const rT = t[i]! - clampedTPred;
+      const rT = t[i] - clampedTPred;
       scores[i] = rY / Math.max(0.1, Math.abs(rT) < 0.01 ? 0.1 : rT);
     }
   }
@@ -239,39 +239,39 @@ export function doubleMLCATE(
   const Xty = new Float64Array(p + 1);
 
   for (let i = 0; i < n; i++) {
-    XtX[0]![0]! += 1;
-    Xty[0]! += scores[i]!;
+    XtX[0][0] += 1;
+    Xty[0] += scores[i];
     for (let j = 0; j < p; j++) {
-      const xij = X[i]![j]!;
-      XtX[0]![j + 1]! += xij;
-      XtX[j + 1]![0]! += xij;
-      Xty[j + 1]! += xij * scores[i]!;
+      const xij = X[i][j];
+      XtX[0][j + 1] += xij;
+      XtX[j + 1][0] += xij;
+      Xty[j + 1] += xij * scores[i];
       for (let l = j; l < p; l++) {
-        XtX[j + 1]![l + 1]! += xij * X[i]![l]!;
-        XtX[l + 1]![j + 1]! = XtX[j + 1]![l + 1]!;
+        XtX[j + 1][l + 1] += xij * X[i][l];
+        XtX[l + 1][j + 1] = XtX[j + 1][l + 1]!;
       }
     }
   }
 
-  const aug = XtX.map((row, ri) => [...Array.from(row), Xty[ri]!]);
+  const aug = XtX.map((row, ri) => [...Array.from(row), Xty[ri]]);
   const k = p + 1;
   for (let col = 0; col < k; col++) {
     let pivot = col;
     for (let row = col + 1; row < k; row++) {
-      if (Math.abs(aug[row]![col]!) > Math.abs(aug[pivot]![col]!)) pivot = row;
+      if (Math.abs(aug[row][col]) > Math.abs(aug[pivot][col])) pivot = row;
     }
-    [aug[col], aug[pivot]] = [aug[pivot]!, aug[col]!];
-    if (Math.abs(aug[col]![col]!) < 1e-12) continue;
-    for (let j2 = col; j2 <= k; j2++) aug[col]![j2]! /= aug[col]![col]!;
+    [aug[col], aug[pivot]] = [aug[pivot], aug[col]];
+    if (Math.abs(aug[col][col]) < 1e-12) continue;
+    for (let j2 = col; j2 <= k; j2++) aug[col][j2] /= aug[col][col];
     for (let row = 0; row < k; row++) {
       if (row === col) continue;
-      const f = aug[row]![col]!;
-      for (let j2 = col; j2 <= k; j2++) aug[row]![j2]! -= f * aug[col]![j2]!;
+      const f = aug[row][col];
+      for (let j2 = col; j2 <= k; j2++) aug[row][j2] -= f * aug[col][j2];
     }
   }
 
-  const beta0 = aug[0]![k]!;
-  const betas = aug.slice(1).map(r => r[k]!);
+  const beta0 = aug[0][k];
+  const betas = aug.slice(1).map(r => r[k]);
 
   return {
     baselineATE: ateResult.ate,
@@ -413,7 +413,7 @@ function fitLinearRegression(X: number[][], target: number[], idx: number[], p: 
 // ── Helpers ───────────────────────────────────────────────────────────
 
 function predictLinear(x: number[], beta: number[]): number {
-  let s = beta[0]!;
+  let s = beta[0];
   for (let j = 0; j < x.length; j++) s += (beta[j + 1] ?? 0) * (x[j] ?? 0);
   return s;
 }
@@ -423,8 +423,8 @@ function sigmoidFn(z: number): number { return 1 / (1 + Math.exp(-Math.max(-15, 
 function naiveATE(y: number[], t: number[]): number {
   let tSum = 0, tN = 0, cSum = 0, cN = 0;
   for (let i = 0; i < y.length; i++) {
-    if (t[i]! > 0.5) { tSum += y[i]!; tN++; }
-    else { cSum += y[i]!; cN++; }
+    if (t[i] > 0.5) { tSum += y[i]; tN++; }
+    else { cSum += y[i]; cN++; }
   }
   return (tN > 0 ? tSum / tN : 0) - (cN > 0 ? cSum / cN : 0);
 }
@@ -434,7 +434,7 @@ function seededShuffle<T>(arr: T[], seed: number): T[] {
   const rng = (): number => { s = (s * 1664525 + 1013904223) & 0x7FFFFFFF; return s / 0x7FFFFFFF; };
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
-    [arr[i], arr[j]] = [arr[j]!, arr[i]!];
+    [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
 }

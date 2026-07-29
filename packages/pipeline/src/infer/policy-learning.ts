@@ -109,10 +109,10 @@ export class PolicyTree {
     let baselineOutcome = 0;
 
     for (let i = 0; i < X.length; i++) {
-      policyOutcome += decisions[i]! === 1
-        ? (t[i]! > 0.5 ? y[i]! : y[i]! + 0)
-        : (t[i]! <= 0.5 ? y[i]! : y[i]! + 0);
-      baselineOutcome += y[i]!;
+      policyOutcome += decisions[i] === 1
+        ? (t[i] > 0.5 ? y[i] : y[i] + 0)
+        : (t[i] <= 0.5 ? y[i] : y[i] + 0);
+      baselineOutcome += y[i];
     }
 
     const policyValue = policyOutcome / X.length;
@@ -146,14 +146,14 @@ export class PolicyTree {
 
     // Leaf decision: treat if average CATE > 0
     let sumCate = 0;
-    for (const i of indices) sumCate += cate[i]!;
+    for (const i of indices) sumCate += cate[i];
     const decision = sumCate / n > 0 ? 1 : 0;
 
     // Compute policy value: average outcome if everyone follows this decision
     let sumValue = 0;
     for (const i of indices) {
-      if (decision === 1 && t[i]! > 0.5) sumValue += y[i]!;
-      else if (decision === 0 && t[i]! <= 0.5) sumValue += y[i]!;
+      if (decision === 1 && t[i] > 0.5) sumValue += y[i];
+      else if (decision === 0 && t[i] <= 0.5) sumValue += y[i];
     }
     const value = sumValue / n;
 
@@ -171,13 +171,13 @@ export class PolicyTree {
     const vars = shuffleRange(p, depth * 7 + this.config.seed).slice(0, mtry);
 
     for (const v of vars) {
-      const values = indices.map(i => X[i]![v]!).sort((a, b) => a - b);
+      const values = indices.map(i => X[i][v]).sort((a, b) => a - b);
       for (let k = 0; k < Math.min(10, values.length - 1); k++) {
-        const split = values[Math.floor((k + 1) * values.length / 11)]!;
+        const split = values[Math.floor((k + 1) * values.length / 11)];
         const left: number[] = [];
         const right: number[] = [];
         for (const i of indices) {
-          if ((X[i]![v] ?? 0) <= split) left.push(i); else right.push(i);
+          if ((X[i][v] ?? 0) <= split) left.push(i); else right.push(i);
         }
 
         if (left.length < this.config.minLeafSize || right.length < this.config.minLeafSize) continue;
@@ -193,8 +193,8 @@ export class PolicyTree {
 
     if (bestVar < 0) return { isLeaf: true, decision, value };
 
-    const left = indices.filter(i => (X[i]![bestVar] ?? 0) <= bestVal);
-    const right = indices.filter(i => (X[i]![bestVar] ?? 0) > bestVal);
+    const left = indices.filter(i => (X[i][bestVar] ?? 0) <= bestVal);
+    const right = indices.filter(i => (X[i][bestVar] ?? 0) > bestVal);
 
     return {
       isLeaf: false,
@@ -261,10 +261,10 @@ export class PolicyForest {
         seed: this.config.seed + b,
       });
 
-      const subX = indices.map(i => X[i]!);
-      const subCate = indices.map(i => cateEstimates[i]!);
-      const subY = indices.map(i => y[i]!);
-      const subT = indices.map(i => t[i]!);
+      const subX = indices.map(i => X[i]);
+      const subCate = indices.map(i => cateEstimates[i]);
+      const subY = indices.map(i => y[i]);
+      const subT = indices.map(i => t[i]);
 
       tree.fit(subX, subCate, subY, subT);
       this.trees.push(tree);
@@ -278,7 +278,7 @@ export class PolicyForest {
     if (this.trees.length === 0) throw new Error('PolicyForest not fitted.');
     return X.map(x => {
       let treat = 0;
-      for (const tree of this.trees) treat += tree.predict([x])[0]!;
+      for (const tree of this.trees) treat += tree.predict([x])[0];
       return treat > this.trees.length / 2 ? 1 : 0;
     });
   }
@@ -294,12 +294,12 @@ export class PolicyForest {
 
     for (let i = 0; i < X.length; i++) {
       if (decisions[i] === 1) {
-        policyOutcome += t[i]! > 0.5 ? y[i]! : y[i]!;
+        policyOutcome += t[i] > 0.5 ? y[i] : y[i];
         treatCount++;
       } else {
-        policyOutcome += t[i]! <= 0.5 ? y[i]! : y[i]!;
+        policyOutcome += t[i] <= 0.5 ? y[i] : y[i];
       }
-      baselineOutcome += y[i]!;
+      baselineOutcome += y[i];
     }
 
     return {
@@ -321,7 +321,7 @@ function shuffleRange(n: number, seed: number): number[] {
   const arr = Array.from({ length: n }, (_, i) => i);
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
-    [arr[i], arr[j]] = [arr[j]!, arr[i]!];
+    [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
 }

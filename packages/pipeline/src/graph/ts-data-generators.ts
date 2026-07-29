@@ -128,15 +128,15 @@ export function generateVARTimeSeries(
 
   // Lagged edges from coeffMatrices
   for (let lag = 0; lag < coeffMatrices.length; lag++) {
-    const matrix = coeffMatrices[lag]!;
+    const matrix = coeffMatrices[lag];
     for (let src = 0; src < d; src++) {
       for (let tgt = 0; tgt < d; tgt++) {
-        if (matrix[src]![tgt] !== 0) {
+        if (matrix[src][tgt] !== 0) {
           truthEdges.push({
-            source: nodeNames[src]!,
-            target: nodeNames[tgt]!,
+            source: nodeNames[src],
+            target: nodeNames[tgt],
             lag: lag + 1,
-            strength: Math.min(1, Math.abs(matrix[src]![tgt]!)) * Math.sign(matrix[src]![tgt]!),
+            strength: Math.min(1, Math.abs(matrix[src][tgt])) * Math.sign(matrix[src][tgt]),
             pValue: 0,
             sourceMark: 'tail',
             targetMark: 'arrow',
@@ -151,12 +151,12 @@ export function generateVARTimeSeries(
   if (contemporaneousCoeffs) {
     for (let src = 0; src < d; src++) {
       for (let tgt = 0; tgt < d; tgt++) {
-        if (contemporaneousCoeffs[src]![tgt] !== 0) {
+        if (contemporaneousCoeffs[src][tgt] !== 0) {
           truthEdges.push({
-            source: nodeNames[src]!,
-            target: nodeNames[tgt]!,
+            source: nodeNames[src],
+            target: nodeNames[tgt],
             lag: 0,
-            strength: Math.min(1, Math.abs(contemporaneousCoeffs[src]![tgt]!)) * Math.sign(contemporaneousCoeffs[src]![tgt]!),
+            strength: Math.min(1, Math.abs(contemporaneousCoeffs[src][tgt])) * Math.sign(contemporaneousCoeffs[src][tgt]),
             pValue: 0,
             sourceMark: 'tail',
             targetMark: 'arrow',
@@ -189,9 +189,9 @@ export function generateVARTimeSeries(
       for (let lag = 0; lag < coeffLag; lag++) {
         const tau = lag + 1;
         if (t - tau >= 0) {
-          const matrix = coeffMatrices[lag]!;
+          const matrix = coeffMatrices[lag];
           for (let src = 0; src < d; src++) {
-            val += (data[t - tau]![src]! ?? 0) * (matrix[src]![vi]! ?? 0);
+            val += (data[t - tau][src] ?? 0) * (matrix[src][vi] ?? 0);
           }
         }
       }
@@ -203,7 +203,7 @@ export function generateVARTimeSeries(
     if (contemporaneousCoeffs) {
       for (let tgt = 0; tgt < d; tgt++) {
         for (let src = 0; src < tgt; src++) {
-          row[tgt]! += row[src]! * (contemporaneousCoeffs[src]![tgt]! ?? 0);
+          row[tgt] += row[src] * (contemporaneousCoeffs[src][tgt] ?? 0);
         }
       }
     }
@@ -213,7 +213,7 @@ export function generateVARTimeSeries(
       const u1 = rng() || 1e-10;
       const u2 = rng() || 1e-10;
       const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-      row[vi]! += z * stds[vi]!;
+      row[vi] += z * stds[vi];
     }
 
     data.push(row);
@@ -250,15 +250,15 @@ export function generateNonlinearVARTimeSeries(
   const truthEdges: TimeSeriesEdge[] = [];
 
   for (let lag = 0; lag < coeffMatrices.length; lag++) {
-    const matrix = coeffMatrices[lag]!;
+    const matrix = coeffMatrices[lag];
     for (let src = 0; src < d; src++) {
       for (let tgt = 0; tgt < d; tgt++) {
-        if (matrix[src]![tgt] !== 0) {
+        if (matrix[src][tgt] !== 0) {
           truthEdges.push({
-            source: nodeNames[src]!,
-            target: nodeNames[tgt]!,
+            source: nodeNames[src],
+            target: nodeNames[tgt],
             lag: lag + 1,
-            strength: Math.min(1, Math.abs(matrix[src]![tgt]!)) * Math.sign(matrix[src]![tgt]!),
+            strength: Math.min(1, Math.abs(matrix[src][tgt])) * Math.sign(matrix[src][tgt]),
             pValue: 0,
             sourceMark: 'tail',
             targetMark: 'arrow',
@@ -272,12 +272,12 @@ export function generateNonlinearVARTimeSeries(
   if (contemporaneousCoeffs) {
     for (let src = 0; src < d; src++) {
       for (let tgt = 0; tgt < d; tgt++) {
-        if (contemporaneousCoeffs[src]![tgt] !== 0) {
+        if (contemporaneousCoeffs[src][tgt] !== 0) {
           truthEdges.push({
-            source: nodeNames[src]!,
-            target: nodeNames[tgt]!,
+            source: nodeNames[src],
+            target: nodeNames[tgt],
             lag: 0,
-            strength: Math.min(1, Math.abs(contemporaneousCoeffs[src]![tgt]!)) * Math.sign(contemporaneousCoeffs[src]![tgt]!),
+            strength: Math.min(1, Math.abs(contemporaneousCoeffs[src][tgt])) * Math.sign(contemporaneousCoeffs[src][tgt]),
             pValue: 0,
             sourceMark: 'tail',
             targetMark: 'arrow',
@@ -321,9 +321,9 @@ export function generateNonlinearVARTimeSeries(
       for (let lag = 0; lag < coeffLag; lag++) {
         const tau = lag + 1;
         if (t - tau >= 0) {
-          const matrix = coeffMatrices[lag]!;
+          const matrix = coeffMatrices[lag];
           for (let src = 0; src < d; src++) {
-            const contrib = (data[t - tau]![src]! ?? 0) * (matrix[src]![vi]! ?? 0);
+            const contrib = (data[t - tau][src] ?? 0) * (matrix[src][vi] ?? 0);
             linearPart += contrib * (1 - nonlinearityStrength);
             nonlinearPart += applyNonlinearity(contrib) * nonlinearityStrength;
           }
@@ -337,7 +337,7 @@ export function generateNonlinearVARTimeSeries(
     if (contemporaneousCoeffs) {
       for (let tgt = 0; tgt < d; tgt++) {
         for (let src = 0; src < tgt; src++) {
-          row[tgt]! += row[src]! * (contemporaneousCoeffs[src]![tgt]! ?? 0);
+          row[tgt] += row[src] * (contemporaneousCoeffs[src][tgt] ?? 0);
         }
       }
     }
@@ -347,7 +347,7 @@ export function generateNonlinearVARTimeSeries(
       const u1 = rng() || 1e-10;
       const u2 = rng() || 1e-10;
       const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-      row[vi]! += z * stds[vi]!;
+      row[vi] += z * stds[vi];
     }
 
     data.push(row);
@@ -451,12 +451,12 @@ export function generateSCMTimeSeries(
     // Add noise to all variables
     const row: number[] = [];
     for (let vi = 0; vi < d; vi++) {
-      const name = nodeNames[vi]!;
-      const baseVal = nameValues.get(name)![t]!;
+      const name = nodeNames[vi];
+      const baseVal = nameValues.get(name)![t];
       const u1 = rng() || 1e-10;
       const u2 = rng() || 1e-10;
       const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-      const noisyVal = baseVal + z * stds[vi]!;
+      const noisyVal = baseVal + z * stds[vi];
       nameValues.get(name)![t] = noisyVal;
       row.push(noisyVal);
     }
@@ -519,7 +519,7 @@ export function chainTimeSeries(T: number, d: number): TestTimeSeries {
   // Build coefficient matrices: X_i → X_{i+1} at lag=1
   const coeffMatrices = [Array.from({ length: d }, () => new Array(d).fill(0))];
   for (let i = 0; i < d - 1; i++) {
-    coeffMatrices[0]![i]![i + 1] = 0.5;
+    coeffMatrices[0][i][i + 1] = 0.5;
   }
 
   return generateVARTimeSeries(nodeNames, {
@@ -552,7 +552,7 @@ export function fullyConnectedVAR1(
   for (let i = 0; i < d; i++) {
     for (let j = 0; j < d; j++) {
       if (rng() < density) {
-        coeffMatrices[0]![i]![j] = (rng() - 0.5) * 1.5;
+        coeffMatrices[0][i][j] = (rng() - 0.5) * 1.5;
       }
     }
   }

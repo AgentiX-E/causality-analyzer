@@ -72,7 +72,7 @@ export function cmiknnTest(
 
   // Permutation test: shuffle Y and recompute CMI
   const rng = createRNG(config.seed ?? 42);
-  const yValues = data.map(row => row[yCol]!);
+  const yValues = data.map(row => row[yCol]);
   let countGreater = 0;
 
   for (let p = 0; p < nPermutations; p++) {
@@ -80,7 +80,7 @@ export function cmiknnTest(
     const shuffled = [...yValues];
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(rng() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j]!, shuffled[i]!];
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
 
     // Reconstruct data with shuffled Y
@@ -123,8 +123,8 @@ function estimateCMI(
   if (n === 0) return 0;
 
   // Build data arrays for X, Y, Z (Z is combined into a single vector per row)
-  const xArr = data.map(row => row[xCol]!);
-  const yArr = data.map(row => row[yCol]!);
+  const xArr = data.map(row => row[xCol]);
+  const yArr = data.map(row => row[yCol]);
 
   // For each point, find distances to k-th neighbor in joint (X,Y,Z) space
   let sum = 0;
@@ -135,9 +135,9 @@ function estimateCMI(
     const distances: Array<{ idx: number; dist: number }> = [];
     for (let j = 0; j < n; j++) {
       if (j === i) continue;
-      let d2 = (xArr[i]! - xArr[j]!) ** 2 + (yArr[i]! - yArr[j]!) ** 2;
+      let d2 = (xArr[i] - xArr[j]) ** 2 + (yArr[i] - yArr[j]) ** 2;
       for (const c of condCols) {
-        d2 += (data[i]![c]! - data[j]![c]!) ** 2;
+        d2 += (data[i][c] - data[j][c]) ** 2;
       }
       distances.push({ idx: j, dist: Math.sqrt(d2) });
     }
@@ -145,7 +145,7 @@ function estimateCMI(
     // Sort and find k-th nearest neighbor distance
     distances.sort((a, b) => a.dist - b.dist);
     if (distances.length < k) continue;
-    const rho = distances[k - 1]!.dist;
+    const rho = distances[k - 1].dist;
     if (rho === 0) continue; // Skip if k-th neighbor at zero distance
 
     // Count points within rho in each marginal space
@@ -153,11 +153,11 @@ function estimateCMI(
     for (let j = 0; j < n; j++) {
       if (j === i) continue;
 
-      let d2_xz = (xArr[i]! - xArr[j]!) ** 2;
-      let d2_yz = (yArr[i]! - yArr[j]!) ** 2;
+      let d2_xz = (xArr[i] - xArr[j]) ** 2;
+      let d2_yz = (yArr[i] - yArr[j]) ** 2;
       let d2_z = 0;
       for (const c of condCols) {
-        const diff = data[i]![c]! - data[j]![c]!;
+        const diff = data[i][c] - data[j][c];
         d2_xz += diff * diff;
         d2_yz += diff * diff;
         d2_z += diff * diff;

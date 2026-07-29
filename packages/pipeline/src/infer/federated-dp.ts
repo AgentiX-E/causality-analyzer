@@ -245,8 +245,8 @@ export function secureAggregate(
   let weightedSum = 0;
   let totalWeight = 0;
   for (let i = 0; i < privatizedValues.length; i++) {
-    weightedSum += weights[i]! * privatizedValues[i]!;
-    totalWeight += weights[i]!;
+    weightedSum += weights[i] * privatizedValues[i];
+    totalWeight += weights[i];
   }
   return totalWeight > 0 ? weightedSum / totalWeight : 0;
 }

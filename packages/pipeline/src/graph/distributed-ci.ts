@@ -75,7 +75,7 @@ export function partitionCITasks(
           // Generate all combinations of size condSize
           const combos = combinations([...candidates], condSize);
           for (const comboIndices of combos) {
-            const condSet = (comboIndices as number[]).sort((a, b) => a - b);
+            const condSet = (comboIndices).sort((a, b) => a - b);
             tasks.push({
               taskId: `ci-${taskId++}`,
               source: i,
@@ -129,7 +129,7 @@ function partitionToBatches(
   switch (strategy) {
     case 'round-robin':
       for (let i = 0; i < tasks.length; i++) {
-        workerQueues[i % workerCount]!.push(tasks[i]!);
+        workerQueues[i % workerCount].push(tasks[i]);
       }
       break;
 
@@ -138,7 +138,7 @@ function partitionToBatches(
       const counts = new Array(workerCount).fill(0);
       for (const task of tasks) {
         const minIdx = counts.indexOf(Math.min(...counts));
-        workerQueues[minIdx]!.push(task);
+        workerQueues[minIdx].push(task);
         counts[minIdx]++;
       }
       break;
@@ -154,7 +154,7 @@ function partitionToBatches(
       let wi = 0;
       for (const [, sourceTasks] of bySource) {
         for (const task of sourceTasks) {
-          workerQueues[wi % workerCount]!.push(task);
+          workerQueues[wi % workerCount].push(task);
           wi++;
         }
       }
@@ -162,7 +162,7 @@ function partitionToBatches(
   }
 
   for (let w = 0; w < workerCount; w++) {
-    const batchTasks = workerQueues[w]!;
+    const batchTasks = workerQueues[w];
     if (batchTasks.length === 0) continue;
     const requiredCols = uniqueColumns(batchTasks);
     batches.push({
@@ -332,11 +332,11 @@ function uniqueColumns(tasks: DistributedCITask[]): number[] {
 
 function extractIndices(comboSet: Set<number> | number[], candidates: number[]): number[] {
   if (comboSet instanceof Set) {
-    return [...comboSet].map(c => candidates[c]!).sort((a, b) => a - b);
+    return [...comboSet].map(c => candidates[c]).sort((a, b) => a - b);
   }
   // comboSet is actually an array of indices from combinations()
-  const arr = comboSet as unknown as number[];
-  return arr.map(c => candidates[c]!).sort((a, b) => a - b);
+  const arr = comboSet;
+  return arr.map(c => candidates[c]).sort((a, b) => a - b);
 }
 
 /**
@@ -412,8 +412,8 @@ function logGammaStirling(z: number): number {
   const c = [0.99999999999980993, 676.5203681218851, -1259.1392167224028,
     771.32342877765313, -176.61502916214059, 12.507343278686905,
     -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
-  let base = z + g + 0.5;
-  let s = c[0]!;
-  for (let i = 1; i < c.length; i++) s += c[i]! / (z + i - 1);
+  const base = z + g + 0.5;
+  let s = c[0];
+  for (let i = 1; i < c.length; i++) s += c[i] / (z + i - 1);
   return Math.log(Math.sqrt(2 * Math.PI)) + (z + 0.5) * Math.log(base) - base + Math.log(s);
 }

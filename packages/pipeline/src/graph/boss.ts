@@ -53,14 +53,14 @@ function solveViaCholesky(
 
   for (let i = 0; i < k; i++) {
     for (let j = 0; j <= i; j++) {
-      let sum = XtX[i]![j]!;
+      let sum = XtX[i][j];
       for (let p = 0; p < j; p++) {
-        sum -= L[i * k + p]! * L[j * k + p]!;
+        sum -= L[i * k + p] * L[j * k + p];
       }
       if (i === j) {
         L[i * k + i] = Math.sqrt(Math.max(1e-12, sum));
       } else {
-        L[i * k + j] = sum / L[j * k + j]!;
+        L[i * k + j] = sum / L[j * k + j];
       }
     }
   }
@@ -68,17 +68,17 @@ function solveViaCholesky(
   // Forward: L·z = Xty
   const z = new Float64Array(k);
   for (let i = 0; i < k; i++) {
-    let sum = Xty[i]!;
-    for (let j = 0; j < i; j++) sum -= L[i * k + j]! * z[j]!;
-    z[i] = sum / L[i * k + i]!;
+    let sum = Xty[i];
+    for (let j = 0; j < i; j++) sum -= L[i * k + j] * z[j];
+    z[i] = sum / L[i * k + i];
   }
 
   // Back: Lᵀ·β = z
   const beta = new Float64Array(k);
   for (let i = k - 1; i >= 0; i--) {
-    let sum = z[i]!;
-    for (let j = i + 1; j < k; j++) sum -= L[j * k + i]! * beta[j]!;
-    beta[i] = sum / L[i * k + i]!;
+    let sum = z[i];
+    for (let j = i + 1; j < k; j++) sum -= L[j * k + i] * beta[j];
+    beta[i] = sum / L[i * k + i];
   }
 
   return beta;

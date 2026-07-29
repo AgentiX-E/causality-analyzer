@@ -295,12 +295,12 @@ export function fuseDomainKnowledge(
   // Build merged DomainKnowledge
   const requires = [...existingRequires].map(key => {
     const [s, t] = key.split('|') as [string, string];
-    return [s!, t!] as readonly [string, string];
+    return [s, t] as readonly [string, string];
   });
 
   const forbids = [...existingForbids].map(key => {
     const [s, t] = key.split('|') as [string, string];
-    return [s!, t!] as readonly [string, string];
+    return [s, t] as readonly [string, string];
   });
 
   const rootNodes = [
@@ -318,7 +318,7 @@ export function fuseDomainKnowledge(
   if (leafNodes.length > 0) dk.leafNodes = leafNodes;
 
   return {
-    domainKnowledge: dk as DomainKnowledge,
+    domainKnowledge: dk,
     llmEdges,
     conflicts,
   };

@@ -74,7 +74,7 @@ export class LinearDRLearner {
     const treatIdx: number[] = [];
     const ctrlIdx: number[] = [];
     for (let i = 0; i < n; i++) {
-      if (t[i]! > 0.5) treatIdx.push(i); else ctrlIdx.push(i);
+      if (t[i] > 0.5) treatIdx.push(i); else ctrlIdx.push(i);
     }
 
     const outcomeTreated = fitOLS(X, y, treatIdx, p);
@@ -85,16 +85,16 @@ export class LinearDRLearner {
     let ifSumSq = 0;
 
     for (let i = 0; i < n; i++) {
-      const xi = X[i]!;
-      const pi = clamp(propensity[i]!, this.config.propensityClipMin, this.config.propensityClipMax);
+      const xi = X[i];
+      const pi = clamp(propensity[i], this.config.propensityClipMin, this.config.propensityClipMax);
 
       // Predicted outcomes
       const g1i = predictLinear(xi, outcomeTreated);
       const g0i = predictLinear(xi, outcomeControl);
 
       // DR score
-      const treatedTerm = t[i]! > 0.5 ? (y[i]! - g1i) / pi : 0;
-      const controlTerm = t[i]! <= 0.5 ? (y[i]! - g0i) / (1 - pi) : 0;
+      const treatedTerm = t[i] > 0.5 ? (y[i] - g1i) / pi : 0;
+      const controlTerm = t[i] <= 0.5 ? (y[i] - g0i) / (1 - pi) : 0;
       const score = g1i - g0i + treatedTerm - controlTerm;
 
       drSum += score;
@@ -182,12 +182,12 @@ export class ForestDRLearner {
     const ctrlY: number[] = [];
 
     for (let i = 0; i < n; i++) {
-      if (t[i]! > 0.5) {
-        treatX.push(X[i]!);
-        treatY.push(y[i]!);
+      if (t[i] > 0.5) {
+        treatX.push(X[i]);
+        treatY.push(y[i]);
       } else {
-        ctrlX.push(X[i]!);
-        ctrlY.push(y[i]!);
+        ctrlX.push(X[i]);
+        ctrlY.push(y[i]);
       }
     }
 
@@ -213,18 +213,18 @@ export class ForestDRLearner {
 
     // DR formula
     let drSum = 0;
-    let ifSumSq = 0;
+    const ifSumSq = 0;
 
     for (let i = 0; i < n; i++) {
-      const xi = X[i]!;
+      const xi = X[i];
       const pi = clamp(propensity, this.config.propensityClipMin, this.config.propensityClipMax);
 
       // Predict outcomes using forests
       const g1i = this.outcomeForest1 ? this.outcomeForest1.predictOne(xi) : 0;
       const g0i = this.outcomeForest0 ? this.outcomeForest0.predictOne(xi) : 0;
 
-      const treatedTerm = t[i]! > 0.5 ? (y[i]! - g1i) / pi : 0;
-      const controlTerm = t[i]! <= 0.5 ? (y[i]! - g0i) / (1 - pi) : 0;
+      const treatedTerm = t[i] > 0.5 ? (y[i] - g1i) / pi : 0;
+      const controlTerm = t[i] <= 0.5 ? (y[i] - g0i) / (1 - pi) : 0;
       const score = g1i - g0i + treatedTerm - controlTerm;
 
       drSum += score;
@@ -267,7 +267,7 @@ function clamp(v: number, min: number, max: number): number {
 }
 
 function predictLinear(x: number[], beta: number[]): number {
-  let s = beta[0]!;
+  let s = beta[0];
   for (let j = 0; j < x.length; j++) s += (beta[j + 1] ?? 0) * (x[j] ?? 0);
   return s;
 }
@@ -283,24 +283,24 @@ function fitOLS(
   const xty: number[] = new Array(k).fill(0);
 
   for (const i of indices) {
-    xtx[0]![0]! += 1;
-    xty[0]! += y[i]!;
+    xtx[0][0] += 1;
+    xty[0] += y[i];
     for (let j = 0; j < p; j++) {
-      const xv = X[i]![j]!;
-      xtx[0]![j + 1]! += xv;
-      xtx[j + 1]![0]! += xv;
-      xty[j + 1]! += xv * y[i]!;
+      const xv = X[i][j];
+      xtx[0][j + 1] += xv;
+      xtx[j + 1][0] += xv;
+      xty[j + 1] += xv * y[i];
     }
   }
 
   for (let ci = 0; ci < k; ci++) {
     for (let cj = ci + 1; cj < k; cj++) {
-      xtx[cj]![ci]! = xtx[ci]![cj]!;
+      xtx[cj][ci] = xtx[ci][cj]!;
     }
   }
 
   // Regularized solve
-  for (let ci = 0; ci < k; ci++) xtx[ci]![ci]! += 1e-8;
+  for (let ci = 0; ci < k; ci++) xtx[ci][ci] += 1e-8;
 
   return gaussSolve(xtx, xty);
 }
@@ -324,28 +324,28 @@ function fitLogistic(
     const xtz = new Array(k).fill(0);
 
     for (let i = 0; i < n; i++) {
-      const eta = predictLinear(X[i]!, beta);
+      const eta = predictLinear(X[i], beta);
       const mu = 1 / (1 + Math.exp(-Math.max(-15, Math.min(15, eta))));
       const w = Math.max(1e-6, mu * (1 - mu));
-      const z = eta + (t[i]! - mu) / w;
+      const z = eta + (t[i] - mu) / w;
 
-      xtx[0]![0]! += w;
+      xtx[0][0]! += w;
       xtz[0]! += w * z;
       for (let j = 0; j < p; j++) {
-        const xv = X[i]![j]!;
-        xtx[0]![j + 1]! += w * xv;
-        xtx[j + 1]![0]! += w * xv;
+        const xv = X[i][j];
+        xtx[0][j + 1]! += w * xv;
+        xtx[j + 1][0]! += w * xv;
         xtz[j + 1]! += w * xv * z;
       }
     }
 
     for (let ci = 0; ci < k; ci++) {
       for (let cj = ci + 1; cj < k; cj++) {
-        xtx[cj]![ci]! = xtx[ci]![cj]!;
+        xtx[cj][ci] = xtx[ci][cj]!;
       }
     }
 
-    for (let ci = 0; ci < k; ci++) xtx[ci]![ci]! += 1e-8;
+    for (let ci = 0; ci < k; ci++) xtx[ci][ci]! += 1e-8;
     beta = gaussSolve(xtx, xtz);
   }
 
@@ -355,27 +355,27 @@ function fitLogistic(
 
 function gaussSolve(A: number[][], b: number[]): number[] {
   const k = A.length;
-  const aug = A.map((row, ri) => [...row, b[ri]!]);
+  const aug = A.map((row, ri) => [...row, b[ri]]);
 
   for (let col = 0; col < k; col++) {
     let maxR = col;
-    let maxV = Math.abs(aug[col]![col]!);
+    let maxV = Math.abs(aug[col][col]);
     for (let r = col + 1; r < k; r++) {
-      if (Math.abs(aug[r]![col]!) > maxV) { maxV = Math.abs(aug[r]![col]!); maxR = r; }
+      if (Math.abs(aug[r][col]) > maxV) { maxV = Math.abs(aug[r][col]); maxR = r; }
     }
     if (maxV < 1e-12) continue;
-    if (maxR !== col) [aug[col], aug[maxR]] = [aug[maxR]!, aug[col]!];
+    if (maxR !== col) [aug[col], aug[maxR]] = [aug[maxR], aug[col]];
 
-    const piv = aug[col]![col]!;
-    for (let c = col; c <= k; c++) aug[col]![c]! /= piv;
+    const piv = aug[col][col];
+    for (let c = col; c <= k; c++) aug[col][c] /= piv;
 
     for (let r = 0; r < k; r++) {
       if (r === col) continue;
-      const f = aug[r]![col]!;
+      const f = aug[r][col];
       if (f === 0) continue;
-      for (let c = col; c <= k; c++) aug[r]![c]! -= f * aug[col]![c]!;
+      for (let c = col; c <= k; c++) aug[r][c] -= f * aug[col][c];
     }
   }
 
-  return aug.map(row => row[k]!);
+  return aug.map(row => row[k]);
 }
