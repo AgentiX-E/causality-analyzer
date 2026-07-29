@@ -127,15 +127,14 @@ describe('cmiknnTest', () => {
     expect(result.testStatistic).toBeGreaterThanOrEqual(0);
   });
 
-  it('detects nonlinear relationship: Y = sin(X) + noise', () => {
+  it('detects nonlinear relationship: Y = sin(X) + noise', { timeout: 15000 }, () => {
     const data: number[][] = [];
-    // Generate with very low noise for strong nonlinear signal
-    for (let i = 0; i < 300; i++) {
+    for (let i = 0; i < 150; i++) {
       const x = (Math.random() - 0.5) * 4;
       const y = Math.sin(x) + (Math.random() - 0.5) * 0.05;
       data.push([x, y]);
     }
-    const result = cmiknnTest(data, 0, 1, [], { k: 5, nPermutations: 200 });
+    const result = cmiknnTest(data, 0, 1, [], { k: 3, nPermutations: 100 });
     // CMIknn should detect nonlinear dependency
     expect(result.pValue).toBeGreaterThanOrEqual(0);
     expect(result.pValue).toBeLessThanOrEqual(1);

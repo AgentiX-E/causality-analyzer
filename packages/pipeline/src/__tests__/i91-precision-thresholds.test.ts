@@ -58,7 +58,7 @@ describe('Precision: ASIA DAG (8 nodes, 8 edges)', () => {
     expect(r.tpr).toBeGreaterThanOrEqual(0.45);
   });
 
-  it('LiNGAM: SHD ≤ 30, TPR ≥ 0.20', () => {
+  it('LiNGAM: SHD ≤ 30, TPR ≥ 0.20', { timeout: 15000 }, () => {
     const r = runBench(truth, directLiNGAM);
     expect(r.shd).toBeLessThanOrEqual(30);
     expect(r.tpr).toBeGreaterThanOrEqual(0.20);

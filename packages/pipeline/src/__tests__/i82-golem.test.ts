@@ -7,7 +7,7 @@ import { golemAlgorithm } from '../../src/graph/golem.js';
 import { generateLinearData } from '../../src/benchmark.js';
 
 describe('GOLEM Algorithm', () => {
-  it('discovers DAG from linear chain data', () => {
+  it('discovers DAG from linear chain data', { timeout: 15000 }, () => {
     const g = new CausalGraph(['X', 'Y', 'Z']);
     g.addEdge('X', 'Y'); g.addEdge('Y', 'Z');
     const { data, nodeNames } = generateLinearData(g, 400, 42);

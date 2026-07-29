@@ -213,9 +213,7 @@ import { HTRCA } from '../analyze/rca.js';
 import { estimateLinearRegression } from '../infer/causal-inference.js';
 import { VotingDetector } from '../detect/voting-detector.js';
 import { StatsDetector } from '../detect/stats-detector.js';
-import { CausalGraph } from '../graph/causal-graph.js';
 import { Matrix } from 'ml-matrix';
-import { buildTimeseriesVizData } from '../viz/viz-data.js';
 
 describe('SPOT branch: Grimshaw fallback and boundary conditions', () => {
   it('constant data triggers method-of-moments fallback', () => {
@@ -431,9 +429,8 @@ describe('circa coverage: child score propagation', () => {
 // ════════════════════════════════════════════════════════════════════
 // Precision branch tests: hitting specific uncovered conditions
 // ════════════════════════════════════════════════════════════════════
-import { CIRCAPipeline, RHTScorer, DAScorer } from '../analyze/circa.js';
 import { refutePlaceboTreatment, refuteBootstrap } from '../infer/causal-inference.js';
-import { cateToRCA, StructuralCausalModel } from '../gcm/structural-causal-model.js';
+import { cateToRCA } from '../gcm/structural-causal-model.js';
 
 describe('voting-detector uncovered branches', () => {
   it('majority: nAnomalous >= threshold (quorum met)', () => {

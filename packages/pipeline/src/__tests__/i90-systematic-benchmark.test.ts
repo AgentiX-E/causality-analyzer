@@ -26,7 +26,6 @@ import { rcdAlgorithm } from '../../src/graph/rcd.js';
 import { cdnodAlgorithm } from '../../src/graph/cdnod.js';
 import { mvpcAlgorithm } from '../../src/graph/mvpc.js';
 import { imagesAlgorithm } from '../../src/graph/images.js';
-import { tsIcdAlgorithm } from '../../src/graph/tsicd.js';
 import { faskAlgorithm } from '../../src/graph/fask.js';
 import { stabilitySelection } from '../../src/graph/stability-selection.js';
 import { discoverClusters } from '../../src/graph/latent-clusters.js';

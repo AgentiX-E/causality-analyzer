@@ -20,7 +20,7 @@ import { StructuralCausalModel } from '../gcm/structural-causal-model.js';
 import { buildGraphVizData, buildRankingVizData } from '../viz/viz-data.js';
 
 // Inline minimal stores for E2E test
-import type { IRelationalStore, ColumnarTable, TableSchema, MetricQuery, DetectionResult, ConditionalProbabilityTable, RegressionParams, RCAResult, ResultQuery, IGraphStore, CausalGraph, GraphMetadata, GraphVersion } from '@agentix-e/causality-analyzer-core';
+import type { IRelationalStore, ColumnarTable, TableSchema, MetricQuery, DetectionResult, ConditionalProbabilityTable, RegressionParams, RCAResult, ResultQuery, IGraphStore, GraphMetadata, GraphVersion } from '@agentix-e/causality-analyzer-core';
 
 class E2ERelationalStore implements IRelationalStore { private cpt = new Map<string, ConditionalProbabilityTable>(); private results: RCAResult[] = [];
   async readMetrics(): Promise<ColumnarTable<any>> { const { ColumnarTable } = await import('@agentix-e/causality-analyzer-core'); return ColumnarTable.fromRows([]); }
