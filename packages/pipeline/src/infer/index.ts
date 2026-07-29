@@ -64,6 +64,14 @@ export type { RefutationPortalResult, RefutationReport } from './refutation-port
 export { unifiedCATE, compareCATEModels } from './cate-unified.js';
 export type { CATEstimator, CATEstimate, CATEModelComparison } from './cate-unified.js';
 
+// ── DML Estimator Family (I8-P1) ─────────────────────────────────
+export { LinearDML, CausalForestDML, NonParamDML } from './dml-estimators.js';
+export type { EffectInterval, DMLEstimatorConfig } from './dml-estimators.js';
+
+// ── DR Estimator Family (I8-P1) ──────────────────────────────────
+export { LinearDRLearner, ForestDRLearner } from './dr-estimators.js';
+export type { DRConfig } from './dr-estimators.js';
+
 // ── Bayesian Network Inference ─────────────────────────────────
 export {
   cptToFactor,
