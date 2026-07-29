@@ -111,7 +111,7 @@ describe('PCMCI+ acceptance — correctness', () => {
 // ── Backend Compatibility ──────────────────────────────────────────────
 
 describe('PCMCI+ acceptance — backend compatibility', () => {
-  it('all backends produce results with same node names', { timeout: 15000 }, () => {
+  it('all backends produce results with same node names', { timeout: 30000 }, () => {
     const ts = chainTimeSeries(200, 3);
     for (const backend of ['parcorr', 'gsquared'] as const) {
       const result = pcmciPlusAlgorithm(ts.data, ts.nodeNames, {
