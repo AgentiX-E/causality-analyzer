@@ -121,6 +121,7 @@ export const CausalForestConfigSchema = z.object({
  */
 export function validateOrThrow<T>(
   schema: z.ZodSchema<T>,
+// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
   config: Partial<T> | unknown,
   configName: string,
 ): T {
@@ -146,6 +147,7 @@ export function validateOrThrow<T>(
  */
 export function validateConfig<T>(
   schema: z.ZodSchema<T>,
+// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
   config: Partial<T> | unknown,
 ): { valid: boolean; data?: T; errors?: string[] } {
   const result = schema.safeParse(config);

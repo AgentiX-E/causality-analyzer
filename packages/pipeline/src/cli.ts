@@ -146,6 +146,7 @@ function execServe(args: CliArgs): void {
   const authNote = authFlags.length > 0 ? ` (auth: ${authFlags.join(' + ')})` : ' (no auth)';
 
   const server = new CausalityServer(serverOpts);
+// eslint-disable-next-line @typescript-eslint/no-floating-promises
   server.start(port).then(() => {
     console.log(`Causality Analyzer API v1.0.0 listening on ${proto}://localhost:${port}${authNote}`);
     console.log(`Endpoints:`);

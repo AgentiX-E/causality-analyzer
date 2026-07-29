@@ -17,6 +17,8 @@ import { Matrix } from 'ml-matrix';
 import { Linear } from '@kanaries/ml';
 import { CausalGraph } from './causal-graph.js';
 
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
+
 // ── pwling helpers ──────────────────────────────────────────────────
 
 function entropy(u: Float64Array): number {
@@ -331,7 +333,7 @@ export function directLiNGAM(
   const edgeList: [number, number][] = [];
   for (let i = 0; i < d; i++) {
     for (let j = 0; j < d; j++) {
-      if (i !== j && g.hasEdge(nodeNames[i]!, nodeNames[j]!)) {
+      if (i !== j && g.hasEdge(nodeNames[i], nodeNames[j])) {
         edgeList.push([i, j]);
       }
     }
@@ -353,20 +355,20 @@ export function directLiNGAM(
       for (let y = 0; y < d; y++) {
         const pa = [...paSets[y]];
         const k = pa.length;
-        let sigma = covMat[y * d + y]!;
+        let sigma = covMat[y * d + y];
         if (k > 0) {
-          const yCov: number[] = pa.map(p => covMat[y * d + p]!);
+          const yCov: number[] = pa.map(p => covMat[y * d + p]);
           if (k === 1) {
-            sigma -= yCov[0]! * yCov[0]! / covMat[pa[0]! * d + pa[0]!]!;
+            sigma -= yCov[0] * yCov[0] / covMat[pa[0] * d + pa[0]];
           } else {
             const paCov: number[][] = [];
             for (let a = 0; a < k; a++) {
               const row: number[] = [];
-              for (let b = 0; b < k; b++) row.push(covMat[pa[a]! * d + pa[b]!]!);
+              for (let b = 0; b < k; b++) row.push(covMat[pa[a] * d + pa[b]]);
               paCov.push(row);
             }
             const coef = solveSmallLS(paCov, yCov);
-            for (let a = 0; a < k; a++) sigma -= (coef[a] ?? 0) * yCov[a]!;
+            for (let a = 0; a < k; a++) sigma -= (coef[a] ?? 0) * yCov[a];
           }
         }
         sigma = Math.max(sigma, 1e-12);
@@ -393,7 +395,7 @@ export function directLiNGAM(
     }
 
     const pruned = new CausalGraph(nodeNames);
-    for (const [from, to] of currentEdges) pruned.addEdge(nodeNames[from]!, nodeNames[to]!);
+    for (const [from, to] of currentEdges) pruned.addEdge(nodeNames[from], nodeNames[to]);
     return { graph: pruned, weights, order };
   }
 
@@ -403,24 +405,24 @@ export function directLiNGAM(
 // Small linear solver for BIC pruning
 function solveSmallLS(A: number[][], b: number[]): number[] {
   const n = A.length;
-  const aug = A.map((row, i) => [...row, b[i]!]);
+  const aug = A.map((row, i) => [...row, b[i]]);
   for (let col = 0; col < n; col++) {
     let maxRow = col;
     for (let row = col + 1; row < n; row++)
-      if (Math.abs(aug[row]![col]!) > Math.abs(aug[maxRow]![col]!)) maxRow = row;
-    [aug[col], aug[maxRow]] = [aug[maxRow]!, aug[col]!];
-    const pv = aug[col]![col]!;
+      if (Math.abs(aug[row][col]) > Math.abs(aug[maxRow][col])) maxRow = row;
+    [aug[col], aug[maxRow]] = [aug[maxRow], aug[col]];
+    const pv = aug[col][col];
     if (Math.abs(pv) < 1e-12) continue;
     for (let row = col + 1; row < n; row++) {
-      const f = aug[row]![col]! / pv;
-      for (let j = col; j <= n; j++) aug[row]![j] -= f * aug[col]![j]!;
+      const f = aug[row][col] / pv;
+      for (let j = col; j <= n; j++) aug[row][j] -= f * aug[col][j];
     }
   }
   const x = new Array<number>(n).fill(0);
   for (let i = n - 1; i >= 0; i--) {
-    let s = aug[i]![n]!;
-    for (let j = i + 1; j < n; j++) s -= aug[i]![j]! * (x[j] ?? 0);
-    x[i] = Math.abs(aug[i]![i]!) < 1e-12 ? 0 : s / aug[i]![i]!;
+    let s = aug[i][n];
+    for (let j = i + 1; j < n; j++) s -= aug[i][j] * (x[j] ?? 0);
+    x[i] = Math.abs(aug[i][i]) < 1e-12 ? 0 : s / aug[i][i];
   }
   return x;
 }

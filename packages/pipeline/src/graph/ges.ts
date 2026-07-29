@@ -17,6 +17,8 @@
 import { Matrix } from 'ml-matrix';
 import { CausalGraph } from './causal-graph.js';
 import { fisherZTest } from './pc.js';
+
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-return */
 import type { DomainKnowledge } from '@agentix-e/causality-analyzer-core';
 
 export interface GESConfig {

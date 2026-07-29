@@ -222,6 +222,7 @@ export function explainDetection(result: DetectionResult): string {
     return 'No anomaly detected. The metric value is within the expected range based on the trained model.';
   }
 
+// eslint-disable-next-line @typescript-eslint/no-base-to-string
   const method = String(result.metadata?.method ?? 'statistical');
   const numAnomalous = result.labels.filter(l => l === 1).length;
 

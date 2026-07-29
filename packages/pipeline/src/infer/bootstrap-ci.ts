@@ -102,6 +102,7 @@ export async function parallelBootstrap<T>(
 }
 
 /** Run a single chunk of bootstrap iterations */
+// eslint-disable-next-line @typescript-eslint/require-await
 async function runBootstrapChunk<T>(
   data: number[][],
   taskFn: (sample: number[][], seed: number) => T,

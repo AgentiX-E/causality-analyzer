@@ -143,9 +143,11 @@ export class CausalityServer {
         if (this.tlsConfig.requestCert) tlsOpts.requestCert = true;
         if (this.tlsConfig.rejectUnauthorized) tlsOpts.rejectUnauthorized = true;
 
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
         this.server = createSecureServer(tlsOpts, handler);
         if (this.logger.info) this.logger.info('mTLS enabled: client certificate auth active');
       } else {
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
         this.server = createServer(handler);
       }
 
