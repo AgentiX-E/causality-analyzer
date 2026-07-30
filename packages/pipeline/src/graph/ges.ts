@@ -488,9 +488,11 @@ export function gesAlgorithm(
   // Initialize empty PDAG
   const state = buildPDAG(new CausalGraph([...nodeNames]), nodeIdx);
 
-  // Minimum BIC delta for forward insertion: on large graphs, require
-  // meaningful improvement to avoid accumulating marginal false edges.
-  const minDelta = d > 15 ? Math.log(Math.max(N, 2)) / 2 : 0;
+  // Adaptive minimum BIC delta for forward insertion:
+  // On large graphs, each false edge compounds with n² CI test cost and
+  // blocks correct edges. Scale threshold with graph size.
+  // For d=20: ≈ 7.6, d=30: ≈ 12.6, d=50: ≈ 18.3
+  const minDelta = d > 15 ? Math.log(Math.max(N, 2)) * Math.sqrt(d) / 3 : 0;
 
   // ── Forward Phase ─────────────────────────────────────────────────
   let iter = 0;
@@ -500,8 +502,8 @@ export function gesAlgorithm(
     applyInsert(state, best);
   }
 
-  // ── Backward Phase (run twice for deeper pruning on large graphs) ──
-  const backwardPasses = d > 15 ? 2 : 1;
+  // ── Backward Phase (scale passes with graph size for deep pruning) ──
+  const backwardPasses = d <= 10 ? 1 : d <= 20 ? 3 : d <= 40 ? 4 : 5;
   for (let pass = 0; pass < backwardPasses; pass++) {
     iter = 0;
     while (iter++ < 200) {
