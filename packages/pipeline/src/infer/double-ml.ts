@@ -229,7 +229,8 @@ export function doubleMLCATE(
       const rawTPred = tPred(X[i]);
       const clampedTPred = rawTPred > 10 ? 0.95 : rawTPred < -10 ? 0.05 : sigmoidFn(rawTPred);
       const rT = t[i] - clampedTPred;
-      scores[i] = rY / Math.max(0.01, Math.abs(rT));
+      const denom = Math.max(0.01, Math.abs(rT));
+      scores[i] = Number.isFinite(rY) && Number.isFinite(denom) ? rY / denom : 0;
     }
   }
 
@@ -282,6 +283,16 @@ export function doubleMLCATE(
 
   const beta0 = sol[0]!;
   const betas = sol.slice(1);
+
+  // Guard against NaN from numerical issues with polynomial-expanded features
+  const hasNaN = !Number.isFinite(beta0) || betas.some(b => !Number.isFinite(b));
+  if (hasNaN) {
+    // Fallback to simple ATE (no CATE)
+    return {
+      baselineATE: ateResult.ate,
+      cateFn: () => ateResult.ate,
+    };
+  }
 
   return {
     baselineATE: ateResult.ate,
