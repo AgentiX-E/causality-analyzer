@@ -299,8 +299,9 @@ function fitOLS(
     }
   }
 
-  // Regularized solve
-  for (let ci = 0; ci < k; ci++) xtx[ci][ci] += 1e-8;
+  // Ridge regularization for multicollinear features
+  const lambda = p > 10 ? 0.5 : 1e-8;
+  for (let ci = 0; ci < k; ci++) xtx[ci][ci] += lambda;
 
   return gaussSolve(xtx, xty);
 }
@@ -345,7 +346,9 @@ function fitLogistic(
       }
     }
 
-    for (let ci = 0; ci < k; ci++) xtx[ci][ci]! += 1e-8;
+    // Ridge regularization for multicollinear features
+    const lambda = p > 10 ? 0.5 : 1e-8;
+    for (let ci = 0; ci < k; ci++) xtx[ci][ci]! += lambda;
     beta = gaussSolve(xtx, xtz);
   }
 
