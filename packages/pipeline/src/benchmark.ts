@@ -291,7 +291,7 @@ export function runBenchmark(
   const allAlgos: Array<{ name: string; fn: (d: Matrix, nodes: string[]) => CausalGraph }> = [
     { name: 'PC', fn: (d, n) => pcAlgorithm(d, n, {}).graph },
     { name: 'GES', fn: (d, n) => gesAlgorithm(d, n) },
-    { name: 'BOSS', fn: (d, n) => bossAlgorithm(d, n, { numStarts: 2, maxIter: 20 }) },
+    { name: 'BOSS', fn: (d, n) => bossAlgorithm(d, n, { seed: 42 }) },
     { name: 'NOTEARS', fn: (_d, n) => notearsAlgorithm(Array.from({ length: _d.rows }, (_, i): number[] => Array.from({ length: _d.columns }, (_, j): number => _d.get(i, j))), n, { lambda1: 0.01, maxOuterIter: 50, wThreshold: 0.05 }).graph },
     { name: 'LiNGAM', fn: (d, n) => directLiNGAM(d, n).graph },
     { name: 'FCI', fn: (d, n) => fciAlgorithm(d, n).graph },

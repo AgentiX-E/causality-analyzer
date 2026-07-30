@@ -299,8 +299,15 @@ export function bossAlgorithm(
   config: Partial<BOSSConfig> = {},
   domainKnowledge?: DomainKnowledge,
 ): CausalGraph {
-  const cfg = { ...DEFAULTS, ...config };
+  // Adaptive defaults: scale parameters with graph size
   const d = nodeNames.length;
+  const adaptiveDefaults: BOSSConfig = {
+    ...DEFAULTS,
+    numStarts: Math.max(3, Math.min(DEFAULTS.numStarts, Math.ceil(d / 4))),
+    maxIter: Math.max(20, Math.min(DEFAULTS.maxIter, d * 3)),
+    maxParents: d > 30 ? Math.min(8, Math.ceil(d / 4)) : -1,
+  };
+  const cfg = { ...adaptiveDefaults, ...config };
   const N = data.rows;
   const rng = createRNG(cfg.seed ?? null);
 
