@@ -257,31 +257,31 @@ export function doubleMLCATE(
   // Ridge-regularized Cholesky solve for the interaction model
   const k = p + 1;
   const ridgeLam = p > 10 ? 1.0 : 1e-10;
-  for (let i = 0; i < k; i++) XtX[i]![i]! += ridgeLam;
+  for (let i = 0; i < k; i++) XtX[i][i] += ridgeLam;
 
   const L = new Float64Array(k * k);
   for (let i = 0; i < k; i++) {
     for (let j = 0; j <= i; j++) {
-      let sum = XtX[i]![j]!;
-      for (let m = 0; m < j; m++) sum -= L[i * k + m]! * L[j * k + m]!;
+      let sum = XtX[i][j];
+      for (let m = 0; m < j; m++) sum -= L[i * k + m] * L[j * k + m];
       if (i === j) L[i * k + i] = Math.sqrt(Math.max(1e-12, sum));
-      else L[i * k + j] = sum / L[j * k + j]!;
+      else L[i * k + j] = sum / L[j * k + j];
     }
   }
   const z = new Float64Array(k);
   for (let i = 0; i < k; i++) {
-    let sum = Xty[i]!;
-    for (let j = 0; j < i; j++) sum -= L[i * k + j]! * z[j]!;
-    z[i] = sum / L[i * k + i]!;
+    let sum = Xty[i];
+    for (let j = 0; j < i; j++) sum -= L[i * k + j] * z[j];
+    z[i] = sum / L[i * k + i];
   }
   const sol = new Array<number>(k).fill(0);
   for (let i = k - 1; i >= 0; i--) {
-    let sum = z[i]!;
-    for (let j = i + 1; j < k; j++) sum -= L[j * k + i]! * (sol[j] ?? 0);
-    sol[i] = sum / L[i * k + i]!;
+    let sum = z[i];
+    for (let j = i + 1; j < k; j++) sum -= L[j * k + i] * (sol[j] ?? 0);
+    sol[i] = sum / L[i * k + i];
   }
 
-  const beta0 = sol[0]!;
+  const beta0 = sol[0];
   const betas = sol.slice(1);
 
   // Guard against NaN from numerical issues with polynomial-expanded features
@@ -413,18 +413,18 @@ function fitLinearRegression(X: number[][], target: number[], idx: number[], p: 
   // Ridge-regularized OLS: (XᵀX + λI)β = Xᵀy via Cholesky
   const k = p + 1;
   const lambda = p > 10 ? 1.0 : 1e-10;
-  for (let i = 0; i < k; i++) XtX[i]![i]! += lambda;
+  for (let i = 0; i < k; i++) XtX[i][i] += lambda;
 
   // Cholesky decomposition on flat Float64Array (avoids number[][] GC overhead)
   const L = new Float64Array(k * k);
   for (let i = 0; i < k; i++) {
     for (let j = 0; j <= i; j++) {
-      let sum = XtX[i]![j]!;
-      for (let p = 0; p < j; p++) sum -= L[i * k + p]! * L[j * k + p]!;
+      let sum = XtX[i][j];
+      for (let p = 0; p < j; p++) sum -= L[i * k + p] * L[j * k + p];
       if (i === j) {
         L[i * k + i] = Math.sqrt(Math.max(1e-12, sum));
       } else {
-        L[i * k + j] = sum / L[j * k + j]!;
+        L[i * k + j] = sum / L[j * k + j];
       }
     }
   }
@@ -432,17 +432,17 @@ function fitLinearRegression(X: number[][], target: number[], idx: number[], p: 
   // Forward: L·z = Xᵀy
   const z = new Float64Array(k);
   for (let i = 0; i < k; i++) {
-    let sum = Xty[i]!;
-    for (let j = 0; j < i; j++) sum -= L[i * k + j]! * z[j]!;
-    z[i] = sum / L[i * k + i]!;
+    let sum = Xty[i];
+    for (let j = 0; j < i; j++) sum -= L[i * k + j] * z[j];
+    z[i] = sum / L[i * k + i];
   }
 
   // Back: Lᵀ·β = z
   const beta = new Array<number>(k);
   for (let i = k - 1; i >= 0; i--) {
-    let sum = z[i]!;
-    for (let j = i + 1; j < k; j++) sum -= L[j * k + i]! * (beta[j] ?? 0);
-    beta[i] = sum / L[i * k + i]!;
+    let sum = z[i];
+    for (let j = i + 1; j < k; j++) sum -= L[j * k + i] * (beta[j] ?? 0);
+    beta[i] = sum / L[i * k + i];
   }
   return beta;
 }
