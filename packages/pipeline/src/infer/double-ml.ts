@@ -229,7 +229,7 @@ export function doubleMLCATE(
       const rawTPred = tPred(X[i]);
       const clampedTPred = rawTPred > 10 ? 0.95 : rawTPred < -10 ? 0.05 : sigmoidFn(rawTPred);
       const rT = t[i] - clampedTPred;
-      scores[i] = rY / Math.max(0.1, Math.abs(rT) < 0.01 ? 0.1 : rT);
+      scores[i] = rY / Math.max(0.01, Math.abs(rT));
     }
   }
 
@@ -253,25 +253,35 @@ export function doubleMLCATE(
     }
   }
 
-  const aug = XtX.map((row, ri) => [...Array.from(row), Xty[ri]]);
+  // Ridge-regularized Cholesky solve for the interaction model
   const k = p + 1;
-  for (let col = 0; col < k; col++) {
-    let pivot = col;
-    for (let row = col + 1; row < k; row++) {
-      if (Math.abs(aug[row][col]) > Math.abs(aug[pivot][col])) pivot = row;
-    }
-    [aug[col], aug[pivot]] = [aug[pivot], aug[col]];
-    if (Math.abs(aug[col][col]) < 1e-12) continue;
-    for (let j2 = col; j2 <= k; j2++) aug[col][j2] /= aug[col][col];
-    for (let row = 0; row < k; row++) {
-      if (row === col) continue;
-      const f = aug[row][col];
-      for (let j2 = col; j2 <= k; j2++) aug[row][j2] -= f * aug[col][j2];
+  const ridgeLam = p > 10 ? 1.0 : 1e-10;
+  for (let i = 0; i < k; i++) XtX[i]![i]! += ridgeLam;
+
+  const L = new Float64Array(k * k);
+  for (let i = 0; i < k; i++) {
+    for (let j = 0; j <= i; j++) {
+      let sum = XtX[i]![j]!;
+      for (let m = 0; m < j; m++) sum -= L[i * k + m]! * L[j * k + m]!;
+      if (i === j) L[i * k + i] = Math.sqrt(Math.max(1e-12, sum));
+      else L[i * k + j] = sum / L[j * k + j]!;
     }
   }
+  const z = new Float64Array(k);
+  for (let i = 0; i < k; i++) {
+    let sum = Xty[i]!;
+    for (let j = 0; j < i; j++) sum -= L[i * k + j]! * z[j]!;
+    z[i] = sum / L[i * k + i]!;
+  }
+  const sol = new Array<number>(k).fill(0);
+  for (let i = k - 1; i >= 0; i--) {
+    let sum = z[i]!;
+    for (let j = i + 1; j < k; j++) sum -= L[j * k + i]! * (sol[j] ?? 0);
+    sol[i] = sum / L[i * k + i]!;
+  }
 
-  const beta0 = aug[0][k];
-  const betas = aug.slice(1).map(r => r[k]);
+  const beta0 = sol[0]!;
+  const betas = sol.slice(1);
 
   return {
     baselineATE: ateResult.ate,
