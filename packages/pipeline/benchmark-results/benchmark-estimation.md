@@ -4,7 +4,7 @@
 
 | Estimator | PEHE (ours) | PEHE (published) | ATE Error | Time (ms/rep) |
 |-----------|-------------|-------------------|-----------|---------------|
-| ForestDRLearner | 2.865 | 0.500 | 1.068 | 112 |
+| ForestDRLearner | 2.865 | 0.500 | 1.068 | 111 |
 | SLearner | 6.929 | 0.690 | 6.408 | 1 |
 | TLearner | 2797.774 | 0.720 | 3.860 | 1 |
 | LinearDRLearner | 4754.283 | 0.520 | 4754.280 | 8 |
