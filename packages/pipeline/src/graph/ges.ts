@@ -23,6 +23,8 @@ import type { DomainKnowledge } from '@agentix-e/causality-analyzer-core';
 
 export interface GESConfig {
   maxDegree?: number;
+  /** BIC penalty discount factor: higher = sparser (default: 1.0, Tetrad: 2.0) */
+  penaltyDiscount?: number;
 }
 
 // ── PDAG Graph Helpers ──────────────────────────────────────────────
@@ -203,6 +205,7 @@ function bicLocal(
   yIdx: number, paIdx: number[],
   cov: number[][], N: number,
   cache: Map<string, number>,
+  penaltyDiscount: number,
 ): number {
   const key = `${yIdx}|${[...paIdx].sort().join(',')}`;
   if (cache.has(key)) return cache.get(key)!;
@@ -222,7 +225,8 @@ function bicLocal(
     for (let i = 0; i < k; i++) sigma -= (coef[i] ?? 0) * yCov[i];
   }
 
-  const bic = -(N * (1 + Math.log(Math.max(1e-12, sigma))) + (k + 1) * Math.log(Math.max(2, N)));
+  const penalty = penaltyDiscount * (k + 1) * Math.log(Math.max(2, N));
+  const bic = -(N * (1 + Math.log(Math.max(1e-12, sigma))) + penalty);
   cache.set(key, bic);
   return bic;
 }
@@ -260,6 +264,7 @@ function findBestInsert(
   state: PDAGState, nodeIdx: Map<string, number>,
   cov: number[][], N: number, cache: Map<string, number>,
   maxDegree: number, minDelta: number,
+  penaltyDiscount: number,
 ): InsertOp | null {
   let best: InsertOp | null = null;
 
@@ -322,8 +327,8 @@ function findBestInsert(
 
         if (maxDegree >= 0 && newParents.size > maxDegree) continue;
 
-        const oldScore = bicLocal(y, [...oldParents], cov, N, cache);
-        const newScore = bicLocal(y, [...newParents], cov, N, cache);
+        const oldScore = bicLocal(y, [...oldParents], cov, N, cache, penaltyDiscount);
+        const newScore = bicLocal(y, [...newParents], cov, N, cache, penaltyDiscount);
         const delta = newScore - oldScore;
 
         if (delta > minDelta && (!best || delta > best.delta)) {
@@ -338,6 +343,7 @@ function findBestInsert(
 function findBestDelete(
   state: PDAGState, nodeIdx: Map<string, number>,
   cov: number[][], N: number, cache: Map<string, number>,
+  penaltyDiscount: number,
 ): DeleteOp | null {
   let best: DeleteOp | null = null;
 
@@ -389,8 +395,8 @@ function findBestDelete(
         newParents.delete(x);
         for (const h of H) newParents.delete(h);
 
-        const oldScore = bicLocal(y, [...oldParents], cov, N, cache);
-        const newScore = bicLocal(y, [...newParents], cov, N, cache);
+        const oldScore = bicLocal(y, [...oldParents], cov, N, cache, penaltyDiscount);
+        const newScore = bicLocal(y, [...newParents], cov, N, cache, penaltyDiscount);
         const delta = newScore - oldScore;
 
         if (delta > 0 && (!best || delta > best.delta)) {
@@ -477,6 +483,7 @@ export function gesAlgorithm(
   const maxDegree = config.maxDegree !== undefined && config.maxDegree >= 0
     ? config.maxDegree
     : d > 20 ? 3 : ratio < 30 ? 3 : ratio < 100 ? 4 : 5;
+  const penaltyDiscount = config.penaltyDiscount ?? (d > 15 ? 2.0 : 1.0);
 
   // Initialize empty PDAG
   const state = buildPDAG(new CausalGraph([...nodeNames]), nodeIdx);
@@ -488,7 +495,7 @@ export function gesAlgorithm(
   // ── Forward Phase ─────────────────────────────────────────────────
   let iter = 0;
   while (iter++ < 200) {
-    const best = findBestInsert(state, nodeIdx, cov, N, scoreCache, maxDegree, minDelta);
+    const best = findBestInsert(state, nodeIdx, cov, N, scoreCache, maxDegree, minDelta, penaltyDiscount);
     if (!best) break;
     applyInsert(state, best);
   }
@@ -498,7 +505,7 @@ export function gesAlgorithm(
   for (let pass = 0; pass < backwardPasses; pass++) {
     iter = 0;
     while (iter++ < 200) {
-      const best = findBestDelete(state, nodeIdx, cov, N, scoreCache);
+      const best = findBestDelete(state, nodeIdx, cov, N, scoreCache, penaltyDiscount);
       if (!best) break;
       applyDelete(state, best);
     }
