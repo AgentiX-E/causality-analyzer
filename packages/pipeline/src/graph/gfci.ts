@@ -39,8 +39,11 @@ export function gfciAlgorithm(
   config: Partial<GFCIConfig> = {},
   domainKnowledge?: DomainKnowledge,
 ): { graph: CausalGraph; pagEdges: Map<string, string> } {
-  const cfg: GFCIConfig = { alpha: config.alpha ?? 0.05, maxDegree: config.maxDegree ?? -1, usePDS: config.usePDS ?? true };
   const n = nodeNames.length;
+  const alpha = config.alpha ?? (n > 15 ? 0.01 : 0.05);
+  // Cap maxDegree on large graphs to avoid PDS combinatorial explosion
+  const effectiveMaxDegree = config.maxDegree ?? (n > 30 ? 5 : n > 15 ? 8 : -1);
+  const cfg: GFCIConfig = { alpha, maxDegree: effectiveMaxDegree, usePDS: config.usePDS ?? true };
   const _N = data.rows;
   const pagEdges = new Map<string, string>();
 
