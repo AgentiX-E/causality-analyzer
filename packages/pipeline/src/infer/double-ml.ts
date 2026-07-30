@@ -389,25 +389,41 @@ function fitLinearRegression(X: number[][], target: number[], idx: number[], p: 
     }
   }
 
-  // Simple OLS: solve XtX * beta = Xty
+  // Ridge-regularized OLS: (XᵀX + λI)β = Xᵀy via Cholesky
   const k = p + 1;
-  const A: number[][] = [];
-  for (let _j = 0; _j < k; _j++) A.push(new Array<number>(k + 1).fill(0));
-  for (let i = 0; i < k; i++) { for (let j = 0; j < k; j++) A[i][j] = XtX[i]?.[j] ?? 0; A[i][k] = Xty[i] ?? 0; }
+  const lambda = p > 10 ? 1.0 : 1e-10;
+  for (let i = 0; i < k; i++) XtX[i]![i]! += lambda;
 
-  for (let col = 0; col < k; col++) {
-    let pivot = col;
-    for (let row = col + 1; row < k; row++) if (Math.abs(A[row][col]) > Math.abs(A[pivot][col])) pivot = row;
-    [A[col], A[pivot]] = [A[pivot], A[col]];
-    if (Math.abs(A[col][col]) < 1e-12) continue;
-    for (let j = col; j <= k; j++) A[col][j] = (A[col][j] ?? 0) / (A[col][col] ?? 1);
-    for (let row = 0; row < k; row++) {
-      if (row === col) continue;
-      const f = A[row][col];
-      for (let j = col; j <= k; j++) A[row][j] = (A[row][j] ?? 0) - f * (A[col][j] ?? 0);
+  // Cholesky decomposition on flat Float64Array (avoids number[][] GC overhead)
+  const L = new Float64Array(k * k);
+  for (let i = 0; i < k; i++) {
+    for (let j = 0; j <= i; j++) {
+      let sum = XtX[i]![j]!;
+      for (let p = 0; p < j; p++) sum -= L[i * k + p]! * L[j * k + p]!;
+      if (i === j) {
+        L[i * k + i] = Math.sqrt(Math.max(1e-12, sum));
+      } else {
+        L[i * k + j] = sum / L[j * k + j]!;
+      }
     }
   }
-  return A.map(r => r[k]);
+
+  // Forward: L·z = Xᵀy
+  const z = new Float64Array(k);
+  for (let i = 0; i < k; i++) {
+    let sum = Xty[i]!;
+    for (let j = 0; j < i; j++) sum -= L[i * k + j]! * z[j]!;
+    z[i] = sum / L[i * k + i]!;
+  }
+
+  // Back: Lᵀ·β = z
+  const beta = new Array<number>(k);
+  for (let i = k - 1; i >= 0; i--) {
+    let sum = z[i]!;
+    for (let j = i + 1; j < k; j++) sum -= L[j * k + i]! * (beta[j] ?? 0);
+    beta[i] = sum / L[i * k + i]!;
+  }
+  return beta;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────

@@ -3,13 +3,13 @@
     "name": "LinearDRLearner",
     "pehe": 4754.282776567457,
     "ateError": 4754.2800895986275,
-    "timeMs": 9
+    "timeMs": 10
   },
   {
     "name": "ForestDRLearner",
     "pehe": 2.865160718941716,
     "ateError": 1.0679746181502092,
-    "timeMs": 115
+    "timeMs": 114
   },
   {
     "name": "SLearner",
@@ -27,6 +27,6 @@
     "name": "XLearner",
     "pehe": 1601191.7036331135,
     "ateError": 451.36597359839396,
-    "timeMs": 11
+    "timeMs": 13
   }
 ]
