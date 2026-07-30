@@ -8,6 +8,10 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run --coverage",
+    "benchmark:discovery": "npx tsx benchmark/run-discovery.ts",
+    "benchmark:estimation": "npx tsx benchmark/run-estimation.ts",
+    "benchmark:all": "npx tsx benchmark/run-all.ts",
+    "benchmark:report": "npx tsx benchmark/run-report.ts",
     "lint": "eslint src/ --ext .ts",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
