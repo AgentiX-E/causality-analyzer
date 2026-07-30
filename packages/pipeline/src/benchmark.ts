@@ -282,8 +282,9 @@ export function runBenchmark(
   truth: CausalGraph,
   data: number[][],
   nodeNames: string[],
+  skipAlgos: string[] = [],
 ): BenchmarkResult {
-  const algorithms: Array<{ name: string; fn: (d: Matrix, nodes: string[]) => CausalGraph }> = [
+  const allAlgos: Array<{ name: string; fn: (d: Matrix, nodes: string[]) => CausalGraph }> = [
     { name: 'PC', fn: (d, n) => pcAlgorithm(d, n, {}).graph },
     { name: 'GES', fn: (d, n) => gesAlgorithm(d, n) },
     { name: 'BOSS', fn: (d, n) => bossAlgorithm(d, n, { numStarts: 2, maxIter: 20 }) },
@@ -292,6 +293,7 @@ export function runBenchmark(
     { name: 'FCI', fn: (d, n) => fciAlgorithm(d, n).graph },
     { name: 'GFCI', fn: (d, n) => gfciAlgorithm(d, n).graph },
   ];
+  const algorithms = allAlgos.filter(a => !skipAlgos.includes(a.name));
 
   const results: AlgorithmResult[] = [];
   const matrix = new Matrix(data);

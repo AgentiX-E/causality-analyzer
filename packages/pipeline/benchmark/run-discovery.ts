@@ -34,11 +34,16 @@ function runDiscoveryBenchmarks() {
   for (const ds of DISCOVERY_DATASETS) {
     console.log(`\n=== ${ds.name} (${ds.nodes} nodes, ${ds.edges} edges) ===`);
     const truth = ds.fn();
+    // Skip slow algorithms on very large graphs
+    const skipAlgos = ds.nodes > 100 ? ['LiNGAM', 'NOTEARS', 'FCI', 'GFCI'] :
+                      ds.nodes > 50 ? ['LiNGAM', 'NOTEARS', 'FCI'] :
+                      ds.nodes > 30 ? ['LiNGAM'] : [];
+
     const { data, nodeNames } = generateLinearData(truth, ds.n, 42);
 
     // Catch algorithm-level errors gracefully (known limitation on large graphs)
     try {
-      const result = runBenchmark(ds.name, truth, data, nodeNames);
+      const result = runBenchmark(ds.name, truth, data, nodeNames, skipAlgos);
       for (const a of result.algorithms) {
         console.log(`  ${a.algorithm.padEnd(8)} SHD=${String(a.shd).padStart(3)} F1=${a.f1.toFixed(3)} TPR=${a.tpr.toFixed(3)} ${a.timeMs}ms`);
       }
