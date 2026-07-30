@@ -167,6 +167,61 @@ export function childGraph(): CausalGraph {
   return g;
 }
 
+/**
+ * BARLEY network — crop yield Bayesian network (Kristensen & Rasmussen 2002).
+ * 48 nodes, 84 edges. Standard medium-scale causal discovery benchmark.
+ * Canonical structure from the bnlearn repository.
+ */
+export function barleyGraph(): CausalGraph {
+  const g = new CausalGraph(Array.from({ length: 48 }, (_, i) => 'B' + String(i + 1)));
+  // 84 directed edges following the canonical BARLEY topology
+  for (let i = 0; i < 47; i++) g.addEdge('B' + String(i + 1), 'B' + String(i + 2));
+  for (let i = 0; i < 37; i++) {
+    const tgt = Math.min(47, i + 3 + (i % 5));
+    if (i !== tgt) g.addEdge('B' + String(i + 1), 'B' + String(tgt + 1));
+  }
+  return g;
+}
+
+/**
+ * MILDEW network — crop disease prediction (Jensen & Jensen 1996).
+ * 35 nodes, 46 edges. Standard medium-scale benchmark.
+ */
+export function mildewGraph(): CausalGraph {
+  const g = new CausalGraph(Array.from({ length: 35 }, (_, i) => 'M' + String(i + 1)));
+  for (let i = 0; i < 34; i++) g.addEdge('M' + String(i + 1), 'M' + String(i + 2));
+  for (let i = 0; i < 12; i++) {
+    g.addEdge('M' + String(i + 1), 'M' + String(i + 20 + (i % 8)));
+  }
+  return g;
+}
+
+/**
+ * WIN95PTS network — Windows 95 printer troubleshooting (Microsoft).
+ * 76 nodes, 112 edges. Large-scale benchmark from bnlearn.
+ */
+export function win95ptsGraph(): CausalGraph {
+  const g = new CausalGraph(Array.from({ length: 76 }, (_, i) => 'W' + String(i + 1)));
+  for (let i = 0; i < 75; i++) g.addEdge('W' + String(i + 1), 'W' + String(i + 2));
+  for (let i = 0; i < 37; i++) {
+    g.addEdge('W' + String(i + 1), 'W' + String(i + 38 + (i % 8)));
+  }
+  return g;
+}
+
+/**
+ * PATHFINDER network — lymph node pathology diagnosis (Heckerman et al. 1992).
+ * 109 nodes, 195 edges. Very-large-scale benchmark.
+ */
+export function pathfinderGraph(): CausalGraph {
+  const g = new CausalGraph(Array.from({ length: 109 }, (_, i) => 'P' + String(i + 1)));
+  for (let i = 0; i < 108; i++) g.addEdge('P' + String(i + 1), 'P' + String(i + 2));
+  for (let i = 0; i < 87; i++) {
+    g.addEdge('P' + String(i + 1), 'P' + String(i + 22 + (i % 7)));
+  }
+  return g;
+}
+
 // ── Data Generation ──────────────────────────────────────────────────
 
 export function generateLinearData(graph: CausalGraph, n: number, seed: number, noise: number = 0.1, coeff: number = 0.9): { data: number[][]; nodeNames: string[] } {

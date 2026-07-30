@@ -9,6 +9,7 @@ import { writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import {
   asiaGraph, sachsGraph, alarmGraph, childGraph,
+  barleyGraph, mildewGraph, win95ptsGraph, pathfinderGraph,
   generateLinearData, runBenchmark, formatBenchmarkTable,
   type BenchmarkResult,
 } from '../src/benchmark.js';
@@ -19,7 +20,11 @@ const DISCOVERY_DATASETS = [
   { name: 'ASIA', fn: asiaGraph, nodes: 8, edges: 8, n: 2000 },
   { name: 'Sachs', fn: sachsGraph, nodes: 11, edges: 17, n: 2000 },
   { name: 'Child', fn: childGraph, nodes: 20, edges: 25, n: 2000 },
+  { name: 'Mildew', fn: mildewGraph, nodes: 35, edges: 46, n: 2000 },
   { name: 'Alarm', fn: alarmGraph, nodes: 37, edges: 46, n: 2000 },
+  { name: 'Barley', fn: barleyGraph, nodes: 48, edges: 84, n: 2000 },
+  { name: 'Win95Pts', fn: win95ptsGraph, nodes: 76, edges: 112, n: 2000 },
+  { name: 'Pathfinder', fn: pathfinderGraph, nodes: 109, edges: 195, n: 2000 },
 ];
 
 function runDiscoveryBenchmarks() {
