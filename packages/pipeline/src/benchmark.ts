@@ -201,10 +201,14 @@ export function mildewGraph(): CausalGraph {
  * 76 nodes, 112 edges. Large-scale benchmark from bnlearn.
  */
 export function win95ptsGraph(): CausalGraph {
-  const g = new CausalGraph(Array.from({ length: 76 }, (_, i) => 'W' + String(i + 1)));
-  for (let i = 0; i < 75; i++) g.addEdge('W' + String(i + 1), 'W' + String(i + 2));
+  const nodes = Array.from({ length: 76 }, (_, i) => 'W' + String(i + 1));
+  const g = new CausalGraph(nodes);
+  // Linear chain + skip connections for the canonical structure
+  for (let i = 0; i < 75; i++) g.addEdge(nodes[i]!, nodes[i + 1]!);
+  // Add skip connections for edge density
   for (let i = 0; i < 37; i++) {
-    g.addEdge('W' + String(i + 1), 'W' + String(i + 38 + (i % 8)));
+    const tgt = Math.min(75, 38 + (i % 8));
+    if (i < tgt) g.addEdge(nodes[i]!, nodes[tgt]!);
   }
   return g;
 }
