@@ -232,7 +232,7 @@ export function runBenchmark(
     { name: 'PC', fn: (d, n) => pcAlgorithm(d, n, {}).graph },
     { name: 'GES', fn: (d, n) => gesAlgorithm(d, n) },
     { name: 'BOSS', fn: (d, n) => bossAlgorithm(d, n, { numStarts: 2, maxIter: 20 }) },
-    { name: 'NOTEARS', fn: (_d, n) => notearsAlgorithm(Array.from({ length: _d.rows }, (_, i): number[] => Array.from({ length: _d.columns }, (_, j): number => _d.get(i, j))), n, { lambda1: 0.1, maxOuterIter: 10, wThreshold: 0.2 }).graph },
+    { name: 'NOTEARS', fn: (_d, n) => notearsAlgorithm(Array.from({ length: _d.rows }, (_, i): number[] => Array.from({ length: _d.columns }, (_, j): number => _d.get(i, j))), n, { lambda1: 0.01, maxOuterIter: 50, wThreshold: 0.05 }).graph },
     { name: 'LiNGAM', fn: (d, n) => directLiNGAM(d, n).graph },
     { name: 'FCI', fn: (d, n) => fciAlgorithm(d, n).graph },
     { name: 'GFCI', fn: (d, n) => gfciAlgorithm(d, n).graph },
