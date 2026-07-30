@@ -3,48 +3,48 @@
     "name": "LinearDML",
     "pehe": 10.632247576557306,
     "ateError": 1.4107161808355104,
-    "timeMs": 1093
+    "timeMs": 1083
   },
   {
     "name": "CausalForestDML",
     "pehe": 4.192640112412158,
     "ateError": 1.0005130882645665,
-    "timeMs": 1547
+    "timeMs": 1549
   },
   {
     "name": "NonParamDML",
     "pehe": 10.631831613765442,
     "ateError": 1.410716192611603,
-    "timeMs": 1113
+    "timeMs": 1087
   },
   {
     "name": "LinearDRLearner",
-    "pehe": 4754.282776567457,
-    "ateError": 4754.2800895986275,
+    "pehe": 372.1519456242852,
+    "ateError": 372.0045167158036,
     "timeMs": 11
   },
   {
     "name": "ForestDRLearner",
     "pehe": 2.865160718941716,
     "ateError": 1.0679746181502092,
-    "timeMs": 120
+    "timeMs": 116
   },
   {
     "name": "SLearner",
-    "pehe": 6.928716712084213,
-    "ateError": 6.4078466852513305,
+    "pehe": 7.058109893181341,
+    "ateError": 6.546334597848265,
     "timeMs": 2
   },
   {
     "name": "TLearner",
-    "pehe": 2797.7739139747205,
-    "ateError": 3.860034375341506,
+    "pehe": 279.92753062237136,
+    "ateError": 3.917510793605472,
     "timeMs": 1
   },
   {
     "name": "XLearner",
-    "pehe": 1601191.7036331135,
-    "ateError": 451.36597359839396,
-    "timeMs": 11
+    "pehe": 16097.351476527347,
+    "ateError": 46.63507667363007,
+    "timeMs": 12
   }
 ]

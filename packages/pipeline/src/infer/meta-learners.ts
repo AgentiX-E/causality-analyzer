@@ -52,8 +52,8 @@ class LinearBaseLearner implements BaseLearner {
         xtx[cj][ci] = xtx[ci][cj]!;
       }
     }
-    // Ridge regularization (L2) for multicollinear features
-    const ridge = k > 10 ? 0.5 : 1e-8;
+    // Adaptive ridge regularization (L2) for multicollinear features
+    const ridge = k > 20 ? 5.0 : k > 10 ? 0.5 : 1e-8;
     for (let ci = 0; ci < k; ci++) xtx[ci][ci] += ridge;
 
     const aug = xtx.map((row, ri) => [...row, xty[ri]]);
