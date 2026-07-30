@@ -56,7 +56,7 @@ export function ciTest(
     default: {
       // Exhaustive check — TypeScript ensures this is unreachable
       const _exhaustive: never = backend;
-      throw new Error(`Unknown CI backend: ${_exhaustive}`);
+      throw new Error(`Unknown CI backend: ${String(_exhaustive)}`);
     }
   }
 }

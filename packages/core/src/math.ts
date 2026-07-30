@@ -1006,8 +1006,8 @@ function computeResiduals(
   k: number,
 ): number[] {
   // Build X'X (k × k) and X'y (k × 1)
-  const xtx: number[][] = Array.from({ length: k }, () => new Array(k).fill(0));
-  const xty: number[] = new Array(k).fill(0);
+  const xtx: number[][] = Array.from({ length: k }, () => new Array(k).fill(0)) as number[][];
+  const xty: number[] = new Array(k).fill(0) as number[];
 
   for (let row = 0; row < n; row++) {
     const rowData = data[row]!;
@@ -1061,13 +1061,13 @@ function computeResiduals(
   }
 
   // Extract β
-  const beta: number[] = new Array(k).fill(0);
+  const beta: number[] = new Array(k).fill(0) as number[];
   for (let ci = 0; ci < k; ci++) {
     beta[ci] = augmented[ci]![k]!;
   }
 
   // Compute residuals
-  const residuals: number[] = new Array(n);
+  const residuals: number[] = new Array(n) as number[];
   for (let row = 0; row < n; row++) {
     const rowData = data[row]!;
     let yHat = 0;
