@@ -1,0 +1,32 @@
+[
+  {
+    "name": "LinearDRLearner",
+    "pehe": 205242691309.81024,
+    "ateError": 205242691309.81052,
+    "timeMs": 11
+  },
+  {
+    "name": "ForestDRLearner",
+    "pehe": 2.865160718941716,
+    "ateError": 1.0679746181502092,
+    "timeMs": 118
+  },
+  {
+    "name": "SLearner",
+    "pehe": 6.915066101125712,
+    "ateError": 6.393214653343601,
+    "timeMs": 2
+  },
+  {
+    "name": "TLearner",
+    "pehe": 139883061056.1134,
+    "ateError": 3.8539663978689007,
+    "timeMs": 1
+  },
+  {
+    "name": "XLearner",
+    "pehe": 4.000601460064065e+21,
+    "ateError": 22487912812.785538,
+    "timeMs": 13
+  }
+]
