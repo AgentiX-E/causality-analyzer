@@ -12,6 +12,8 @@ import { generateIHDP, computePEHE, computeATEError } from './ihdp-data.js';
 import {
   LinearDML, CausalForestDML, NonParamDML,
 } from '../src/infer/dml-estimators.js';
+import { type NuisanceModel } from '../src/infer/double-ml.js';
+import { CausalForest } from '../src/infer/causal-forest.js';
 import {
   LinearDRLearner, ForestDRLearner,
 } from '../src/infer/dr-estimators.js';
@@ -35,11 +37,28 @@ function runEstimators(
   X: number[][], y: number[], t: number[], tauTrue: number[],
 ): EstimatorResult[] {
   const results: EstimatorResult[] = [];
+  const p = X[0]?.length ?? 0;
+
+  /** Forest-based nuisance model for high-dimensional/nonlinear data */
+  function forestNuisance(): NuisanceModel | undefined {
+    if (p <= 10) return undefined;
+    return (trainX: number[][], trainY: number[], trainIdx: number[]) => {
+      const forest = new CausalForest({ nTrees: 30, minLeafSize: 10, maxDepth: 8, seed: 42, sampleFraction: 0.5 });
+      forest.train(
+        trainIdx.map(function(i: number) { return trainX[i]!; }),
+        trainIdx.map(function(i: number) { return trainY[i]!; }),
+        new Array(trainIdx.length).fill(1),
+      );
+      return function(x: number[]) { return forest.predictOne(x); };
+    };
+  }
+
+  const fNuisance = forestNuisance();
 
   // LinearDML
   try {
     const t0 = performance.now();
-    const dml = new LinearDML({ nFolds: 3 });
+    const dml = new LinearDML({ nFolds: 3, outcomeModel: fNuisance, propensityModel: fNuisance });
     dml.fit(X, y, t);
     const cate = dml.effect(X);
     results.push({
@@ -54,7 +73,7 @@ function runEstimators(
   try {
     const t0 = performance.now();
     const cf = new CausalForestDML({
-      nFolds: 3,
+      nFolds: 3, outcomeModel: fNuisance, propensityModel: fNuisance,
       forestConfig: { nTrees: 100, minLeafSize: 10, maxDepth: 10, seed: 42 },
     });
     cf.fit(X, y, t);
@@ -70,7 +89,7 @@ function runEstimators(
   // NonParamDML
   try {
     const t0 = performance.now();
-    const np = new NonParamDML({ nFolds: 3 });
+    const np = new NonParamDML({ nFolds: 3, outcomeModel: fNuisance, propensityModel: fNuisance });
     np.fit(X, y, t);
     const cate = np.effect(X);
     results.push({

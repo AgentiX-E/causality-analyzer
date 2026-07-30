@@ -1,21 +1,39 @@
 [
   {
+    "name": "LinearDML",
+    "pehe": 10.632247576557306,
+    "ateError": 1.4107161808355104,
+    "timeMs": 1093
+  },
+  {
+    "name": "CausalForestDML",
+    "pehe": 4.192640112412158,
+    "ateError": 1.0005130882645665,
+    "timeMs": 1547
+  },
+  {
+    "name": "NonParamDML",
+    "pehe": 10.631831613765442,
+    "ateError": 1.410716192611603,
+    "timeMs": 1113
+  },
+  {
     "name": "LinearDRLearner",
     "pehe": 4754.282776567457,
     "ateError": 4754.2800895986275,
-    "timeMs": 8
+    "timeMs": 11
   },
   {
     "name": "ForestDRLearner",
     "pehe": 2.865160718941716,
     "ateError": 1.0679746181502092,
-    "timeMs": 111
+    "timeMs": 120
   },
   {
     "name": "SLearner",
     "pehe": 6.928716712084213,
     "ateError": 6.4078466852513305,
-    "timeMs": 1
+    "timeMs": 2
   },
   {
     "name": "TLearner",
