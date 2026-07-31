@@ -15,7 +15,7 @@
         "nMissing": 2,
         "nExtra": 5,
         "nEdges": 11,
-        "timeMs": 74
+        "timeMs": 48
       },
       {
         "algorithm": "GES",
@@ -28,7 +28,7 @@
         "nMissing": 2,
         "nExtra": 2,
         "nEdges": 8,
-        "timeMs": 11
+        "timeMs": 8
       },
       {
         "algorithm": "BOSS",
@@ -41,7 +41,7 @@
         "nMissing": 1,
         "nExtra": 1,
         "nEdges": 8,
-        "timeMs": 164
+        "timeMs": 99
       },
       {
         "algorithm": "NOTEARS",
@@ -54,7 +54,7 @@
         "nMissing": 4,
         "nExtra": 9,
         "nEdges": 13,
-        "timeMs": 428
+        "timeMs": 278
       },
       {
         "algorithm": "LiNGAM",
@@ -67,7 +67,7 @@
         "nMissing": 2,
         "nExtra": 8,
         "nEdges": 14,
-        "timeMs": 1051
+        "timeMs": 681
       },
       {
         "algorithm": "FCI",
@@ -80,7 +80,7 @@
         "nMissing": 3,
         "nExtra": 2,
         "nEdges": 7,
-        "timeMs": 61
+        "timeMs": 41
       },
       {
         "algorithm": "GFCI",
@@ -93,7 +93,7 @@
         "nMissing": 3,
         "nExtra": 2,
         "nEdges": 7,
-        "timeMs": 38
+        "timeMs": 25
       }
     ]
   },
@@ -113,7 +113,7 @@
         "nMissing": 10,
         "nExtra": 5,
         "nEdges": 11,
-        "timeMs": 119
+        "timeMs": 77
       },
       {
         "algorithm": "GES",
@@ -126,7 +126,7 @@
         "nMissing": 5,
         "nExtra": 4,
         "nEdges": 15,
-        "timeMs": 14
+        "timeMs": 11
       },
       {
         "algorithm": "BOSS",
@@ -139,7 +139,7 @@
         "nMissing": 7,
         "nExtra": 7,
         "nEdges": 16,
-        "timeMs": 597
+        "timeMs": 419
       },
       {
         "algorithm": "NOTEARS",
@@ -152,7 +152,7 @@
         "nMissing": 11,
         "nExtra": 17,
         "nEdges": 22,
-        "timeMs": 802
+        "timeMs": 541
       },
       {
         "algorithm": "LiNGAM",
@@ -165,7 +165,7 @@
         "nMissing": 10,
         "nExtra": 13,
         "nEdges": 19,
-        "timeMs": 1470
+        "timeMs": 915
       },
       {
         "algorithm": "FCI",
@@ -178,7 +178,7 @@
         "nMissing": 11,
         "nExtra": 8,
         "nEdges": 13,
-        "timeMs": 143
+        "timeMs": 91
       },
       {
         "algorithm": "GFCI",
@@ -191,7 +191,7 @@
         "nMissing": 11,
         "nExtra": 4,
         "nEdges": 9,
-        "timeMs": 34
+        "timeMs": 21
       }
     ]
   },
@@ -211,7 +211,7 @@
         "nMissing": 10,
         "nExtra": 9,
         "nEdges": 23,
-        "timeMs": 376
+        "timeMs": 246
       },
       {
         "algorithm": "GES",
@@ -224,7 +224,7 @@
         "nMissing": 10,
         "nExtra": 12,
         "nEdges": 26,
-        "timeMs": 54
+        "timeMs": 37
       },
       {
         "algorithm": "BOSS",
@@ -237,7 +237,7 @@
         "nMissing": 4,
         "nExtra": 4,
         "nEdges": 24,
-        "timeMs": 5180
+        "timeMs": 7662
       },
       {
         "algorithm": "NOTEARS",
@@ -250,7 +250,7 @@
         "nMissing": 19,
         "nExtra": 45,
         "nEdges": 50,
-        "timeMs": 3327
+        "timeMs": 2166
       },
       {
         "algorithm": "LiNGAM",
@@ -263,7 +263,7 @@
         "nMissing": 15,
         "nExtra": 39,
         "nEdges": 48,
-        "timeMs": 3842
+        "timeMs": 2340
       },
       {
         "algorithm": "FCI",
@@ -276,7 +276,7 @@
         "nMissing": 8,
         "nExtra": 7,
         "nEdges": 23,
-        "timeMs": 1212
+        "timeMs": 828
       },
       {
         "algorithm": "GFCI",
@@ -289,7 +289,7 @@
         "nMissing": 10,
         "nExtra": 11,
         "nEdges": 25,
-        "timeMs": 736
+        "timeMs": 487
       }
     ]
   }
