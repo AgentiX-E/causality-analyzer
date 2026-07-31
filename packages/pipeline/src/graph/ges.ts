@@ -201,7 +201,7 @@ function pdagToCpdag(state: PDAGState): void {
 
 // ── BIC Score ───────────────────────────────────────────────────────
 
-function bicLocal(
+export function bicLocal(
   yIdx: number, paIdx: number[],
   cov: number[][], N: number,
   cache: Map<string, number>,
