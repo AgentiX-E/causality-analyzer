@@ -1,0 +1,49 @@
+name: Hyperparameter Tuning (v2.0)
+on:
+  schedule:
+    - cron: '0 2 * * 0'  # Weekly Sunday 2AM UTC
+  workflow_dispatch:
+    inputs:
+      scope:
+        type: choice
+        options: [discovery, estimation, all]
+        default: discovery
+
+jobs:
+  tune-discovery:
+    if: ${{ github.event.inputs.scope == 'discovery' || github.event.inputs.scope == 'all' || github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: 'pnpm' }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @agentix-e/causality-analyzer-pipeline build
+      - name: Tune discovery algorithms
+        run: BENCH_TUNING_TRIALS=3 pnpm --filter @agentix-e/causality-analyzer-pipeline benchmark:tune
+        timeout-minutes: 80
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tuning-results-discovery
+          path: packages/pipeline/benchmark-results/tuning-results.json
+
+  tune-estimation:
+    if: ${{ github.event.inputs.scope == 'estimation' || github.event.inputs.scope == 'all' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: 'pnpm' }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @agentix-e/causality-analyzer-pipeline build
+      - name: Tune IHDP estimators
+        run: pnpm --filter @agentix-e/causality-analyzer-pipeline benchmark:tune:ihdp
+        timeout-minutes: 110
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tuning-results-estimation
+          path: packages/pipeline/benchmark-results/tuning-ihdp.json
