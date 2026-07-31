@@ -198,12 +198,13 @@ export class ProfileStore {
     const path = join(this.config.storagePath, `${profileId}.json`);
     if (!existsSync(path)) return null;
     try {
-      const data = JSON.parse(readFileSync(path, 'utf-8'));
-      data.history = data.history.map((h: Record<string, unknown>) => ({
+      type ParsedProfile = Record<string, unknown> & { history: Array<Record<string, unknown>> };
+      const data = JSON.parse(readFileSync(path, 'utf-8')) as ParsedProfile;
+      data.history = data.history.map((h) => ({
         ...h,
         timestamp: new Date(h.timestamp as string),
       }));
-      return data as TuningProfile;
+      return data as unknown as TuningProfile;
     } catch {
       return null;
     }
@@ -723,7 +724,7 @@ export class MetaTransfer {
 /**
  * Zero-human-intervention production loop integrating all recovery layers.
  */
-export async function autonomousPipeline(
+export function autonomousPipeline(
   algorithm: string,
   source: DataSourceIdentity,
   store: ProfileStore,
@@ -736,7 +737,7 @@ export async function autonomousPipeline(
   runDiscovery: (params: Record<string, number>) => { shd: number; f1: number },
   // Optional: callback for CI-based retuning (Stage 3)
   triggerRetune?: () => Promise<void>,
-): Promise<{ shd: number; f1: number; status: ProfileStatus; stage: RecoveryStage | null }> {
+): { shd: number; f1: number; status: ProfileStatus; stage: RecoveryStage | null } {
   const profile = store.getOrCreate(algorithm, source);
   let recoveryStage: RecoveryStage | null = null;
 
@@ -877,7 +878,7 @@ export function generateSourceIdentity(
  *   6. Record result to profile history
  *   7. If retuning is staged, queue tuning job
  */
-export async function productionPipeline(
+export function productionPipeline(
   algorithm: string,
   source: DataSourceIdentity,
   store: ProfileStore,
@@ -886,7 +887,7 @@ export async function productionPipeline(
   rollback: RollbackManager,
   // Callback: run causal discovery and return SHD/F1
   runDiscovery: (params: Record<string, number>) => { shd: number; f1: number },
-): Promise<{ shd: number; f1: number; status: ProfileStatus; drift: DriftReport }> {
+): { shd: number; f1: number; status: ProfileStatus; drift: DriftReport } {
   const profile = store.getOrCreate(algorithm, source);
 
   // Layer 1: Drift detection
