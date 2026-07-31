@@ -67,7 +67,7 @@ export function computeStARS(
   for (let s = 0; s < m; s++) {
     // Random subsample (with basic seeded RNG)
     const indices = reservoirSample(n, subsampleSize, 42 + s);
-    const subsample = indices.map(i => data[i]!);
+    const subsample = indices.map(i => data[i]);
 
     try {
       const subGraph = runDiscovery(subsample);
@@ -259,15 +259,15 @@ function computeMSEFit(pred: CausalGraph, data: number[][]): number {
     if (parents.length === 0) continue;
 
     // Simple linear regression: predict y from parents
-    const yVals = data.map(r => r[y]!);
+    const yVals = data.map(r => r[y]);
     const yMean = yVals.reduce((a, b) => a + b, 0) / n;
     const ssTotal = yVals.reduce((a, v) => a + (v - yMean) ** 2, 0);
 
     // Predict y as linear combination of parents (simple OLS)
-    const X = parents.map(p => data.map(r => r[p]!));
+    const X = parents.map(p => data.map(r => r[p]));
     const coeffs = solveLinearRegression(X, yVals);
-    const preds = data.map(r => parents.reduce((s, p, k) => s + coeffs[k]! * r[p]!, 0));
-    const ssResidual = yVals.reduce((s, v, i) => s + (v - preds[i]!) ** 2, 0);
+    const preds = data.map(r => parents.reduce((s, p, k) => s + coeffs[k] * r[p], 0));
+    const ssResidual = yVals.reduce((s, v, i) => s + (v - preds[i]) ** 2, 0);
 
     const r2 = ssTotal > 0 ? 1 - ssResidual / ssTotal : 0;
     totalR2 += Math.max(0, Math.min(1, r2));
@@ -283,15 +283,15 @@ function computeMSEFit(pred: CausalGraph, data: number[][]): number {
 function computeCovariance(data: number[][], n: number, d: number): number[][] {
   const means = new Array(d).fill(0);
   for (let j = 0; j < d; j++) {
-    for (let i = 0; i < n; i++) means[j] += data[i]![j]!;
+    for (let i = 0; i < n; i++) means[j] += data[i][j];
     means[j] /= n;
   }
   const cov: number[][] = Array.from({ length: d }, () => new Array(d).fill(0));
   for (let i = 0; i < d; i++) {
     for (let j = 0; j <= i; j++) {
       let val = 0;
-      for (let r = 0; r < n; r++) val += (data[r]![i]! - means[i]!) * (data[r]![j]! - means[j]!);
-      cov[i]![j] = cov[j]![i] = val / n;
+      for (let r = 0; r < n; r++) val += (data[r][i] - means[i]!) * (data[r][j] - means[j]!);
+      cov[i][j] = cov[j][i] = val / n;
     }
   }
   return cov;
@@ -316,21 +316,21 @@ function solveLinearRegression(X: number[][], y: number[]): number[] {
   const Xty = new Array(p + 1).fill(0);
 
   for (let r = 0; r < n; r++) {
-    XtX[0]![0]! += 1;
-    Xty[0]! += y[r]!;
+    XtX[0][0] += 1;
+    Xty[0]! += y[r];
     for (let k = 0; k < p; k++) {
-      XtX[0]![k + 1]! += X[k]![r]!;
-      XtX[k + 1]![0]! += X[k]![r]!;
-      Xty[k + 1]! += X[k]![r]! * y[r]!;
+      XtX[0][k + 1] += X[k][r];
+      XtX[k + 1][0] += X[k][r];
+      Xty[k + 1]! += X[k][r] * y[r];
     }
   }
   for (let i = 0; i <= p; i++) {
     for (let j = i + 1; j <= p; j++) {
-      XtX[j]![i] = XtX[i]![j]!;
+      XtX[j][i] = XtX[i][j]!;
     }
   }
   // Ridge regularization
-  for (let i = 0; i <= p; i++) XtX[i]![i]! += 1e-8;
+  for (let i = 0; i <= p; i++) XtX[i][i] += 1e-8;
 
   // Gaussian elimination
   const aug = XtX.map((row, ri) => [...row, Xty[ri]!]);
@@ -338,15 +338,15 @@ function solveLinearRegression(X: number[][], y: number[]): number[] {
   for (let col = 0; col < k; col++) {
     let pivot = col;
     for (let row = col + 1; row < k; row++) {
-      if (Math.abs(aug[row]![col]!) > Math.abs(aug[pivot]![col]!)) pivot = row;
+      if (Math.abs(aug[row][col]) > Math.abs(aug[pivot][col])) pivot = row;
     }
-    [aug[col], aug[pivot]] = [aug[pivot]!, aug[col]!];
-    if (Math.abs(aug[col]![col]!) < 1e-12) continue;
-    for (let j2 = col; j2 <= k; j2++) aug[col]![j2]! /= aug[col]![col]!;
+    [aug[col], aug[pivot]] = [aug[pivot], aug[col]];
+    if (Math.abs(aug[col][col]) < 1e-12) continue;
+    for (let j2 = col; j2 <= k; j2++) aug[col][j2]! /= aug[col][col]!;
     for (let row = 0; row < k; row++) {
       if (row === col) continue;
-      const f = aug[row]![col]!;
-      for (let j2 = col; j2 <= k; j2++) aug[row]![j2]! -= f * aug[col]![j2]!;
+      const f = aug[row][col]!;
+      for (let j2 = col; j2 <= k; j2++) aug[row][j2]! -= f * aug[col][j2]!;
     }
   }
   return aug.slice(1).map(r => r[k]!);

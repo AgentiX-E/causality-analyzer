@@ -236,6 +236,11 @@ export class ProfileStore {
   /** Get rollback history */
   getRollbackHistory(): RollbackEvent[] { return [...this.rollbacks]; }
 
+  /** Get all active profiles (for meta-transfer lookup) */
+  allProfiles(): TuningProfile[] {
+    return [...this.profiles.values()].filter(p => p.status === 'active');
+  }
+
   /** Register a rollback event */
   registerRollback(event: RollbackEvent): void {
     this.rollbacks.push(event);
@@ -349,8 +354,8 @@ export class DriftDetector {
     let maxDiff = 0;
     let aIdx = 0, bIdx = 0;
     for (const val of sorted) {
-      while (aIdx < a.length && a[aIdx]! <= val) aIdx++;
-      while (bIdx < b.length && b[bIdx]! <= val) bIdx++;
+      while (aIdx < a.length && a[aIdx] <= val) aIdx++;
+      while (bIdx < b.length && b[bIdx] <= val) bIdx++;
       const diff = Math.abs(aIdx / a.length - bIdx / b.length);
       if (diff > maxDiff) maxDiff = diff;
     }
@@ -538,12 +543,12 @@ export class ParameterPool {
 
   /** Get the best params from pool */
   get best(): Record<string, number> | null {
-    return this.entries.length > 0 ? this.entries[0]!.params : null;
+    return this.entries.length > 0 ? this.entries[0].params : null;
   }
 
   /** Get the N-th best params — for ensemble fallback */
   getNth(n: number): Record<string, number> | null {
-    return n < this.entries.length ? this.entries[n]!.params : null;
+    return n < this.entries.length ? this.entries[n].params : null;
   }
 
   /** Size of the pool */
@@ -689,8 +694,7 @@ export class MetaTransfer {
     let best: TuningProfile | null = null;
     let bestScore = -Infinity;
 
-    for (const [, other] of (this.store as any).profiles) {
-      const p = other as TuningProfile;
+    for (const p of this.store.allProfiles()) {
       if (p.profileId === profile.profileId) continue;
       if (p.algorithm !== profile.algorithm) continue;
       if (p.status !== 'active') continue;
