@@ -17,6 +17,9 @@
     "benchmark:tune": "npx tsx benchmark/tune.ts",
     "benchmark:tune:full": "BENCH_TUNING_TRIALS=5 npx tsx benchmark/tune.ts",
     "benchmark:tune:ihdp": "npx tsx benchmark/tune-ihdp.ts",
+    "benchmark:ocdb": "npx tsx benchmark/run-ocdb.ts",
+    "benchmark:ocdb:full": "BENCH_OCDB_MAX_SIZE=50 npx tsx benchmark/run-ocdb.ts",
+    "benchmark:ocdb:ci": "BENCH_OCDB_MAX_SIZE=10 npx tsx benchmark/run-ocdb.ts",
     "lint": "eslint src/ --ext .ts",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
