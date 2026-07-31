@@ -19,6 +19,7 @@ import { gfciAlgorithm } from '../src/graph/gfci.js';
 import { bossAlgorithm } from '../src/graph/boss.js';
 import { notearsAlgorithm } from '../src/graph/notears.js';
 import { directLiNGAM } from '../src/graph/lingam.js';
+import { _resetFisherZCache } from '@agentix-e/causality-analyzer-core';
 import type { CausalGraph } from '../src/graph/causal-graph.js';
 
 const OUTPUT_DIR = join(import.meta.dirname, '..', 'benchmark-results');
@@ -103,6 +104,7 @@ function runBenchmarks() {
       const trials: TrialResult[] = [];
 
       for (let t = 0; t < N_TRIALS; t++) {
+        _resetFisherZCache(); // prevent cross-trial cache contamination
         const { data, nodeNames } = generateLinearData(truth, ds.n, 42 + t);
         const mat = new Matrix(data);
         const r = runAlgo(algo.name, algo.fn, mat, nodeNames, truth, skipSlow);
