@@ -311,7 +311,9 @@ function quickDataFingerprint(
   condSet: number[],
   n: number,
 ): number {
-  const cols = [i, j, ...condSet];
+  // Sort (i, j) to ensure symmetric calls produce identical fingerprints,
+  // matching the cache key's sorting behavior.
+  const cols = [Math.min(i, j), Math.max(i, j), ...condSet];
   const mid = Math.floor(n / 2);
   const last = n - 1;
   const samples = [0, mid, last, Math.floor(n / 4), Math.floor(3 * n / 4)];
