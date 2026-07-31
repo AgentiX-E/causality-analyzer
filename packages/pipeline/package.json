@@ -16,6 +16,7 @@
     "benchmark:multi:full": "BENCH_TRIALS=5 npx tsx benchmark/run-multi.ts",
     "benchmark:tune": "npx tsx benchmark/tune.ts",
     "benchmark:tune:full": "BENCH_TUNING_TRIALS=5 npx tsx benchmark/tune.ts",
+    "benchmark:tune:ihdp": "npx tsx benchmark/tune-ihdp.ts",
     "lint": "eslint src/ --ext .ts",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
