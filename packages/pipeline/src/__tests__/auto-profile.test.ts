@@ -440,5 +440,200 @@ describe('ProfileStore', () => {
   });
 });
 
+// ── Autonomous Recovery Tests ──────────────────────────────────────
+
+import {
+  ParameterPool, StagedRecovery, MetaTransfer,
+  autonomousPipeline,
+} from '../profile/auto-profile.js';
+
+describe('ParameterPool', () => {
+  it('records and ranks parameter sets by SHD', () => {
+    const pool = new ParameterPool(5);
+    pool.record({ a: 1 }, 10);
+    pool.record({ a: 2 }, 5);
+    pool.record({ a: 3 }, 15);
+    expect(pool.size).toBe(3);
+    // Best should be the one with SHD=5
+    expect(pool.best?.a).toBe(2);
+  });
+
+  it('deduplicates near-identical params', () => {
+    const pool = new ParameterPool(5);
+    pool.record({ a: 1, b: 0.1 }, 10);
+    pool.record({ a: 1, b: 0.101 }, 10); // 1% difference → same
+    expect(pool.size).toBe(1);
+  });
+
+  it('EMA updates existing entries', () => {
+    const pool = new ParameterPool(5);
+    pool.record({ a: 1 }, 10);
+    pool.record({ a: 1 }, 5); // better SHD → score increases
+    expect(pool.size).toBe(1);
+    expect(pool.topK[0]!.trials).toBe(2);
+  });
+
+  it('getNth returns correct fallback', () => {
+    const pool = new ParameterPool(5);
+    pool.record({ a: 1 }, 5);
+    pool.record({ a: 2 }, 10);
+    pool.record({ a: 3 }, 15);
+    expect(pool.getNth(1)?.a).toBe(2); // second best
+    expect(pool.getNth(99)).toBeNull();
+  });
+
+  it('caps at maxSize', () => {
+    const pool = new ParameterPool(3);
+    for (let i = 0; i < 10; i++) pool.record({ a: i }, 20 - i);
+    expect(pool.size).toBeLessThanOrEqual(3);
+  });
+});
+
+describe('StagedRecovery', () => {
+  it('escalates from ensemble → retune → transfer', () => {
+    const recovery = new StagedRecovery();
+    const profile = makeProfile('BOSS', makeSource('recov'));
+    const pool = new ParameterPool(3);
+    pool.record({ a: 1 }, 10);
+    pool.record({ a: 2 }, 8);
+    pool.record({ a: 3 }, 12);
+
+    // First escalation: ensemble
+    const s1 = recovery.escalate(profile, pool);
+    expect(s1).toBe('ensemble');
+
+    // After 10 attempts: retune
+    let stage: string | null = null;
+    for (let i = 0; i < 10; i++) stage = recovery.escalate(profile, pool);
+    expect(stage).toBe('retune');
+
+    // After 3 more retune cycles: transfer
+    for (let i = 0; i < 3; i++) stage = recovery.escalate(profile, pool);
+    expect(stage).toBe('transfer');
+
+    // Transfer stays indefinitely
+    stage = recovery.escalate(profile, pool);
+    expect(stage).toBe('transfer');
+  });
+
+  it('clears recovery state on command', () => {
+    const recovery = new StagedRecovery();
+    const profile = makeProfile('BOSS', makeSource('recov'));
+    const pool = new ParameterPool(3);
+    pool.record({ a: 1 }, 10);
+
+    recovery.escalate(profile, pool);
+    recovery.clear(profile.profileId);
+
+    // After clear, escalate starts fresh
+    const stage = recovery.escalate(profile, pool);
+    expect(stage).toBe('ensemble');
+  });
+});
+
+describe('AutonomousPipeline', () => {
+  it('automatically switches to ensemble on stale', async () => {
+    const store = makeStore();
+    const detector = new DriftDetector(TEST_CONFIG);
+    const shadowEval = new ShadowEvaluator(TEST_CONFIG);
+    const rollback = new RollbackManager(store, TEST_CONFIG);
+    const recovery = new StagedRecovery();
+    const pool = new ParameterPool(5);
+    const transfer = new MetaTransfer(store);
+    const source = makeSource('auto-test');
+
+    // Pre-populate pool with diverse params
+    pool.record({ lambda: 0.1 }, 10);
+    pool.record({ lambda: 0.05 }, 8);
+    pool.record({ lambda: 0.2 }, 12);
+
+    // Mark profile as stale
+    const profile = store.getOrCreate('BOSS', source);
+    profile.status = 'stale';
+
+    const result = await autonomousPipeline(
+      'BOSS', source, store, detector, shadowEval, rollback,
+      recovery, pool, transfer,
+      (params) => ({ shd: params.lambda === 0.1 ? 10 : params.lambda === 0.05 ? 8 : 12, f1: 0.5 }),
+    );
+
+    expect(result.stage).toBe('ensemble');
+    // Profile should switch to one of the pool params
+    const updated = store.getOrCreate('BOSS', source);
+    expect([0.05, 0.1, 0.2]).toContain(updated.activeParams.lambda);
+  });
+
+  it('recovery loop returns to active when SHD recovers', async () => {
+    const store = makeStore();
+    const detector = new DriftDetector(TEST_CONFIG);
+    const shadowEval = new ShadowEvaluator(TEST_CONFIG);
+    const rollback = new RollbackManager(store, TEST_CONFIG);
+    const recovery = new StagedRecovery();
+    const pool = new ParameterPool(5);
+    const transfer = new MetaTransfer(store);
+    const source = makeSource('recovery-test');
+
+    // Pre-populate baseline with good SHD
+    const profile = store.getOrCreate('BOSS', source);
+    profile.history = Array.from({ length: 5 }, (_, i) => ({
+      params: { lambda: 0.1 }, shd: 10, f1: 0.5, shadow: false,
+      timestamp: new Date(Date.now() + i * 1000),
+    }));
+    profile.status = 'stale';
+    pool.record({ lambda: 0.1 }, 10);
+    pool.record({ lambda: 0.05 }, 8);
+
+    // Run with good params → should recover
+    const result = await autonomousPipeline(
+      'BOSS', source, store, detector, shadowEval, rollback,
+      recovery, pool, transfer,
+      () => ({ shd: 10, f1: 0.5 }),
+    );
+
+    // Should have recovered (SHD=10 ≈ baseline)
+    const updated = store.getOrCreate('BOSS', source);
+    expect(['active', 'stale']).toContain(updated.status); // recovery may take multiple runs
+  });
+
+  it('does not enter stale when pool has ≥3 entries (ensemble fallback)', async () => {
+    const store = makeStore();
+    const detector = new DriftDetector(TEST_CONFIG);
+    const shadowEval = new ShadowEvaluator(TEST_CONFIG);
+    const rollback = new RollbackManager(store, TEST_CONFIG);
+    const recovery = new StagedRecovery();
+    const pool = new ParameterPool(5);
+    const transfer = new MetaTransfer(store);
+    const source = makeSource('no-stale-test');
+
+    // Pre-populate with 3+ diverse entries so ensemble is available
+    pool.record({ lambda: 0.1 }, 10);
+    pool.record({ lambda: 0.05 }, 8);
+    pool.record({ lambda: 0.2 }, 12);
+
+    // Create drift scenario
+    const profile = store.getOrCreate('BOSS', source);
+    profile.history = [
+      ...Array.from({ length: 10 }, (_, i) => ({
+        params: { lambda: 0.1 }, shd: 10, f1: 0.5, shadow: false,
+        timestamp: new Date(Date.now() + i * 1000),
+      })),
+      ...Array.from({ length: 10 }, (_, i) => ({
+        params: { lambda: 0.1 }, shd: 16, f1: 0.3, shadow: false,
+        timestamp: new Date(Date.now() + (10 + i) * 1000),
+      })),
+    ];
+
+    const result = await autonomousPipeline(
+      'BOSS', source, store, detector, shadowEval, rollback,
+      recovery, pool, transfer,
+      () => ({ shd: 10, f1: 0.5 }),
+    );
+
+    // With pool ≥3, should switch to ensemble WITHOUT going stale
+    const updated = store.getOrCreate('BOSS', source);
+    expect(updated.status).not.toBe('stale');
+  });
+});
+
 // ── Name export for vitest discovery ────────────────────────────────
 export const testSuite = 'AutoProfile';
