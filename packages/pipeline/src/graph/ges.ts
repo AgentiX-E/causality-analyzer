@@ -408,6 +408,93 @@ function findBestDelete(
   return best;
 }
 
+// ── Turning Operator (Hauser & Bühlmann 2012) ──────────────────────
+
+interface TurnOp { x: number; y: number; delta: number }
+
+/**
+ * Find the best edge reversal that improves total BIC score.
+ *
+ * For each directed edge X→Y, check if reversing to Y→X:
+ * 1. Is valid in CPDAG space (no cycles, respects Meek rules)
+ * 2. Improves combined BIC of nodes X and Y
+ *
+ * The score change considers both nodes simultaneously:
+ *   old: BIC(X | pa(X)) + BIC(Y | pa(Y))
+ *   new: BIC(X | pa(X) ∪ {Y}) + BIC(Y | pa(Y) \ {X})
+ */
+function findBestTurn(
+  state: PDAGState, nodeIdx: Map<string, number>,
+  cov: number[][], N: number, cache: Map<string, number>,
+  penaltyDiscount: number,
+): TurnOp | null {
+  let best: TurnOp | null = null;
+
+  for (let x = 0; x < state.d; x++) {
+    for (let y = 0; y < state.d; y++) {
+      if (x === y) continue;
+      // Must be a directed edge X→Y
+      if (!state.pa[y].has(x)) continue;
+
+      // Validity: Y can legally become a parent of X
+      // Must not create a cycle: Y not reachable from X in current pa graph
+      if (hasDirectedPath(state, y, x)) continue;
+
+      // Y must not already be a parent of X
+      if (state.pa[x].has(y)) continue;
+
+      // Compute score change
+      const oldParentsX = [...state.pa[x]];
+      const oldParentsY = [...state.pa[y]];
+      const newParentsX = [...oldParentsX, y];
+      const newParentsY = oldParentsY.filter(p => p !== x);
+
+      const oldScore = bicLocal(x, oldParentsX, cov, N, cache, penaltyDiscount) +
+                       bicLocal(y, oldParentsY, cov, N, cache, penaltyDiscount);
+      const newScore = bicLocal(x, newParentsX, cov, N, cache, penaltyDiscount) +
+                       bicLocal(y, newParentsY, cov, N, cache, penaltyDiscount);
+
+      const delta = newScore - oldScore;
+      if (delta > 0 && (!best || delta > best.delta)) {
+        best = { x, y, delta };
+      }
+    }
+  }
+  return best;
+}
+
+/**
+ * Check if there is a directed path from `from` to `to`
+ * in the current parent graph (BFS).
+ */
+function hasDirectedPath(state: PDAGState, from: number, to: number): boolean {
+  const visited = new Set<number>();
+  const queue = [from];
+  visited.add(from);
+  while (queue.length > 0) {
+    const cur = queue.shift()!;
+    if (cur === to) return true;
+    for (const parent of state.pa[cur]) {
+      if (!visited.has(parent)) {
+        visited.add(parent);
+        queue.push(parent);
+      }
+    }
+  }
+  return false;
+}
+
+function applyTurn(state: PDAGState, op: TurnOp): void {
+  // Remove X→Y edge
+  state.pa[op.y].delete(op.x);
+  // Add Y→X edge
+  state.pa[op.x].add(op.y);
+  // Ensure adjacency is set
+  state.adj[op.x][op.y] = state.adj[op.y][op.x] = true;
+  // Restore CPDAG consistency
+  pdagToCpdag(state);
+}
+
 // ── Apply operators ─────────────────────────────────────────────────
 
 function applyInsert(state: PDAGState, op: InsertOp): void {
@@ -510,6 +597,19 @@ export function gesAlgorithm(
       const best = findBestDelete(state, nodeIdx, cov, N, scoreCache, penaltyDiscount);
       if (!best) break;
       applyDelete(state, best);
+    }
+  }
+
+  // ── Turning Phase (Hauser & Bühlmann 2012) ──────────────────────────
+  // Reverses incorrectly oriented edges that improve total BIC.
+  // Critical for large graphs where forward/backward alone leave
+  // suboptimal edge orientations.
+  if (d > 8) {
+    iter = 0;
+    while (iter++ < 200) {
+      const best = findBestTurn(state, nodeIdx, cov, N, scoreCache, penaltyDiscount);
+      if (!best) break;
+      applyTurn(state, best);
     }
   }
 
