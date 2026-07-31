@@ -1,0 +1,107 @@
+[
+  {
+    "algo": "NOTEARS",
+    "dataset": "ASIA",
+    "params": {
+      "lambda1": 0.005,
+      "wThreshold": 0.2
+    },
+    "shdMean": 7.5,
+    "shdStd": 0.7071067811865476,
+    "f1Mean": 0.6157894736842104,
+    "trials": 2
+  },
+  {
+    "algo": "NOTEARS",
+    "dataset": "Sachs",
+    "params": {
+      "lambda1": 0.001,
+      "wThreshold": 0.2
+    },
+    "shdMean": 19,
+    "shdStd": 0,
+    "f1Mean": 0.2962962962962963,
+    "trials": 2
+  },
+  {
+    "algo": "NOTEARS",
+    "dataset": "Child",
+    "params": {
+      "lambda1": 0.002,
+      "wThreshold": 0.2
+    },
+    "shdMean": 43.5,
+    "shdStd": 0.7071067811865476,
+    "f1Mean": 0.15535444947209653,
+    "trials": 2
+  },
+  {
+    "algo": "GES",
+    "dataset": "ASIA",
+    "params": {
+      "penaltyDiscount": 1.5
+    },
+    "shdMean": 5.5,
+    "shdStd": 4.949747468305833,
+    "f1Mean": 0.6727941176470589,
+    "trials": 2
+  },
+  {
+    "algo": "GES",
+    "dataset": "Sachs",
+    "params": {
+      "penaltyDiscount": 1
+    },
+    "shdMean": 8,
+    "shdStd": 1.4142135623730951,
+    "f1Mean": 0.7419354838709677,
+    "trials": 2
+  },
+  {
+    "algo": "GES",
+    "dataset": "Child",
+    "params": {
+      "penaltyDiscount": 2.5
+    },
+    "shdMean": 20.5,
+    "shdStd": 0.7071067811865476,
+    "f1Mean": 0.5934065934065933,
+    "trials": 2
+  },
+  {
+    "algo": "BOSS",
+    "dataset": "ASIA",
+    "params": {
+      "numStarts": 3,
+      "maxParents": 4
+    },
+    "shdMean": 2,
+    "shdStd": 0,
+    "f1Mean": 0.875,
+    "trials": 2
+  },
+  {
+    "algo": "BOSS",
+    "dataset": "Sachs",
+    "params": {
+      "numStarts": 3,
+      "maxParents": 4
+    },
+    "shdMean": 12.5,
+    "shdStd": 2.1213203435596424,
+    "f1Mean": 0.6038306451612903,
+    "trials": 2
+  },
+  {
+    "algo": "BOSS",
+    "dataset": "Child",
+    "params": {
+      "numStarts": 3,
+      "maxParents": 4
+    },
+    "shdMean": 6.5,
+    "shdStd": 0.7071067811865476,
+    "f1Mean": 0.863031914893617,
+    "trials": 2
+  }
+]

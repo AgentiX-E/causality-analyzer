@@ -291,8 +291,8 @@ export function runBenchmark(
   const allAlgos: Array<{ name: string; fn: (d: Matrix, nodes: string[]) => CausalGraph }> = [
     { name: 'PC', fn: (d, n) => pcAlgorithm(d, n, {}).graph },
     { name: 'GES', fn: (d, n) => gesAlgorithm(d, n) },
-    { name: 'BOSS', fn: (d, n) => bossAlgorithm(d, n, { seed: 42 }) },
-    { name: 'NOTEARS', fn: (_d, n) => notearsAlgorithm(Array.from({ length: _d.rows }, (_, i): number[] => Array.from({ length: _d.columns }, (_, j): number => _d.get(i, j))), n, { lambda1: 0.005, maxOuterIter: 100, tol: 1e-8, wThreshold: 0.1 }).graph },
+    { name: 'BOSS', fn: (d, n) => bossAlgorithm(d, n, { numStarts: 3, maxParents: 4, seed: 42 }) },
+    { name: 'NOTEARS', fn: (_d, n) => notearsAlgorithm(Array.from({ length: _d.rows }, (_, i): number[] => Array.from({ length: _d.columns }, (_, j): number => _d.get(i, j))), n, { lambda1: 0.005, maxOuterIter: 50, tol: 1e-8, wThreshold: 0.2 }).graph },
     { name: 'LiNGAM', fn: (d, n) => directLiNGAM(d, n).graph },
     { name: 'FCI', fn: (d, n) => fciAlgorithm(d, n).graph },
     { name: 'GFCI', fn: (d, n) => gfciAlgorithm(d, n).graph },
