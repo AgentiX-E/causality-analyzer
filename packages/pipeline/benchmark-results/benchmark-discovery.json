@@ -15,7 +15,7 @@
         "nMissing": 2,
         "nExtra": 5,
         "nEdges": 11,
-        "timeMs": 48
+        "timeMs": 49
       },
       {
         "algorithm": "GES",
@@ -41,20 +41,20 @@
         "nMissing": 1,
         "nExtra": 1,
         "nEdges": 8,
-        "timeMs": 99
+        "timeMs": 95
       },
       {
         "algorithm": "NOTEARS",
         "graph": "ASIA",
-        "shd": 13,
-        "tpr": 0.5,
-        "fpr": 0.6923076923076923,
-        "f1": 0.380952380952381,
-        "nCorrect": 4,
-        "nMissing": 4,
+        "shd": 12,
+        "tpr": 0.625,
+        "fpr": 0.6428571428571429,
+        "f1": 0.45454545454545453,
+        "nCorrect": 5,
+        "nMissing": 3,
         "nExtra": 9,
-        "nEdges": 13,
-        "timeMs": 278
+        "nEdges": 14,
+        "timeMs": 206
       },
       {
         "algorithm": "LiNGAM",
@@ -67,7 +67,7 @@
         "nMissing": 2,
         "nExtra": 8,
         "nEdges": 14,
-        "timeMs": 681
+        "timeMs": 683
       },
       {
         "algorithm": "FCI",
@@ -80,7 +80,7 @@
         "nMissing": 3,
         "nExtra": 2,
         "nEdges": 7,
-        "timeMs": 41
+        "timeMs": 47
       },
       {
         "algorithm": "GFCI",
@@ -113,7 +113,7 @@
         "nMissing": 10,
         "nExtra": 5,
         "nEdges": 11,
-        "timeMs": 77
+        "timeMs": 74
       },
       {
         "algorithm": "GES",
@@ -126,7 +126,7 @@
         "nMissing": 5,
         "nExtra": 4,
         "nEdges": 15,
-        "timeMs": 11
+        "timeMs": 10
       },
       {
         "algorithm": "BOSS",
@@ -139,20 +139,20 @@
         "nMissing": 7,
         "nExtra": 7,
         "nEdges": 16,
-        "timeMs": 419
+        "timeMs": 434
       },
       {
         "algorithm": "NOTEARS",
         "graph": "Sachs",
-        "shd": 28,
-        "tpr": 0.3125,
-        "fpr": 0.7727272727272727,
-        "f1": 0.2631578947368421,
-        "nCorrect": 5,
-        "nMissing": 11,
-        "nExtra": 17,
-        "nEdges": 22,
-        "timeMs": 541
+        "shd": 23,
+        "tpr": 0.25,
+        "fpr": 0.7333333333333333,
+        "f1": 0.2580645161290323,
+        "nCorrect": 4,
+        "nMissing": 12,
+        "nExtra": 11,
+        "nEdges": 15,
+        "timeMs": 551
       },
       {
         "algorithm": "LiNGAM",
@@ -165,7 +165,7 @@
         "nMissing": 10,
         "nExtra": 13,
         "nEdges": 19,
-        "timeMs": 915
+        "timeMs": 935
       },
       {
         "algorithm": "FCI",
@@ -178,7 +178,7 @@
         "nMissing": 11,
         "nExtra": 8,
         "nEdges": 13,
-        "timeMs": 91
+        "timeMs": 99
       },
       {
         "algorithm": "GFCI",
@@ -191,7 +191,7 @@
         "nMissing": 11,
         "nExtra": 4,
         "nEdges": 9,
-        "timeMs": 21
+        "timeMs": 25
       }
     ]
   },
@@ -211,7 +211,7 @@
         "nMissing": 10,
         "nExtra": 9,
         "nEdges": 23,
-        "timeMs": 246
+        "timeMs": 261
       },
       {
         "algorithm": "GES",
@@ -224,7 +224,7 @@
         "nMissing": 10,
         "nExtra": 12,
         "nEdges": 26,
-        "timeMs": 37
+        "timeMs": 35
       },
       {
         "algorithm": "BOSS",
@@ -237,20 +237,20 @@
         "nMissing": 4,
         "nExtra": 4,
         "nEdges": 24,
-        "timeMs": 7662
+        "timeMs": 7644
       },
       {
         "algorithm": "NOTEARS",
         "graph": "Child",
-        "shd": 64,
-        "tpr": 0.20833333333333334,
-        "fpr": 0.9,
-        "f1": 0.13513513513513514,
-        "nCorrect": 5,
-        "nMissing": 19,
-        "nExtra": 45,
-        "nEdges": 50,
-        "timeMs": 2166
+        "shd": 53,
+        "tpr": 0.16666666666666666,
+        "fpr": 0.8918918918918919,
+        "f1": 0.13114754098360656,
+        "nCorrect": 4,
+        "nMissing": 20,
+        "nExtra": 33,
+        "nEdges": 37,
+        "timeMs": 2141
       },
       {
         "algorithm": "LiNGAM",
@@ -263,7 +263,7 @@
         "nMissing": 15,
         "nExtra": 39,
         "nEdges": 48,
-        "timeMs": 2340
+        "timeMs": 2398
       },
       {
         "algorithm": "FCI",
@@ -276,7 +276,7 @@
         "nMissing": 8,
         "nExtra": 7,
         "nEdges": 23,
-        "timeMs": 828
+        "timeMs": 776
       },
       {
         "algorithm": "GFCI",
@@ -289,7 +289,7 @@
         "nMissing": 10,
         "nExtra": 11,
         "nEdges": 25,
-        "timeMs": 487
+        "timeMs": 463
       }
     ]
   }
