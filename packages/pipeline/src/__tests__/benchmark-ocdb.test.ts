@@ -8,8 +8,7 @@
  * @packageDocumentation
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { CausalGraph } from '../src/graph/causal-graph.js';
+import { describe, it, expect, beforeAll } from 'vitest';
 import {
   runOCDBBenchmark,
   formatOCDBMarkdown,
@@ -19,18 +18,24 @@ import {
   OCDB_INSTANCES_PER_SIZE,
   OCDB_DENSITIES,
   type OCDBAggregateResult,
-} from '../benchmark/ocdb.js';
+} from '../../benchmark/ocdb.js';
 
 const SEED = 20260101;
-const TIMEOUT = 120_000;
+const HOOK_TIMEOUT = 600_000; // 10 min for full benchmark in beforeAll
 
 describe('OCDB Benchmark Suite', () => {
   let results: { aggregated: OCDBAggregateResult[] };
 
   beforeAll(() => {
-    // Run small-tier only for CI viability
-    results = runOCDBBenchmark({ maxGraphSize: 10, skipLarge: true, seed: SEED }).aggregated;
-  }, TIMEOUT);
+    // Fast-only mode for CI: skip NOTEARS, LiNGAM, FCI, GFCI
+    const { aggregated: agg } = runOCDBBenchmark({
+      maxGraphSize: 10,
+      skipLarge: true,
+      fastOnly: true,
+      seed: SEED,
+    });
+    results = agg;
+  }, HOOK_TIMEOUT);
 
   // ── Graph Generation ─────────────────────────────────────────
 

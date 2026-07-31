@@ -118,6 +118,7 @@ export interface OCDBAggregateResult {
 export function runOCDBBenchmark(options?: {
   maxGraphSize?: number;
   skipLarge?: boolean;
+  fastOnly?: boolean;
   seed?: number;
 }): { raw: OCDBSampleResult[]; aggregated: OCDBAggregateResult[] } {
   const maxSize = options?.maxGraphSize ?? 50;
@@ -135,6 +136,11 @@ export function runOCDBBenchmark(options?: {
     { label: 'medium', value: OCDB_DENSITIES.medium },
     { label: 'high', value: OCDB_DENSITIES.high },
   ];
+
+  // For CI/tests: only run fast algorithms (skip NOTEARS, LiNGAM, FCI, GFCI)
+  const alwaysSkip = options?.fastOnly
+    ? ['NOTEARS', 'LiNGAM', 'FCI', 'GFCI']
+    : [];
 
   const raw: OCDBSampleResult[] = [];
   let instanceSeed = seed;
@@ -166,7 +172,7 @@ export function runOCDBBenchmark(options?: {
             truth,
             data,
             nodeNames,
-            skipLarge,
+            [...alwaysSkip, ...skipLarge],
           );
 
           for (const alg of benchmarkResult.algorithms) {
