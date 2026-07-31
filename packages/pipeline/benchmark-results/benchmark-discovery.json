@@ -15,7 +15,7 @@
         "nMissing": 2,
         "nExtra": 5,
         "nEdges": 11,
-        "timeMs": 47
+        "timeMs": 58
       },
       {
         "algorithm": "GES",
@@ -28,7 +28,7 @@
         "nMissing": 2,
         "nExtra": 2,
         "nEdges": 8,
-        "timeMs": 9
+        "timeMs": 11
       },
       {
         "algorithm": "BOSS",
@@ -41,20 +41,20 @@
         "nMissing": 1,
         "nExtra": 1,
         "nEdges": 8,
-        "timeMs": 108
+        "timeMs": 167
       },
       {
         "algorithm": "NOTEARS",
         "graph": "ASIA",
-        "shd": 10,
+        "shd": 7,
         "tpr": 0.75,
-        "fpr": 0.5714285714285714,
-        "f1": 0.5454545454545454,
+        "fpr": 0.45454545454545453,
+        "f1": 0.631578947368421,
         "nCorrect": 6,
         "nMissing": 2,
-        "nExtra": 8,
-        "nEdges": 14,
-        "timeMs": 223
+        "nExtra": 5,
+        "nEdges": 11,
+        "timeMs": 329
       },
       {
         "algorithm": "LiNGAM",
@@ -67,7 +67,7 @@
         "nMissing": 2,
         "nExtra": 8,
         "nEdges": 14,
-        "timeMs": 702
+        "timeMs": 1085
       },
       {
         "algorithm": "FCI",
@@ -80,7 +80,7 @@
         "nMissing": 3,
         "nExtra": 2,
         "nEdges": 7,
-        "timeMs": 43
+        "timeMs": 62
       },
       {
         "algorithm": "GFCI",
@@ -93,7 +93,7 @@
         "nMissing": 3,
         "nExtra": 2,
         "nEdges": 7,
-        "timeMs": 29
+        "timeMs": 38
       }
     ]
   },
@@ -113,7 +113,7 @@
         "nMissing": 10,
         "nExtra": 5,
         "nEdges": 11,
-        "timeMs": 79
+        "timeMs": 111
       },
       {
         "algorithm": "GES",
@@ -126,7 +126,7 @@
         "nMissing": 5,
         "nExtra": 4,
         "nEdges": 15,
-        "timeMs": 19
+        "timeMs": 29
       },
       {
         "algorithm": "BOSS",
@@ -139,20 +139,20 @@
         "nMissing": 7,
         "nExtra": 7,
         "nEdges": 16,
-        "timeMs": 435
+        "timeMs": 462
       },
       {
         "algorithm": "NOTEARS",
         "graph": "Sachs",
-        "shd": 24,
+        "shd": 19,
         "tpr": 0.25,
-        "fpr": 0.75,
-        "f1": 0.25,
+        "fpr": 0.6363636363636364,
+        "f1": 0.2962962962962963,
         "nCorrect": 4,
         "nMissing": 12,
-        "nExtra": 12,
-        "nEdges": 16,
-        "timeMs": 542
+        "nExtra": 7,
+        "nEdges": 11,
+        "timeMs": 844
       },
       {
         "algorithm": "LiNGAM",
@@ -165,7 +165,7 @@
         "nMissing": 10,
         "nExtra": 13,
         "nEdges": 19,
-        "timeMs": 926
+        "timeMs": 1405
       },
       {
         "algorithm": "FCI",
@@ -178,7 +178,7 @@
         "nMissing": 11,
         "nExtra": 8,
         "nEdges": 13,
-        "timeMs": 90
+        "timeMs": 127
       },
       {
         "algorithm": "GFCI",
@@ -191,7 +191,7 @@
         "nMissing": 11,
         "nExtra": 4,
         "nEdges": 9,
-        "timeMs": 22
+        "timeMs": 34
       }
     ]
   },
@@ -211,7 +211,7 @@
         "nMissing": 10,
         "nExtra": 9,
         "nEdges": 23,
-        "timeMs": 297
+        "timeMs": 426
       },
       {
         "algorithm": "GES",
@@ -224,33 +224,33 @@
         "nMissing": 10,
         "nExtra": 12,
         "nEdges": 26,
-        "timeMs": 54
+        "timeMs": 74
       },
       {
         "algorithm": "BOSS",
         "graph": "Child",
-        "shd": 8,
-        "tpr": 0.8333333333333334,
-        "fpr": 0.16666666666666666,
-        "f1": 0.8333333333333334,
-        "nCorrect": 20,
-        "nMissing": 4,
-        "nExtra": 4,
+        "shd": 6,
+        "tpr": 0.875,
+        "fpr": 0.125,
+        "f1": 0.875,
+        "nCorrect": 21,
+        "nMissing": 3,
+        "nExtra": 3,
         "nEdges": 24,
-        "timeMs": 7769
+        "timeMs": 10274
       },
       {
         "algorithm": "NOTEARS",
         "graph": "Child",
-        "shd": 51,
-        "tpr": 0.20833333333333334,
-        "fpr": 0.8648648648648649,
-        "f1": 0.1639344262295082,
-        "nCorrect": 5,
-        "nMissing": 19,
-        "nExtra": 32,
-        "nEdges": 37,
-        "timeMs": 2155
+        "shd": 45,
+        "tpr": 0.16666666666666666,
+        "fpr": 0.8620689655172413,
+        "f1": 0.1509433962264151,
+        "nCorrect": 4,
+        "nMissing": 20,
+        "nExtra": 25,
+        "nEdges": 29,
+        "timeMs": 3200
       },
       {
         "algorithm": "LiNGAM",
@@ -263,7 +263,7 @@
         "nMissing": 15,
         "nExtra": 39,
         "nEdges": 48,
-        "timeMs": 2461
+        "timeMs": 3587
       },
       {
         "algorithm": "FCI",
@@ -276,7 +276,7 @@
         "nMissing": 8,
         "nExtra": 7,
         "nEdges": 23,
-        "timeMs": 775
+        "timeMs": 1226
       },
       {
         "algorithm": "GFCI",
@@ -289,7 +289,7 @@
         "nMissing": 10,
         "nExtra": 11,
         "nEdges": 25,
-        "timeMs": 487
+        "timeMs": 843
       }
     ]
   }

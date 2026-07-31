@@ -22,7 +22,7 @@ import {
 } from '../src/infer/meta-learners.js';
 
 const OUTPUT_DIR = join(import.meta.dirname, '..', 'benchmark-results');
-const N_REPETITIONS = 10;   // Standard: 100; use 10 for fast CI
+const N_REPETITIONS = 100;  // Standard IHDP: 100 repetitions (Hill 2011, Curth & van der Schaar 2021)
 const N_SAMPLES = 747;
 const P_FEATURES = 25;
 
@@ -43,7 +43,7 @@ function runEstimators(
   function forestNuisance(): NuisanceModel | undefined {
     if (p <= 10) return undefined;
     return (trainX: number[][], trainY: number[], trainIdx: number[]) => {
-      const forest = new CausalForest({ nTrees: 30, minLeafSize: 10, maxDepth: 8, seed: 42, sampleFraction: 0.5 });
+      const forest = new CausalForest({ nTrees: 50, minLeafSize: 5, maxDepth: 12, seed: 42, sampleFraction: 0.7 });
       forest.train(
         trainIdx.map(function(i: number) { return trainX[i]!; }),
         trainIdx.map(function(i: number) { return trainY[i]!; }),
