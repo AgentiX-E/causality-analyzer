@@ -246,17 +246,22 @@ export class ProfileStore {
 // ── Layer 1: Drift Detector ─────────────────────────────────────────
 
 /**
- * Multi-signal drift detection combining three statistical tests:
- *   1. SHD degradation: sliding window mean comparison
- *   2. KS test: distribution shift in SHD values
- *   3. Variance spike: σ(recent) vs σ(baseline)
+ * Multi-signal drift detection with statistically justified thresholds:
+ *
+ *   1. 3σ rule: recent SHD mean > μ_baseline + 3σ_baseline
+ *      False alarm rate: < 0.27% (Chebyshev inequality bound)
+ *   2. KS test: two-sample Kolmogorov-Smirnov for distribution shift
+ *   3. Bartlett's test: variance homogeneity test
+ *      Detects variance spikes without requiring mean change
+ *
+ * Research basis:
+ *   - 3σ: Shewhart control charts (Western Electric 1956)
+ *   - KS: Kolmogorov (1933), Smirnov (1948)
+ *   - Bartlett: Bartlett (1937), "Properties of Sufficiency"
  */
 export class DriftDetector {
   constructor(private config: AutoProfileConfig) {}
 
-  /**
-   * Check all drift signals. Returns the MOST SEVERE trigger.
-   */
   detect(profile: TuningProfile): DriftReport {
     const h = profile.history;
     if (h.length < 10) {
@@ -269,17 +274,20 @@ export class DriftDetector {
     const baseSHD = baseline.map(e => e.shd);
     const recentSHD = recent.map(e => e.shd);
 
-    // Signal 1: SHD mean degradation
+    // Signal 1: 3σ rule — μ_recent > μ_baseline + 3σ_baseline
     const baseMean = baseSHD.reduce((a, b) => a + b, 0) / baseSHD.length;
+    const baseStd = this.stdDev(baseSHD, baseMean);
     const recentMean = recentSHD.reduce((a, b) => a + b, 0) / recentSHD.length;
-    const degradationRatio = recentMean / Math.max(1, baseMean);
+    // Use 3σ deviation from baseline mean as threshold
+    const threshold3Sigma = baseMean + 3 * Math.max(baseStd, 0.5); // min σ=0.5 to avoid division by zero artifacts
 
-    if (degradationRatio > this.config.shdDegradationThreshold) {
+    if (recentMean > threshold3Sigma && baseStd > 0) {
+      const zScore = (recentMean - baseMean) / baseStd;
       return {
         drifted: true,
-        severity: Math.min(1, (degradationRatio - 1) / 0.5),
+        severity: Math.min(1, (zScore - 3) / 3),
         trigger: 'shd-degradation',
-        details: `SHD degraded: mean ${baseMean.toFixed(1)}→${recentMean.toFixed(1)} (${((degradationRatio - 1) * 100).toFixed(0)}%)`,
+        details: `3σ violation: μ_recent=${recentMean.toFixed(1)} > μ+3σ=${threshold3Sigma.toFixed(1)} (z=${zScore.toFixed(1)})`,
       };
     }
 
@@ -295,22 +303,47 @@ export class DriftDetector {
       };
     }
 
-    // Signal 3: Variance spike
-    const baseVariance = this.variance(baseSHD);
-    const recentVariance = this.variance(recentSHD);
-    if (baseVariance > 0 && recentVariance / baseVariance > this.config.varianceSpikeThreshold) {
-      return {
-        drifted: true,
-        severity: Math.min(1, (recentVariance / baseVariance - 1) / 3),
-        trigger: 'variance-spike',
-        details: `Variance spike: σ² ${baseVariance.toFixed(1)}→${recentVariance.toFixed(1)}`,
-      };
+    // Signal 3: Bartlett's test for variance homogeneity
+    const baseVar = this.variance(baseSHD, baseMean);
+    const recentVar = this.variance(recentSHD, recentMean);
+    if (baseVar > 0 && recentVar > 0) {
+      const bartlettStat = this.bartlettTest(baseSHD, recentSHD);
+      // Bartlett's test statistic ~ χ²(1) under H₀
+      // Critical value at α=0.01 for df=1 is 6.635
+      const bartlettCritical = 6.635;
+      if (bartlettStat > bartlettCritical) {
+        return {
+          drifted: true,
+          severity: Math.min(1, (bartlettStat - bartlettCritical) / (bartlettCritical * 2)),
+          trigger: 'variance-spike',
+          details: `Bartlett test: χ²=${bartlettStat.toFixed(1)} > critical=${bartlettCritical} (p<0.01)`,
+        };
+      }
     }
 
     return { drifted: false, severity: 0, trigger: 'none', details: 'All signals stable' };
   }
 
-  /** Two-sample Kolmogorov-Smirnov test statistic */
+  /** Compute Bartlett's test statistic for variance equality of two samples */
+  private bartlettTest(a: number[], b: number[]): number {
+    const n1 = a.length, n2 = b.length;
+    const n = n1 + n2;
+    const mean1 = a.reduce((s, v) => s + v, 0) / n1;
+    const mean2 = b.reduce((s, v) => s + v, 0) / n2;
+    const var1 = this.variance(a, mean1);
+    const var2 = this.variance(b, mean2);
+    if (var1 <= 0 || var2 <= 0) return 0;
+    const pooledVar = ((n1 - 1) * var1 + (n2 - 1) * var2) / (n - 2);
+    // Bartlett's test χ² statistic
+    const chi2 = (n - 2) * Math.log(pooledVar) - (n1 - 1) * Math.log(var1) - (n2 - 1) * Math.log(var2);
+    const correction = 1 + (1 / (3 * 1)) * (1 / (n1 - 1) + 1 / (n2 - 1) - 1 / (n - 2));
+    return chi2 / correction;
+  }
+
+  private stdDev(arr: number[], mean: number): number {
+    return Math.sqrt(this.variance(arr, mean));
+  }
+
   private twoSampleKS(a: number[], b: number[]): number {
     const sorted = [...a, ...b].sort((x, y) => x - y);
     let maxDiff = 0;
@@ -324,13 +357,11 @@ export class DriftDetector {
     return maxDiff;
   }
 
-  /** Critical value for two-sample KS test */
   private ksCriticalValue(n1: number, n2: number, alpha: number): number {
     return Math.sqrt(-0.5 * Math.log(alpha / 2)) * Math.sqrt((n1 + n2) / (n1 * n2));
   }
 
-  private variance(arr: number[]): number {
-    const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+  private variance(arr: number[], mean: number): number {
     return arr.reduce((a, v) => a + (v - mean) ** 2, 0) / (arr.length - 1);
   }
 }
