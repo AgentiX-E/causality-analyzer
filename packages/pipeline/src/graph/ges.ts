@@ -572,6 +572,16 @@ export function gesAlgorithm(
     : d > 20 ? 3 : ratio < 30 ? 3 : ratio < 100 ? 4 : 5;
   const penaltyDiscount = config.penaltyDiscount ?? (d > 15 ? 2.0 : 1.0);
 
+  // Pre-compute single-parent BIC cache: O(d²) memory, enables O(1)
+  // baseline score lookups in insert/delete operators (v2.0 Phase 2B).
+  const singleParentBIC = new Map<string, number>();
+  for (let y = 0; y < d; y++) {
+    for (let x = 0; x < d; x++) {
+      if (x === y) continue;
+      singleParentBIC.set(`${y}|${x}`, bicLocal(y, [x], cov, N, scoreCache, penaltyDiscount));
+    }
+  }
+
   // Initialize empty PDAG
   const state = buildPDAG(new CausalGraph([...nodeNames]), nodeIdx);
 
