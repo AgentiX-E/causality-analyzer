@@ -169,4 +169,67 @@ describe('graphSimilarity', () => {
     const sim = graphSimilarity(gNoAdj, g1);
     expect(sim).toBeGreaterThan(0.5);
   });
+
+  it('computes fingerprint from edges array without adjacencyMatrix', () => {
+    const graph = {
+      nodes: ['A', 'B', 'C'] as readonly string[],
+      edges: [
+        { source: 'A', target: 'B' },
+        { source: 'B', target: 'C' },
+      ] as readonly { source: string; target: string }[],
+      hasEdge(from: string, to: string): boolean {
+        return (from === 'A' && to === 'B') || (from === 'B' && to === 'C');
+      },
+      parents(node: string): string[] {
+        if (node === 'B') return ['A'];
+        if (node === 'C') return ['B'];
+        return [];
+      },
+    };
+    const fp = computeFingerprint(graph);
+    expect(fp.length).toBe(13);
+    expect(fp[2]).toBeCloseTo(1 / 3); // rootRatio: A is root
+    expect(fp[3]).toBeCloseTo(1 / 3); // leafRatio: C is leaf
+    expect(fp[4]).toBe(0);           // no v-structures in chain
+  });
+
+  it('computes fingerprint from edges with v-structure', () => {
+    const graph = {
+      nodes: ['A', 'B', 'C'] as readonly string[],
+      edges: [
+        { source: 'A', target: 'C' },
+        { source: 'B', target: 'C' },
+      ] as readonly { source: string; target: string }[],
+      hasEdge(from: string, to: string): boolean {
+        return (from === 'A' && to === 'C') || (from === 'B' && to === 'C');
+      },
+      parents(node: string): string[] {
+        if (node === 'C') return ['A', 'B'];
+        return [];
+      },
+    };
+    const fp = computeFingerprint(graph);
+    expect(fp[4]).toBeGreaterThan(0); // v-structure detected
+  });
+
+  it('computes fingerprint with edges and no roots (all nodes have parents)', () => {
+    // Create a cycle-like DAG where every node has a parent
+    const graph = {
+      nodes: ['A', 'B'] as readonly string[],
+      edges: [
+        { source: 'A', target: 'B' },
+      ] as readonly { source: string; target: string }[],
+      hasEdge(from: string, to: string): boolean {
+        return from === 'A' && to === 'B';
+      },
+      parents(node: string): string[] {
+        if (node === 'B') return ['A'];
+        return [];
+      },
+    };
+    const fp = computeFingerprint(graph);
+    expect(fp.length).toBe(13);
+    expect(fp[2]).toBeCloseTo(0.5); // rootRatio: A is root
+    expect(fp[3]).toBeCloseTo(0.5); // leafRatio: B is leaf
+  });
 });

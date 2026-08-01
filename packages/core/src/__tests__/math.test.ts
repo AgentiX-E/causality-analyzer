@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { solveLinear, solveLinearSafe, normalTail, normalCDF, normalCDFTail, erf, colMean, createRNG, combinations, fisherZTest, partialCorrelationFromCov, invertMatrix, solveOLS, bicScore, gicScore, isBicScore, isMatrixSingular, precomputeCorrelation, chiSquareTest, gSquareTest, _setFisherZCacheMax, _resetFisherZCache } from '../math.js';
+import { solveLinear, solveLinearSafe, normalTail, normalCDF, normalCDFTail, erf, colMean, createRNG, combinations, fisherZTest, partialCorrelationFromCov, partialCorrelationRaw, invertMatrix, solveOLS, bicScore, gicScore, isBicScore, isMatrixSingular, precomputeCorrelation, chiSquareTest, gSquareTest, _setFisherZCacheMax, _resetFisherZCache } from '../math.js';
 
 // ── solveLinear ─────────────────────────────────────────────────────
 
@@ -967,5 +967,45 @@ describe('solveLinearCholesky', () => {
 
   it('handles empty input', () => {
     expect(solveLinearCholesky([], [])).toEqual([]);
+  });
+});
+
+// ── partialCorrelationRaw degenerate cases ─────────────────────────
+
+describe('partialCorrelationRaw degenerate inputs', () => {
+  it('handles near-linearly-dependent conditioning columns', () => {
+    // Two conditioning columns that are almost identical → near-singular
+    // regression matrix triggers the zero-factor branch in computeResiduals
+    const n = 50;
+    const data: number[][] = [];
+    for (let i = 0; i < n; i++) {
+      const z = i / n;
+      data.push([z * 2, z * 3, z, z + 1e-15]); // col 2 ≈ col 3
+    }
+    // partial correlation of col 0 and col 1 given [col 2, col 3]
+    // Cols 2 and 3 are nearly identical → regression may be degenerate
+    const r = partialCorrelationRaw(data, 0, 1, [2, 3]);
+    expect(Math.abs(r)).toBeLessThanOrEqual(1);
+    expect(Number.isFinite(r)).toBe(true);
+  });
+
+  it('handles zero-variance conditioning column', () => {
+    // All identical values in a conditioning column
+    const data: number[][] = [];
+    for (let i = 0; i < 30; i++) {
+      data.push([i, Math.sin(i), 5]); // col 2 is constant
+    }
+    const r = partialCorrelationRaw(data, 0, 1, [2]);
+    expect(Number.isFinite(r)).toBe(true);
+  });
+
+  it('handles identical conditioning columns (singular regression)', () => {
+    // Two exactly identical conditioning columns → singular X'X matrix
+    const data: number[][] = [];
+    for (let i = 0; i < 30; i++) {
+      data.push([i * 0.1, i * 0.2, i * 0.01, i * 0.01]); // col 2 ≡ col 3
+    }
+    const r = partialCorrelationRaw(data, 0, 1, [2, 3]);
+    expect(Number.isNaN(r) || Math.abs(r) <= 1).toBe(true);
   });
 });

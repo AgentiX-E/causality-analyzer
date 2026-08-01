@@ -16,11 +16,12 @@ export default defineConfig({
         'src/di/index.ts',
         'src/interfaces/index.ts',
         'src/types/index.ts',
+        'src/types/timeseries.ts', // Pure type definitions, no executable code
         'src/registry/**',        // Experimental decorator-based registry, not yet used
       ],
       thresholds: {
         statements: 95,
-        branches: 80,
+        branches: 85,
         functions: 95,
         lines: 95
       }

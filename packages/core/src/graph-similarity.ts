@@ -78,7 +78,7 @@ export function computeFingerprint(graph: {
   const n = graph.nodes.length;
   const fp = new Float64Array(13);
 
-  if (n === 0) return fp;
+  if (n === 0) return fp; // all zeros for empty graph
 
   const adj = graph.adjacencyMatrix;
   const edges = graph.edges;
@@ -154,10 +154,10 @@ export function computeFingerprint(graph: {
 
   fp[0] = n <= 1 ? 0 : Math.log2(n) / Math.log2(200);  // log-scaled node count
   fp[1] = maxEdges > 0 ? edges2 / maxEdges : 0;
-  fp[2] = n > 0 ? roots / n : 0;
-  fp[3] = n > 0 ? leaves / n : 0;
+  fp[2] = roots / n;
+  fp[3] = leaves / n;
   fp[4] = maxEdges > 0 ? Math.min(vstructs / Math.max(1, n), 1) : 0;
-  for (let i = 0; i < 5; i++) fp[5 + i] = n > 0 ? (outDeg[i] ?? 0) / n : 0;
+  for (let i = 0; i < 5; i++) fp[5 + i] = (outDeg[i] ?? 0) / n;
   fp[10] = maxDepthNorm;
   fp[11] = avgDepthNorm;
   fp[12] = diameterNorm;
