@@ -161,9 +161,9 @@ export function runOCDBBenchmark(options?: {
           const { data } = generateLinearData(truth, nSamples, instanceSeed++);
 
           // Determine which algorithms to skip on large graphs
-          // 50+ nodes: PC/GES/BOSS only (others O(n³) or worse)
+          // 50+ nodes: PC/GES only (BOSS=3×GES too heavy at n³)
           const skipLarge = size >= 50
-            ? ['NOTEARS', 'LiNGAM', 'FCI', 'GFCI']
+            ? ['NOTEARS', 'LiNGAM', 'FCI', 'GFCI', 'BOSS']
             : size > 30
               ? ['LiNGAM', 'NOTEARS']
               : [];
