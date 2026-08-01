@@ -91,3 +91,38 @@ jobs:
           name: ocdb-benchmark-results
           path: packages/pipeline/benchmark-results/benchmark-ocdb.*
           retention-days: 90
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # Cross-Language — CA vs causal-learn (Python) head-to-head comparison
+  # ═══════════════════════════════════════════════════════════════════════
+  cross-language:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pnpm config set approve-builds true
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run --filter @agentix-e/causality-analyzer-core build
+      - run: pnpm run --filter @agentix-e/causality-analyzer-pipeline build
+      - name: Install causal-learn
+        run: pip install causal-learn
+      - name: Export benchmark data (CSV)
+        run: npx tsx packages/pipeline/benchmark/export-benchmark-data.ts
+      - name: Run causal-learn benchmark
+        run: python3 packages/pipeline/benchmark/run-causal-learn-benchmark.py
+      - name: Upload comparison results
+        uses: actions/upload-artifact@v4
+        with:
+          name: cross-language-comparison
+          path: packages/pipeline/benchmark-results/cross-language-comparison.*
+          retention-days: 90
