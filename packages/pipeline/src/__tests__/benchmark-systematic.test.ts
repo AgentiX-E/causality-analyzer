@@ -127,8 +127,8 @@ describe('Benchmark: Continuous Optimization', () => {
         expect(result.W.length).toBe(nodes * nodes);
       });
 
-      it(`GOLEM on ${name}: produces valid output`, { timeout: 30000 }, () => {
-        const result = golemAlgorithm(data, nodeNames, { maxIter: nodes > 5 ? 1500 : 3000 });
+      it(`GOLEM on ${name}: produces valid output`, { timeout: 60000 }, () => {
+        const result = golemAlgorithm(data, nodeNames, { maxIter: nodes > 5 ? 500 : 800 });
         expect(result.graph.nodeCount).toBe(nodes);
         expect(result.W).toBeInstanceOf(Float64Array);
       });

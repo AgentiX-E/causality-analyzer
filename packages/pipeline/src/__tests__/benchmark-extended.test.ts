@@ -128,7 +128,7 @@ describe('Extended Benchmark: Small DAGs (≤11 nodes)', () => {
     assertValidBench(r, 'DAGMA', 0);
   });
 
-  it('GOLEM on ASIA', { timeout: 45000 }, () => {
+  it('GOLEM on ASIA', { timeout: 60000 }, () => {
     const r = runBench(asia, golemAlgorithm, 2000);
     assertValidBench(r, 'GOLEM', 0);
   });

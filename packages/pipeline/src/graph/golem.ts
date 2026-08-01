@@ -114,7 +114,7 @@ const DEFAULTS: GOLEMConfig = {
   lambda1: 1e-2,
   lambda2: 5.0,
   lr: 1e-3,
-  maxIter: 5000,
+  maxIter: 1000,
   wThreshold: 0.3,
   optimizer: 'adam',  // Adam handles expm non-convexity; LBFGS fails
 };

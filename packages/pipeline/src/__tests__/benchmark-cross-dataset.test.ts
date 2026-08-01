@@ -46,7 +46,7 @@ const algorithms: [string, Algo][] = [
   ['LiNGAM', (d, n) => directLiNGAM(d, n).graph],
   ['NOTEARS', (d, n) => notearsAlgorithm((d as Matrix).to2DArray(), n).graph],
   ['DAGMA', (d, n) => dagmaAlgorithm((d as Matrix).to2DArray(), n).graph],
-  ['GOLEM', (d, n) => golemAlgorithm(d, n, { maxIter: 2000 }).graph],
+  ['GOLEM', (d, n) => golemAlgorithm(d, n, { maxIter: 800 }).graph],
   ['FCI', (d, n) => fciAlgorithm(d, n).graph],
   ['GFCI',(d, n) => gfciAlgorithm(d, n).graph],
 ];

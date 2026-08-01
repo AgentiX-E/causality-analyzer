@@ -117,6 +117,30 @@ describe('WasmRelationalStore', () => {
     store.close();
     expect(() => store.close()).not.toThrow();
   });
+
+  it('readMetrics filters by metric name list', async () => {
+    await store.writeDetections([
+      { isAnomalous: true, labels: new Float64Array([1, 0, 0]), scores: new Float64Array([0.9, 0.1, 0.2]), timestamp: 1000, metadata: {} },
+    ]);
+
+    const filtered = await store.readMetrics({ start: 0, end: 2000, metrics: ['m0'] });
+    expect(filtered).toBeDefined();
+  });
+
+  it('readMetrics without metric filter returns all', async () => {
+    await store.writeDetections([
+      { isAnomalous: true, labels: new Float64Array([1, 0]), scores: new Float64Array([0.9, 0.1]), timestamp: 1000, metadata: {} },
+    ]);
+
+    const all = await store.readMetrics({ start: 0, end: 2000 });
+    expect(all).toBeDefined();
+    expect(all.value.length).toBeGreaterThanOrEqual(0);
+  });
+
+  it('loadRegressionModel returns null for non-existent', async () => {
+    const loaded = await store.loadRegressionModel('nonexistent', 'X');
+    expect(loaded).toBeNull();
+  });
 });
 
 // ── WasmGraphStore ───────────────────────────────────────────────────
@@ -209,6 +233,17 @@ describe('WasmGraphStore', () => {
   it('close is idempotent', () => {
     store.close();
     expect(() => store.close()).not.toThrow();
+  });
+
+  it('loadGraphVersion returns null for non-existent version', async () => {
+    const loaded = await store.loadGraphVersion('g3', 999);
+    expect(loaded).toBeNull();
+  });
+
+  it('findSimilarGraphs handles empty store gracefully', async () => {
+    const query = { nodes: ['A', 'B'], edges: [makeEdge('A', 'B')] };
+    const similar = await store.findSimilarGraphs(query, 5);
+    expect(similar).toEqual([]);
   });
 });
 

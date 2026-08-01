@@ -175,12 +175,13 @@ export function adam(
   let bestVal = Infinity;
   let bestX = new Float64Array(x0);
 
+  // Initial evaluation
+  let [currentVal, g] = f(x);
+
   for (let t = 0; t < cfg.maxIter; t++) {
-    const [, g] = f(x);
     const gNorm = norm2(g);
     if (gNorm < cfg.gtol) {
-      const [val] = f(x);
-      return { x, value: val, gradNorm: gNorm, iterations: t + 1, converged: true };
+      return { x, value: currentVal, gradNorm: gNorm, iterations: t + 1, converged: true };
     }
 
     for (let i = 0; i < n; i++) {
@@ -194,13 +195,13 @@ export function adam(
       x[i] = x[i]! - cfg.lr * mHat / (Math.sqrt(vHat) + cfg.eps);
     }
 
-    const [val] = f(x);
-    if (val < bestVal) { bestVal = val; bestX = new Float64Array(x); }
+    // Single f(x) call per iteration: value + gradient
+    [currentVal, g] = f(x);
+    if (currentVal < bestVal) { bestVal = currentVal; bestX = new Float64Array(x); }
   }
 
-  const [val] = f(bestX);
   const [, gFinal] = f(bestX);
-  return { x: bestX, value: val, gradNorm: norm2(gFinal), iterations: cfg.maxIter, converged: false };
+  return { x: bestX, value: bestVal, gradNorm: norm2(gFinal), iterations: cfg.maxIter, converged: false };
 }
 
 // ── Line Search (Armijo backtracking) ─────────────────────────────────

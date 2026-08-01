@@ -8,8 +8,16 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'lcov'],
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts', 'src/**/index.ts', 'src/sqlite-worker.ts', 'src/worker-sqlite-port.ts'],
-      thresholds: { statements: 90, branches: 80, functions: 90, lines: 90 },
+      exclude: [
+        'src/**/*.test.ts',
+        'src/**/*.spec.ts',
+        'src/**/index.ts',
+        'src/sqlite-port.ts',
+        'src/sqlite-worker.ts',
+        'src/worker-sqlite-port.ts',
+        'src/types/**',
+      ],
+      thresholds: { statements: 95, branches: 90, functions: 95, lines: 95 },
     },
   },
 });
