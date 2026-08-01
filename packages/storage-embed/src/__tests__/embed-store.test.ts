@@ -140,6 +140,11 @@ describe('EmbedRelationalStore', () => {
     store = createStore();
     expect(await store.queryHistoricalResults({})).toEqual([]);
   });
+
+  it('healthCheck reports store status', () => {
+    store = createStore();
+    expect(store.healthCheck()).toBe(true);
+  });
 });
 
 // ── EmbedGraphStore (overgraph persistent) ──────────────────────────
@@ -262,5 +267,9 @@ describe('EmbedGraphStore', () => {
     expect(typeof id).toBe('string');
     const loaded = await store.loadGraph(id);
     expect(loaded?.nodes).toEqual(['Z']);
+  });
+
+  it('healthCheck returns true for active store', () => {
+    expect(store.healthCheck()).toBe(true);
   });
 });
