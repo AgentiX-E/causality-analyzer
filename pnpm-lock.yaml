@@ -50,6 +50,9 @@ importers:
 
   packages/core:
     dependencies:
+      ubique:
+        specifier: ^1.0.2
+        version: 1.0.2
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -793,6 +796,9 @@ packages:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
     engines: {node: '>= 8'}
 
+  dayjs@1.11.21:
+    resolution: {integrity: sha512-98IT+HOahAisibz/yjKbzuOBwYcjJ7BCLPzARyHiyEBmRz4fatF+KPJszEHXsGYjUG234aH/cOjW1wwTbKUZlA==}
+
   debug@4.4.3:
     resolution: {integrity: sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==}
     engines: {node: '>=6.0'}
@@ -1500,6 +1506,9 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
+  ubique@1.0.2:
+    resolution: {integrity: sha512-oND1BEXuZnPxeU80q6/z3UFSolpmbNhZi4fcToZFo/MmvxelrxaS99vLRwMsF+4NEzqOL//fuLlrYJpn7BQ6WQ==}
+
   uc.micro@2.1.0:
     resolution: {integrity: sha512-ARDJmphmdvUk6Glw7y9DQ2bFkKBHwQHLi2lsaH6PPmz/Ka9sFOBsBluozhDltWmnv9u/cF6Rt87znRTPV+yp/A==}
 
@@ -2179,6 +2188,8 @@ snapshots:
       path-key: 3.1.1
       shebang-command: 2.0.0
       which: 2.0.2
+
+  dayjs@1.11.21: {}
 
   debug@4.4.3:
     dependencies:
@@ -2860,6 +2871,10 @@ snapshots:
       - supports-color
 
   typescript@5.9.3: {}
+
+  ubique@1.0.2:
+    dependencies:
+      dayjs: 1.11.21
 
   uc.micro@2.1.0: {}
 
