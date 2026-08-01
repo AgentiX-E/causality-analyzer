@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Causality Analyzer — Benchmark Results</title>
+<style>
+  :root {
+    --bg: #0d1117; --fg: #c9d1d9; --border: #30363d;
+    --accent: #58a6ff; --green: #3fb950; --red: #f85149;
+    --table-bg: #161b22; --table-alt: #1c2128;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg); color: var(--fg); line-height: 1.6;
+    max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+  h1 { font-size: 2rem; margin-bottom: 0.5rem; color: var(--accent); }
+  h2 { font-size: 1.4rem; margin: 2rem 0 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
+  h3 { font-size: 1.1rem; margin: 1.5rem 0 0.5rem; }
+  p { margin: 0.5rem 0; }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.88rem; }
+  th, td { padding: 0.5rem 0.75rem; text-align: left; border: 1px solid var(--border); }
+  th { background: var(--table-bg); font-weight: 600; }
+  tr:nth-child(even) { background: var(--table-alt); }
+  .best { color: var(--green); font-weight: 600; }
+  .tag { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin: 0.15rem; }
+  .tag-ca { background: #1f6feb33; border: 1px solid #1f6feb; color: #58a6ff; }
+  .tag-yes { background: #23863633; border: 1px solid #238636; color: #3fb950; }
+  .tag-no { background: #da363333; border: 1px solid #da3633; color: #f85149; }
+  .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+  .summary-card { background: var(--table-bg); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem; text-align: center; }
+  .summary-card .value { font-size: 2rem; font-weight: 700; color: var(--accent); }
+  .summary-card .label { font-size: 0.85rem; color: #8b949e; margin-top: 0.3rem; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<h1>Causality Analyzer — Benchmark</h1>
+<p>
+  Open Causal Discovery Benchmark (OCDB) results for
+  <strong>@agentix-e/causality-analyzer</strong> v1.1.0.
+  Updated daily via <a href="https://github.com/AgentiX-E/causality-analyzer/actions/workflows/benchmark-scheduled.yml">GitHub Actions CI</a>.
+</p>
+
+<div class="summary">
+  <div class="summary-card">
+    <div class="value">19</div>
+    <div class="label">Discovery Algorithms</div>
+  </div>
+  <div class="summary-card">
+    <div class="value">36</div>
+    <div class="label">OCDB Configurations</div>
+  </div>
+  <div class="summary-card">
+    <div class="value">2670</div>
+    <div class="label">Pipeline Tests</div>
+  </div>
+  <div class="summary-card">
+    <div class="value">BOSS 🏆</div>
+    <div class="label">Best Algorithm (28/36)</div>
+  </div>
+</div>
+
+<h2>OCDB — Best Per-Configuration (SHD)</h2>
+<table>
+  <tr><th>Size</th><th>Density</th><th>200s</th><th>500s</th><th>1000s</th><th>5000s</th></tr>
+  <tr><td>8</td><td>low (0.15)</td><td class="best">GES 2.0</td><td class="best">BOSS 2.6</td><td class="best">GES 3.4</td><td class="best">BOSS 1.6</td></tr>
+  <tr><td>8</td><td>med (0.25)</td><td class="best">BOSS 4.6</td><td class="best">BOSS 5.0</td><td class="best">BOSS 4.2</td><td class="best">BOSS 4.0</td></tr>
+  <tr><td>8</td><td>high (0.40)</td><td class="best">BOSS 9.2</td><td class="best">BOSS 8.4</td><td class="best">BOSS 8.6</td><td class="best">BOSS 5.4</td></tr>
+  <tr><td>10</td><td>low</td><td class="best">BOSS 2.6</td><td class="best">BOSS 2.4</td><td class="best">BOSS 2.2</td><td class="best">BOSS 2.2</td></tr>
+  <tr><td>10</td><td>med</td><td class="best">BOSS 7.4</td><td class="best">BOSS 5.2</td><td class="best">BOSS 6.0</td><td class="best">BOSS 4.0</td></tr>
+  <tr><td>10</td><td>high</td><td class="best">BOSS 19.0</td><td class="best">FCI 16.4</td><td class="best">BOSS 16.0</td><td class="best">BOSS 14.0</td></tr>
+  <tr><td>20</td><td>low</td><td class="best">BOSS 27.4</td><td class="best">GES 33.2</td><td class="best">BOSS 26.8</td><td class="best">PC 26.2</td></tr>
+  <tr><td>20</td><td>med</td><td class="best">BOSS 49.6</td><td class="best">FCI 54.0</td><td class="best">BOSS 52.2</td><td class="best">FCI 52.4</td></tr>
+  <tr><td>20</td><td>high</td><td class="best">FCI 79.8</td><td class="best">FCI 80.0</td><td class="best">NOTEARS 82.8</td><td class="best">NOTEARS 83.6</td></tr>
+</table>
+
+<h2>BNLearn Canonical Networks</h2>
+
+<h3>ASIA (8 nodes, 8 edges, 5000 samples)</h3>
+<table>
+  <tr><th>Algorithm</th><th>SHD</th><th>TPR</th><th>FPR</th><th>Status</th></tr>
+  <tr><td class="best">BOSS</td><td class="best">2</td><td>0.875</td><td>0.125</td><td>🏆 Best</td></tr>
+  <tr><td>GES</td><td>4</td><td>0.750</td><td>0.250</td><td>CI + PC-pruned</td></tr>
+  <tr><td>FCI</td><td>5</td><td>0.625</td><td>0.286</td><td>PAG output</td></tr>
+  <tr><td>GFCI</td><td>5</td><td>0.625</td><td>0.286</td><td>Hybrid PAG</td></tr>
+  <tr><td>PC</td><td>7</td><td>0.750</td><td>0.455</td><td>α=0.05</td></tr>
+  <tr><td>LiNGAM</td><td>10</td><td>0.750</td><td>0.571</td><td>BIC-pruned</td></tr>
+  <tr><td>GOLEM</td><td>11</td><td>0.375</td><td>0.727</td><td>Gradient-based</td></tr>
+  <tr><td>NOTEARS</td><td>12</td><td>0.625</td><td>0.643</td><td>Neural+L-BFGS</td></tr>
+</table>
+
+<h2>Algorithm Coverage vs Industry</h2>
+<table>
+  <tr><th>Algorithm</th><th>CA</th><th>causal-learn</th><th>pcalg (R)</th><th>Tetrad</th><th>gCastle</th></tr>
+  <tr><td>PC / PC-stable</td><td><span class="tag-yes">✅</span></td><td><span class="tag-yes">✅</span></td><td><span class="tag-yes">✅</span></td><td><span class="tag-yes">✅</span></td><td><span class="tag-yes">✅</span></td></tr>
+  <tr><td>FCI / GFCI / RFCI</td><td><span class="tag-yes">✅</span></td><td><span class="tag-yes">✅</span></td><td><span class="tag-yes">✅</span></td><td><span class="tag-yes">✅</span></td><td><span class="tag-no">—</span></td></tr>
+  <tr><td>GES</td><td><span class="tag-yes">✅</span></td><td><span class="tag-yes">✅</span></td><td><span class="tag-yes">✅</span></td><td><span class="tag-yes">✅</span></td><td><span class="tag-no">—</span></td></tr>
+  <tr><td><strong>BOSS</strong></td><td><span class="tag-ca">✅ CA</span></td><td><span class="tag-no">—</span></td><td><span class="tag-no">—</span></td><td><span class="tag-no">—</span></td><td><span class="tag-no">—</span></td></tr>
+  <tr><td><strong>GRaSP</strong></td><td><span class="tag-ca">✅ CA</span></td><td><span class="tag-no">—</span></td><td><span class="tag-no">—</span></td><td><span class="tag-no">—</span></td><td><span class="tag-no">—</span></td></tr>
+  <tr><td>LiNGAM / DirectLiNGAM</td><td><span class="tag-yes">✅</span></td><td><span class="tag-yes">✅</span></td><td><span class="tag-no">—</span></td><td><span class="tag-no">—</span></td><td><span class="tag-yes">✅</span></td></tr>
+  <tr><td>NOTEARS / GOLEM / DAGMA</td><td><span class="tag-yes">✅</span></td><td><span class="tag-yes">✅</span></td><td><span class="tag-no">—</span></td><td><span class="tag-no">—</span></td><td><span class="tag-yes">✅</span></td></tr>
+  <tr><td><strong>MVPC / CD-NOD / RCD</strong></td><td><span class="tag-ca">✅ CA</span></td><td><span class="tag-no">—</span></td><td><span class="tag-no">—</span></td><td><span class="tag-no">—</span></td><td><span class="tag-no">—</span></td></tr>
+  <tr><td><strong>TS-ICD</strong></td><td><span class="tag-ca">✅ CA</span></td><td><span class="tag-no">—</span></td><td><span class="tag-no">—</span></td><td><span class="tag-no">—</span></td><td><span class="tag-no">—</span></td></tr>
+  <tr><td><strong>Total</strong></td><td><strong>19</strong></td><td>10</td><td>6</td><td>7</td><td>5</td></tr>
+</table>
+
+<p style="margin-top:2rem; font-size:0.85rem; color:#8b949e;">
+  Last updated: 2026-08-01 · Generated by GitHub Actions CI ·
+  <a href="https://github.com/AgentiX-E/causality-analyzer">Source</a> ·
+  <a href="https://agentix-e.github.io/causality-analyzer/api/">API Docs</a>
+</p>
+
+</body>
+</html>
