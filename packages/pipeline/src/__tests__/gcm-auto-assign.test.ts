@@ -50,11 +50,11 @@ describe('Auto-Assign Mechanisms', () => {
   it('assigns pnl for high-skew data', () => {
     const g = new CausalGraph(['X']);
     const nodeIndex = new Map([['X', 0]]);
-    // Pareto-like data — guaranteed high positive skew
+    // Deterministic Pareto-like data — guaranteed high positive skew (~4.0+)
     const data: number[][] = [];
-    for (let i = 0; i < 100; i++) {
-      // 90% small values, 10% extreme outliers
-      data.push([Math.random() > 0.9 ? 50 + Math.random() * 100 : Math.random() * 2]);
+    for (let i = 0; i < 200; i++) {
+      // 95% small values [0, 2), 5% extreme outliers [80, 180]
+      data.push([i % 20 === 0 ? 80 + i : (i * 0.01)]);
     }
 
     const result = autoAssignMechanisms(g, data, nodeIndex);

@@ -84,11 +84,12 @@ describe('parCorrTest', () => {
 
   it('dependency vanishes when conditioning on mediator Z', () => {
     const data: number[][] = [];
+    const rng = createRNG(42);
     // Structure: col0=dummy, col1=X, col2=Z, col3=Y, col4=dummy2
     for (let i = 0; i < 200; i++) {
-      const x = Math.random();
-      const z = 0.6 * x + (Math.random() - 0.5) * 0.2;
-      const y = 0.6 * z + (Math.random() - 0.5) * 0.2;
+      const x = rng();
+      const z = 0.6 * x + (rng() - 0.5) * 0.2;
+      const y = 0.6 * z + (rng() - 0.5) * 0.2;
       data.push([0, x, z, y, 0]);
     }
     // X and Y should be independent given Z: test cols 1,3 given cols 2

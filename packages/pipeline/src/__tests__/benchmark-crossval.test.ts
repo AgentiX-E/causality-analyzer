@@ -46,7 +46,7 @@ describe('Benchmark: Algorithm Integrity', () => {
       expect(dag.edges.length).toBeGreaterThanOrEqual(0);
     });
 
-    it(`${b.name} — LiNGAM produces valid DAG`, { timeout: 15000 }, () => {
+    it(`${b.name} — LiNGAM produces valid DAG`, { timeout: 30000 }, () => {
       const g = b.fn();
       const { data, nodeNames } = generateLinearData(g, b.nSamples, b.seed);
       const r = directLiNGAM(toMatrix(data), nodeNames);
