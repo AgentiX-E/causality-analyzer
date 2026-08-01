@@ -1,0 +1,72 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'docs/**'
+      - 'packages/pipeline/benchmark-results/**'
+      - 'BENCHMARKS.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm config set approve-builds true
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run --filter @agentix-e/causality-analyzer-core build
+      - run: pnpm run --filter @agentix-e/causality-analyzer-pipeline build
+
+      - name: Generate TypeDoc API docs
+        run: pnpm run docs
+
+      - name: Copy benchmark results to pages
+        run: |
+          mkdir -p _site/benchmark
+          cp packages/pipeline/benchmark-results/benchmark-ocdb.md _site/benchmark/ || true
+          cp packages/pipeline/benchmark-results/comparison-report.md _site/benchmark/ || true
+          cp docs/benchmark/index.html _site/benchmark/index.html || true
+          cp BENCHMARKS.md _site/benchmark/BENCHMARKS.md || true
+
+      - name: Copy docs to pages
+        run: |
+          cp -r docs/* _site/ 2>/dev/null || true
+          cp README.md _site/README.md || true
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

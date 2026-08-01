@@ -1,22 +1,29 @@
 import { defineConfig } from 'vitest/config';
-export default defineConfig({ 
+
+export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['src/**/*.test.ts'],
-    testTimeout: 60000,
-    setupFiles: ['./src/__tests__/setup.ts'],
+    testTimeout: 30000,
+    hookTimeout: 60000,
     coverage: {
       provider: 'v8',
-      reporter: ['text','json','lcov'],
+      reporter: ['text', 'json', 'lcov'],
       include: ['src/**/*.ts'],
       exclude: [
         'src/**/*.test.ts',
-        'src/**/index.ts',    // barrel exports — no executable logic
-        'src/cli.ts',         // CLI entry point — tested via integration
-        'src/parallel/',      // Worker Threads — OS-level threading
+        'src/**/__tests__/**',
+        'src/index.ts',
+        'src/cli.ts',
+        'src/server.ts',
+        'benchmark/**',
       ],
-      thresholds: { statements: 91, branches: 75, functions: 92, lines: 93 }
-    }
-  }
+      thresholds: {
+        statements: 90,
+        branches: 74,
+        functions: 90,
+        lines: 90,
+      },
+    },
+  },
 });

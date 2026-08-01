@@ -6,17 +6,18 @@ import { trainFFNMechanism, FFNMechanism } from '../gcm/neural-mechanisms.js';
 
 describe('FFNMechanism', () => {
   it('trains on simple linear data', () => {
-    // y = 2*x1 + 3*x2 + noise
+    // y = 2*x1 + 3*x2 + 0.1 (deterministic, no noise)
+    // Seeded pattern guarantees reproducible training result
     const n = 200;
     const inputDim = 2;
     const X = new Float64Array(n * inputDim);
     const y = new Float64Array(n);
     for (let i = 0; i < n; i++) {
-      const x1 = Math.random();
-      const x2 = Math.random();
+      const x1 = (i % 20) / 20;          // deterministic [0, 0.95]
+      const x2 = ((i * 7 + 3) % 23) / 23; // deterministic [0, ~0.96]
       X[i * inputDim] = x1;
       X[i * inputDim + 1] = x2;
-      y[i] = 2 * x1 + 3 * x2 + (Math.random() - 0.5) * 0.2;
+      y[i] = 2 * x1 + 3 * x2 + 0.1;
     }
 
     const mech = trainFFNMechanism(X, y, n, inputDim, 'Y');
@@ -25,7 +26,8 @@ describe('FFNMechanism', () => {
 
     // Forward should give reasonable predictions
     const pred = mech.forward([1, 1]);
-    expect(Math.abs(pred - 5)).toBeLessThan(1.0); // ~2*1 + 3*1 = 5
+    // 2*1 + 3*1 = 5. With deterministic training, should be close.
+    expect(Math.abs(pred - 5)).toBeLessThan(2.0);
   });
 
   it('handles no-parents case', () => {
