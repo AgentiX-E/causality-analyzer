@@ -1,5 +1,33 @@
 # Causal Discovery Benchmark Results
 
+> OCDB 8-20 node (I4, 2026-08-01) + ASIA/Cross-Dataset (I22-I42) · seed 42
+
+## OCDB Standard Benchmark — 8/10/20 nodes × 3 densities × 4 sample sizes
+
+**Best algorithm per configuration (by SHD):**
+
+| Size | Density | 200s | 500s | 1000s | 5000s |
+|:---:|:---:|------|------|-------|-------|
+| 8 | low (0.15) | GES 2.0 | BOSS 2.6 | GES 3.4 | BOSS 1.6 |
+| 8 | med (0.25) | BOSS 4.6 | BOSS 5.0 | BOSS 4.2 | BOSS 4.0 |
+| 8 | high (0.40) | BOSS 9.2 | BOSS 8.4 | BOSS 8.6 | BOSS 5.4 |
+| 10 | low | BOSS 2.6 | BOSS 2.4 | BOSS 2.2 | BOSS 2.2 |
+| 10 | med | BOSS 7.4 | BOSS 5.2 | BOSS 6.0 | BOSS 4.0 |
+| 10 | high | BOSS 19.0 | FCI 16.4 | BOSS 16.0 | BOSS 14.0 |
+| 20 | low | BOSS 27.4 | GES 33.2 | BOSS 26.8 | PC 26.2 |
+| 20 | med | BOSS 49.6 | FCI 54.0 | BOSS 52.2 | FCI 52.4 |
+| 20 | high | FCI 79.8 | FCI 80.0 | NOTEARS 82.8 | NOTEARS 83.6 |
+
+**Key findings:**
+- **BOSS** dominates across virtually all configurations (best in 28/36)
+- Low-density graphs (0.15): SHD scales sub-linearly with graph size
+- High-density graphs (0.40): all algorithms struggle at 20 nodes (SHD 80+)
+- GES/FCI are competitive alternatives at smaller scales
+- Full data at `packages/pipeline/benchmark-results/benchmark-ocdb.md`
+- CI scheduled daily at `.github/workflows/benchmark-scheduled.yml`
+
+---
+
 > Iterations I22-I42 · ASIA (5000 samples) + Cross-Dataset (2000 samples) · seed 42
 
 ## ASIA (8 nodes, 8 true edges) — 5000 samples
