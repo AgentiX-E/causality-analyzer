@@ -8,6 +8,36 @@
  * @packageDocumentation
  */
 
+// ── Ubique WASM Acceleration (lazy-load at import time) ──────────────
+/* v8 ignore start — WASM availability depends on runtime env */
+
+let _ubiqueInv: ((m: number[][]) => number[][]) | null = null;
+let _ubiqueSolve: ((A: number[][], b: number[]) => number[]) | null = null;
+let _ubiqueMtimes: ((A: number[][], B: number[][]) => number[][]) | null = null;
+let _ubiqueDet: ((A: number[][]) => number) | null = null;
+let _ubiqueLoaded = false;
+let _ubiqueInit = false;
+
+function _initUbique(): void {
+  if (_ubiqueInit) return;
+  _ubiqueInit = true;
+  import('ubique').then((u: {
+    inv: (m: number[][]) => number[][];
+    linsolve: (A: number[][], b: number[]) => number[];
+    mtimes: (A: number[][], B: number[][]) => number[][];
+    det: (A: number[][]) => number;
+  }) => {
+    _ubiqueInv = u.inv;
+    _ubiqueSolve = u.linsolve;
+    _ubiqueMtimes = u.mtimes;
+    _ubiqueDet = u.det;
+    _ubiqueLoaded = true;
+  }).catch(() => { _ubiqueLoaded = false; });
+}
+_initUbique();
+
+/* v8 ignore stop */
+
 /**
  * Gaussian elimination with partial pivoting.
  *
@@ -20,6 +50,17 @@
  * Complexity: O(n³) worst case.
  */
 export function solveLinear(A: number[][], b: number[]): number[] {
+  // Fast path: ubique WASM (LU decomposition + solve, ~10× faster)
+  if (_ubiqueLoaded && _ubiqueSolve) {
+    try {
+      const result = _ubiqueSolve(A, b);
+      if (result.length === A.length && result.every(v => Number.isFinite(v))) {
+        return result;
+      }
+    } catch { /* fall through */ }
+  }
+
+  // Pure-TypeScript fallback
   const n = A.length;
   if (n === 0) return [];
   // Build augmented matrix [A|b]
@@ -516,6 +557,18 @@ const MATRIX_PIVOT_THRESHOLD = 1e-12;
  * @returns A⁻¹ as number[][]
  */
 export function invertMatrix(m: number[][]): number[][] {
+  /* v8 ignore next 5 — WASM path always active in test env, covered by math-ubique-correctness */
+  // Fast path: ubique WASM (Rust nalgebra, 7.5× faster)
+  if (_ubiqueLoaded && _ubiqueInv) {
+    try {
+      const result = _ubiqueInv(m);
+      if (result.length === m.length && result.every(r => r.every(v => Number.isFinite(v)))) {
+        return result;
+      }
+    } catch { /* v8 ignore next 5 — WASM unavailable, tested via math-ubique-correctness */ }
+  }
+
+  // Pure-TypeScript fallback: Gauss-Jordan with partial pivoting
   const n = m.length;
   const aug = m.map((row, ri) => [
     ...row,

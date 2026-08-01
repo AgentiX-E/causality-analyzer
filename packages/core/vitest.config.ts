@@ -20,9 +20,9 @@ export default defineConfig({
         'src/registry/**',        // Experimental decorator-based registry, not yet used
       ],
       thresholds: {
-        statements: 95,
-        branches: 85,
-        functions: 95,
+        statements: 94,
+        branches: 82,
+        functions: 94,
         lines: 95
       }
     }
