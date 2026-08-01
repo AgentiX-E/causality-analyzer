@@ -1,0 +1,79 @@
+name: OpenRCA Benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      dataset:
+        description: 'Dataset to evaluate (Telecom, Bank, Market/cloudbed-1, Market/cloudbed-2)'
+        required: true
+        type: choice
+        options:
+          - Telecom
+          - Bank
+          - Market/cloudbed-1
+          - Market/cloudbed-2
+
+permissions:
+  contents: read
+
+jobs:
+  run-rca-agent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Clone OpenRCA
+        run: git clone https://github.com/microsoft/OpenRCA.git
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r OpenRCA/requirements.txt
+          pip install pandas openai
+
+      - name: Build CA packages
+        run: |
+          pnpm config set approve-builds true
+          pnpm install --frozen-lockfile
+          pnpm run --filter @agentix-e/causality-analyzer-core build
+          pnpm run --filter @agentix-e/causality-analyzer-pipeline build
+
+      - name: Download OpenRCA dataset (${{ github.event.inputs.dataset }})
+        run: |
+          echo "Dataset download requires 68GB Google Drive access."
+          echo "Place dataset in OpenRCA/dataset/${{ github.event.inputs.dataset }}/"
+          echo "See: https://drive.google.com/drive/folders/1wGiEnu4OkWrjPxfx5ZTROnU37-5UDoPM"
+          # In CI: pre-seed dataset via artifact or shared storage
+
+      - name: Run CA-LLM RCA Agent
+        if: false  # Enable after dataset is available in CI
+        run: |
+          cd OpenRCA
+          export DEEPSEEK_API_KEY=${{ secrets.DEEPSEEK_API_KEY }}
+          python -m rca.run_ca_agent --dataset ${{ github.event.inputs.dataset }}
+
+      - name: Evaluate results
+        if: false  # Enable after dataset is available in CI
+        run: |
+          cd OpenRCA
+          python -m main.evaluate \
+            -p test/result/${{ github.event.inputs.dataset }}/agent-ca-llm-agent-deepseek-chat.csv \
+            -q dataset/${{ github.event.inputs.dataset }}/query.csv \
+            -r test/result/report-ca-llm-agent.csv
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: openrca-ca-llm-results
+          path: OpenRCA/test/result/
