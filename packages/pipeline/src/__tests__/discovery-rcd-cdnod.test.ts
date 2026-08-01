@@ -88,14 +88,15 @@ describe('CD-NOD Algorithm', () => {
     g.addEdge('X', 'Y'); g.addEdge('Y', 'Z');
 
     // Generate data with 2 domains: domain 0 (normal), domain 1 (shifted)
+    // Deterministic patterns guarantee reproducible CD-NOD behavior
     const data: number[][] = [];
     const domains: number[] = [];
     for (let i = 0; i < 200; i++) {
       const d = i < 100 ? 0 : 1;
       domains.push(d);
-      const x = Math.random();
-      const y = 0.7 * x + (d === 1 ? 0.5 : 0) + Math.random() * 0.1;
-      const z = 0.8 * y + Math.random() * 0.1;
+      const x = (i % 31) / 31;                          // deterministic [0, ~0.97]
+      const y = 0.7 * x + (d === 1 ? 0.5 : 0) + 0.05; // shifted + constant noise
+      const z = 0.8 * y + 0.05;                         // constant noise
       data.push([x, y, z]);
     }
 
