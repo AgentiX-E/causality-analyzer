@@ -47,8 +47,9 @@ describe('FFNMechanism', () => {
     const inputDim = 1;
     const X = new Float64Array(n);
     const y = new Float64Array(n);
+    // Deterministic data: X = i/n, y = 5*X + 0.1
     for (let i = 0; i < n; i++) {
-      X[i] = Math.random();
+      X[i] = (i + 1) / n;
       y[i] = 5 * X[i]! + 0.1;
     }
 

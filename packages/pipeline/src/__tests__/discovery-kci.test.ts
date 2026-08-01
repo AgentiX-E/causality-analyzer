@@ -33,9 +33,10 @@ describe('kciTest', () => {
   it('correctly identifies independence', () => {
     const n = 100;
     const data = new Matrix(n, 2);
+    // Deterministic independent columns using simple pattern
     for (let i = 0; i < n; i++) {
-      data.set(i, 0, Math.random());
-      data.set(i, 1, Math.random());
+      data.set(i, 0, (i % 17) / 17);         // deterministic pseudo-random
+      data.set(i, 1, ((i * 7 + 3) % 19) / 19); // independent from col 0
     }
     // With independent data, p-value should be sensibly large
     // (permutation test with 50 perms: min p = 1/51 ≈ 0.02)
