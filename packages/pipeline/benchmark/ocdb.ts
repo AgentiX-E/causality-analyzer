@@ -161,14 +161,20 @@ export function runOCDBBenchmark(options?: {
           const { data } = generateLinearData(truth, nSamples, instanceSeed++);
 
           // Determine which algorithms to skip on large graphs
-          const skipLarge = size > 50
-            ? ['LiNGAM', 'NOTEARS', 'FCI', 'GFCI']
+          // 50+ nodes: PC/GES/BOSS only (others O(n³) or worse)
+          const skipLarge = size >= 50
+            ? ['NOTEARS', 'LiNGAM', 'FCI', 'GFCI']
             : size > 30
               ? ['LiNGAM', 'NOTEARS']
               : [];
 
+          const desc = `${size}n_${densLabel}_inst${inst}_${nSamples}s`;
+          if (typeof process !== 'undefined' && process.env['CI'] !== 'true') {
+            console.log(`  ${desc} (algorithms: ${7 - skipLarge.length})`);
+          }
+
           const benchmarkResult = runBenchmark(
-            `${size}n_${densLabel}_inst${inst}_${nSamples}s`,
+            desc,
             truth,
             data,
             nodeNames,

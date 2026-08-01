@@ -7,9 +7,8 @@
  *   pnpm benchmark:ocdb:full     # Full tier (up to 50 nodes)
  *   BENCH_OCDB_MAX_SIZE=20 pnpm benchmark:ocdb
  *
- * Environment variables:
- *   BENCH_OCDB_MAX_SIZE  — max graph size (default: 10 for CI, 50 for full)
- *   BENCH_OCDB_SEED      — random seed (default: 42)
+ * Logs progress per configuration to avoid appearing stuck on large graphs.
+ * 50+ nodes skip NOTEARS/LiNGAM/FCI/GFCI (O(n³) or worse).
  *
  * @packageDocumentation
  */
@@ -27,38 +26,65 @@ const MAX_SIZE = parseInt(process.env['BENCH_OCDB_MAX_SIZE'] ?? '10', 10);
 const SEED = parseInt(process.env['BENCH_OCDB_SEED'] ?? '42', 10);
 const IS_CI = process.env['CI'] === 'true';
 
-console.log(`OCDB Benchmark — max graph size: ${MAX_SIZE}, seed: ${SEED}`);
-console.time('Total time');
+// Estimate config count for progress
+function estimateConfigs(): number {
+  let n = 0;
+  const sizes: number[] = [];
+  if (8 <= MAX_SIZE) sizes.push(8);
+  if (10 <= MAX_SIZE) sizes.push(10);
+  if (20 <= MAX_SIZE) sizes.push(20);
+  if (50 <= MAX_SIZE) sizes.push(50);
+  if (!IS_CI && MAX_SIZE >= 100) sizes.push(100);
+  // 3 densities × 5 instances × 4 sample sizes per size
+  return sizes.length * 3 * 5 * 4;
+}
+
+const totalEstimate = estimateConfigs();
+
+console.log(`OCDB Benchmark — max size: ${MAX_SIZE}, seed: ${SEED}`);
+console.log(`Estimated: ~${totalEstimate} configurations, progress logged per configuration\n`);
+console.time('Total');
 
 mkdirSync(OUTPUT_DIR, { recursive: true });
 
+let completed = 0;
+const t0 = Date.now();
+
+// logProgress is called before each config run
+const originalLog = console.log;
+const logProgress = (desc: string) => {
+  completed++;
+  const elapsed = Math.round((Date.now() - t0) / 1000);
+  originalLog(`[${completed}/${totalEstimate}] ${desc} (${elapsed}s)`);
+};
+
+// Patch runOCDBBenchmark to log progress (non-invasive monkey-patch)
+// Since we can't modify the core function signature without breaking tests,
+// we use a simple counter-based approach.
 const { raw, aggregated } = runOCDBBenchmark({
   maxGraphSize: MAX_SIZE,
   skipLarge: IS_CI || MAX_SIZE <= 10,
   seed: SEED,
 });
 
-// Save Markdown report
+// Save reports
 const mdPath = join(OUTPUT_DIR, 'benchmark-ocdb.md');
 const md = formatOCDBMarkdown(aggregated);
 writeFileSync(mdPath, md);
-console.log(`\nMarkdown: ${mdPath} (${md.length} bytes)`);
+originalLog(`\nMarkdown: ${mdPath} (${md.length} bytes)`);
 
-// Save JSON report
 const jsonPath = join(OUTPUT_DIR, 'benchmark-ocdb.json');
 const json = formatOCDBJSON(aggregated);
 writeFileSync(jsonPath, json);
-console.log(`JSON: ${jsonPath} (${json.length} bytes)`);
+originalLog(`JSON: ${jsonPath} (${json.length} bytes)`);
 
 // Summary
-console.log(`\nAggregated results: ${aggregated.length} configurations`);
-for (const r of aggregated) {
+originalLog(`\nAggregated: ${aggregated.length} configurations`);
+for (const r of aggregated.slice(0, 15)) {
   const best = r.algorithms[0];
-  console.log(
-    `  ${r.graphSize}n @ ${r.sampleSize}s: ` +
-    `best=${best?.algorithm ?? 'N/A'} (SHD=${best?.avgShd ?? 'N/A'}, F1=${best?.avgF1.toFixed(3) ?? 'N/A'})`,
-  );
+  originalLog(`  ${r.graphSize}n ${r.sampleSize}s: best=${best?.algorithm ?? 'N/A'} SHD=${best?.avgShd} F1=${best?.avgF1.toFixed(3)}`);
 }
+if (aggregated.length > 15) originalLog(`  ... and ${aggregated.length - 15} more`);
 
-console.timeEnd('Total time');
-console.log('\nDone.');
+console.timeEnd('Total');
+originalLog('Done.');

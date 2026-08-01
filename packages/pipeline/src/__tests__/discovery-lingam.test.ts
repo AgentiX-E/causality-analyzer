@@ -7,16 +7,21 @@ function generateNonGaussianData(
   nSamples: number,
 ): Matrix {
   const n = nodes.length;
-  const order = [...nodes];
-  // Sort by edge dependencies to approximate topological order
   const data = Matrix.zeros(nSamples, n);
+  let seed = 42;
+
+  // Simple LCG for deterministic non-Gaussian noise
+  function rng(): number {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 0x100000000;
+  }
 
   for (let row = 0; row < nSamples; row++) {
     const values = new Array(n).fill(0);
     for (const name of nodes) {
       const idx = nodes.indexOf(name);
-      // Non-Gaussian noise: uniform distribution
-      const noise = (Math.random() - 0.5) * 2;
+      // Non-Gaussian noise: uniform distribution (deterministic)
+      const noise = (rng() - 0.5) * 2;
       let val = noise;
       for (const [f, t, w] of edges) {
         if (t === name) {
