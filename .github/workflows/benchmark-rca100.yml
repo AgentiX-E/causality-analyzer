@@ -36,12 +36,24 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm run --filter @agentix-e/causality-analyzer-core build
           pnpm run --filter @agentix-e/causality-analyzer-pipeline build
-      - name: Run CA-LLM RCA Agent on RCA100
+      - name: Convert Parquet to CSV (Python bridge)
+        run: |
+          pip install pandas pyarrow
+          python -c "
+          import pandas as pd, os, glob
+          os.makedirs('benchmark-data/rca100/csv', exist_ok=True)
+          for f in sorted(glob.glob('benchmark-data/rca100/cases/*.parquet')):
+              df = pd.read_parquet(f)
+              name = os.path.splitext(os.path.basename(f))[0]
+              df.to_csv(f'benchmark-data/rca100/csv/{name}.csv', index=False)
+          print(f'Converted {len(glob.glob(\"benchmark-data/rca100/csv/*.csv\"))} files')
+          "
+      - name: Run RCA100 Benchmark
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         run: |
-          pip install pandas openai pyarrow
-          echo "RCA100 agent ready"
+          cd packages/pipeline
+          npx tsx benchmark/run-rca100-agent.ts
       - uses: actions/upload-artifact@v4
         with:
           name: rca100-predictions

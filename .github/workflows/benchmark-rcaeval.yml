@@ -39,12 +39,10 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm run --filter @agentix-e/causality-analyzer-core build
           pnpm run --filter @agentix-e/causality-analyzer-pipeline build
-      - name: Run CA-LLM RCA Agent on RCAEval
-        env:
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+      - name: Run RCAEval Benchmark
         run: |
-          pip install pandas openai rca-eval
-          echo "RCAEval agent ready"
+          cd packages/pipeline
+          npx tsx benchmark/run-rcaeval.ts
       - uses: actions/upload-artifact@v4
         with:
           name: rcaeval-predictions-${{ matrix.system }}
