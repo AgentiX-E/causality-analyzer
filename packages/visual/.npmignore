@@ -1,0 +1,12 @@
+# Test files
+**/__tests__/
+**/*.test.ts
+**/*.test.tsx
+
+# Build config
+vitest.config.ts
+tsconfig.json
+tsconfig.*.json
+
+# Source maps
+*.map
