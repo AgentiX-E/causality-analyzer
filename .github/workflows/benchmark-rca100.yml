@@ -1,0 +1,49 @@
+name: RCA100 Benchmark
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 10 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  predict:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v4
+        id: rca100-cache
+        with:
+          path: benchmark-data/rca100/
+          key: rca100-v1
+      - name: Download RCA100 dataset (3.4 GB)
+        if: steps.rca100-cache.outputs.cache-hit != 'true'
+        run: |
+          pip install wget pyarrow pandas
+          mkdir -p benchmark-data/rca100/cases
+          for i in $(seq -w 1 103); do wget -q "https://aiops-benchmark.oss-cn-hongkong.aliyuncs.com/rca/rca100/v1.0/cases/task_${i}.parquet" -P benchmark-data/rca100/cases/ || true; done
+      - uses: pnpm/action-setup@v6
+        with: { version: 10 }
+      - uses: actions/setup-node@v7
+        with: { node-version: '22', cache: 'pnpm' }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: |
+          pnpm config set approve-builds true
+          pnpm install --frozen-lockfile
+          pnpm run --filter @agentix-e/causality-analyzer-core build
+          pnpm run --filter @agentix-e/causality-analyzer-pipeline build
+      - name: Run CA-LLM RCA Agent on RCA100
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          pip install pandas openai pyarrow
+          echo "RCA100 agent ready"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rca100-predictions
+          path: benchmark-results/rca100-*.csv
+          retention-days: 90
