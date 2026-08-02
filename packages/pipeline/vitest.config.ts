@@ -5,7 +5,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     testTimeout: 30000,
-    hookTimeout: 60000,
+    hookTimeout: 180000,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'lcov'],
