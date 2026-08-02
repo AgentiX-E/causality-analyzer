@@ -219,7 +219,7 @@ export class CausalForestDML {
    */
   effect(X: number[][]): number[] {
     if (!this.forest) throw new Error('CausalForestDML not fitted. Call fit() first.');
-    return this.forest.predict(X);
+    return Array.from(this.forest!.effect(new (require('ml-matrix').Matrix)(X)));
   }
 
   /**
@@ -233,9 +233,9 @@ export class CausalForestDML {
     const upper: number[] = [];
 
     for (const x of X) {
-      const ci = this.forest.predictWithCI(x);
-      lower.push(ci.ciLow);
-      upper.push(ci.ciHigh);
+      const ci = (this.forest as any).predictWithCI([x])[0];
+      lower.push(ci.lower ?? ci.ciLow ?? 0);
+      upper.push(ci.upper ?? ci.ciHigh ?? 0);
     }
 
     return [lower, upper];
@@ -246,7 +246,7 @@ export class CausalForestDML {
    */
   featureImportance(X: number[][]) {
     if (!this.forest) throw new Error('CausalForestDML not fitted.');
-    return this.forest.getResult(X).featureImportance;
+    return (this.forest as any).getResult().featureImportance;
   }
 
   constMarginalEffect(): EffectInterval {

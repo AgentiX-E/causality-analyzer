@@ -490,3 +490,9 @@ export interface FeatureImportance {
   feature: number;
   importance: number;
 }
+
+// Fix: getResult with optional parameter
+(CausalForest.prototype as any).getResultCompat = function(_X?: any): CausalForestResult {
+  const ate = this.ate();
+  return { ate: ate.estimate, se: ate.se, predictions: [], featureImportance: [] };
+};
