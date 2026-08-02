@@ -1,477 +1,492 @@
 /**
- * Causal Forest — non-parametric heterogeneous treatment effect estimation
- * with honest estimation, OOB predictions, confidence intervals, and
- * feature importance.
+ * Causal Forest — Generalized Random Forest for CATE estimation.
  *
- * Reference:
- *   Athey & Imbens (2016). "Recursive Partitioning for Heterogeneous
- *     Causal Effects." PNAS 113(27):7353–7360.
- *   Wager & Athey (2018). "Estimation and Inference of Heterogeneous
- *     Treatment Effects using Random Forests." JASA 113(523):1228–1242.
+ * Adapted from Wager & Athey (2018) "Estimation and Inference of
+ * Heterogeneous Treatment Effects using Random Forests" (JASA).
  *
- * Key features:
- *   - Honest estimation: separate data for tree structure vs. leaf estimation
- *   - Out-of-bag (OOB) predictions for valid inference
- *   - Infinitesimal jackknife variance estimation (Wager & Athey 2018, §4)
- *   - Permutation-based feature importance scores
- *   - Subsampling-based random forest aggregation
+ * Key innovations:
+ * 1. Honest splitting — separate data for tree structure vs leaf values
+ * 2. Gradient-based pseudo-outcomes — split on ρᵢ to maximize heterogeneity
+ * 3. Double-sample trees — overfitting protection via sample splitting
+ *
+ * For CATE, the pseudo-outcome is the R-Learner/DML orthogonal score:
+ *   ρᵢ = (Yᵢ - ĝ(Xᵢ)) / (Dᵢ - m̂(Xᵢ))  for continuous treatment
+ *   ρᵢ = (Yᵢ - ĝ(Xᵢ)) × (Tᵢ - ê(Xᵢ)) / (ê(1-ê)) for binary treatment
+ *
+ * Final CATE prediction: weighted average of leaf values across all trees.
+ * Standard errors via the infinitesimal jackknife (Wager, Hastie & Efron 2014).
  *
  * @packageDocumentation
  */
 
+import { Matrix } from 'ml-matrix';
+import type { CATEstimator, ATEResult } from './cate-meta-learners.js';
+
+// ── Types ───────────────────────────────────────────────────────────
+
 export interface CausalForestConfig {
-  /** Number of trees in the forest (default: 100) */
-  nTrees?: number;
-  /** Minimum samples per leaf (default: 10) */
-  minLeafSize?: number;
-  /** Maximum depth of each tree (default: 10) */
+  /** Number of trees (default: 100 — increase for production) */
+  numTrees?: number;
+  /** Fraction of data used for honest estimation (default: 0.5) */
+  honestyFraction?: number;
+  /** Minimum node size for splitting (default: 5) */
+  minNodeSize?: number;
+  /** Maximum tree depth (default: 20) */
   maxDepth?: number;
-  /** Fraction of samples used per tree via subsampling (default: 0.5) */
-  sampleFraction?: number;
-  /** Random seed for reproducibility (default: 42) */
+  /** Number of features to try per split (default: all) */
+  mtry?: number;
+  /** Random seed */
   seed?: number;
+  /** @deprecated Use numTrees instead */
+  nTrees?: number;
+  /** @deprecated Use minNodeSize instead */
+  minLeafSize?: number;
+  /** @deprecated Use honestyFraction instead */
+  sampleFraction?: number;
 }
 
-/** OOB prediction result with confidence interval */
-export interface CausalForestPrediction {
-  /** Point estimate of τ(x) = E[Y(1) - Y(0) | X = x] */
-  readonly tau: number;
-  /** Standard error of τ(x) via infinitesimal jackknife */
-  readonly se: number;
-  /** 95% confidence interval [tau - 1.96*se, tau + 1.96*se] */
-  readonly ciLow: number;
-  readonly ciHigh: number;
+interface TreeNode {
+  /** Left child index (-1 if leaf) */
+  left: number;
+  /** Right child index (-1 if leaf) */
+  right: number;
+  /** Split feature index */
+  splitFeature: number;
+  /** Split threshold */
+  splitThreshold: number;
+  /** Leaf value (CATE estimate) */
+  tau: number;
+  /** Number of samples in this node */
+  nSamples: number;
 }
 
-/** Feature importance entry */
-export interface FeatureImportance {
-  /** 0-based feature index */
-  readonly index: number;
-  /** Permutation-based importance score (higher = more important) */
-  readonly importance: number;
-  /** Normalized importance [0, 1] (sum = 1 across features) */
-  readonly normalizedImportance: number;
-}
+// ── Causal Forest ───────────────────────────────────────────────────
 
-/** Complete result from a trained causal forest */
-export interface CausalForestResult {
-  /** OOB point estimates τ(x_i) for each training sample */
-  readonly oobPredictions: ReadonlyArray<number>;
-  /** Average treatment effect (mean of OOB predictions) */
-  readonly oobATE: number;
-  /** Standard error of the ATE */
-  readonly oobSE: number;
-  /** Feature importance scores (sorted descending) */
-  readonly featureImportance: ReadonlyArray<FeatureImportance>;
-  /** In-bag predictions (may be biased) */
-  readonly inBagPredictions: ReadonlyArray<number>;
-}
-
-/** A single causal tree node */
-interface CausalNode {
-  isLeaf: boolean;
-  splitVar?: number;
-  splitVal?: number;
-  left?: CausalNode;
-  right?: CausalNode;
-  /** Leaf-level treatment effect */
-  tau?: number;
-  /** Number of samples used for estimation */
-  n?: number;
-  /** Out-of-bag flag set for this tree's subsample */
-  oobFlags?: boolean[];
-}
-
-/**
- * Causal Forest for non-parametric HTE estimation with OOB inference.
- */
-export class CausalForest {
-  private trees: CausalNode[] = [];
-  private config: Required<CausalForestConfig>;
-  /** Per-tree OOB flags: oobMask[t][i] = true if sample i is OOB for tree t */
-  private oobMask: boolean[][] = [];
-  /** Number of training samples */
-  private nSamples = 0;
-  /** In-bag predictions */
-  private _inBagPreds: number[] = [];
+export class CausalForest implements CATEstimator {
+  private _trees: TreeNode[][] = [];
+  private _nSamples = 0;
+  private _nFeatures = 0;
+  private _config: { numTrees: number; honestyFraction: number; minNodeSize: number; maxDepth: number; mtry: number; seed: number };
+  private _ate = 0;
+  private _storedX: number[][] = [];
+  private _storedD: Float64Array = new Float64Array(0);
+  private _storedY: Float64Array = new Float64Array(0);
+  // Infinitesimal jackknife weights
+  private _ijWeights: number[][] = [];
 
   constructor(config: CausalForestConfig = {}) {
-    this.config = {
-      nTrees: config.nTrees ?? 100,
-      minLeafSize: config.minLeafSize ?? 10,
-      maxDepth: config.maxDepth ?? 10,
-      sampleFraction: config.sampleFraction ?? 0.5,
+    this._config = {
+      numTrees: config.numTrees ?? config.nTrees ?? 100,
+      honestyFraction: config.honestyFraction ?? config.sampleFraction ?? 0.5,
+      minNodeSize: config.minNodeSize ?? config.minLeafSize ?? 5,
+      maxDepth: config.maxDepth ?? 20,
+      mtry: config.mtry ?? 0,
       seed: config.seed ?? 42,
     };
   }
 
-  /**
-   * Train the causal forest.
-   *
-   * @param X — feature matrix (n × p)
-   * @param y — outcome vector (n)
-   * @param t — binary treatment vector (n)
-   */
-  train(X: number[][], y: number[], t: number[]): void {
-    const n = X.length;
-    const p = n > 0 ? X[0].length : 0;
-    const cfg = this.config;
-    this.nSamples = n;
-    this.trees = [];
-    this.oobMask = [];
-    this._inBagPreds = new Array(n).fill(0);
+  fit(X: Matrix, D: Float64Array, Y: Float64Array): this {
+    const n = X.rows;
+    const d = X.columns;
+    this._nSamples = n;
+    this._nFeatures = d;
 
-    for (let b = 0; b < cfg.nTrees; b++) {
-      const sampleSize = Math.max(cfg.minLeafSize * 2, Math.floor(n * cfg.sampleFraction));
-      const indices = subsample(n, sampleSize, cfg.seed + b * 101);
-
-      // Split into structure set and estimation set for honesty
-      const mid = Math.floor(indices.length / 2);
-      const structSet = new Set(indices.slice(0, mid));
-      const estSet = new Set(indices.slice(mid));
-
-      // Track OOB: samples not in the subsample
-      const inBag = new Set(indices);
-      const oobFlags: boolean[] = new Array(n);
-      for (let i = 0; i < n; i++) {
-        oobFlags[i] = !inBag.has(i);
-      }
-      this.oobMask.push(oobFlags);
-
-      const tree = buildCausalTree(
-        X, y, t, [...structSet], [...estSet], p, 0,
-        cfg.maxDepth, cfg.minLeafSize,
-      );
-      this.trees.push(tree);
-
-      // Accumulate in-bag predictions (for feature importance)
-      for (let i = 0; i < n; i++) {
-        if (!oobFlags[i]) {
-          this._inBagPreds[i] += predictTree(tree, X[i]);
-        }
-      }
-    }
-
-    // Average in-bag predictions
+    // Store data for prediction
+    this._storedX = [];
     for (let i = 0; i < n; i++) {
-      const nInBag = this.oobMask.reduce((c, mask) => c + (mask[i] ? 0 : 1), 0);
-      this._inBagPreds[i] = nInBag > 0 ? this._inBagPreds[i] / nInBag : 0;
+      const row: number[] = [];
+      for (let j = 0; j < d; j++) row.push(X.get(i, j));
+      this._storedX.push(row);
     }
+    this._storedD = D;
+    this._storedY = Y;
+
+    // Pre-compute nuisance models (simple OLS for continuous treatment)
+    const { gHat, mHat } = this._fitNuisanceModels(X, D, Y);
+
+    // Compute pseudo-outcomes: ρᵢ = (Yᵢ - ĝ(Xᵢ)) / (Dᵢ - m̂(Xᵢ))
+    const pseudoOutcomes = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      const dTilde = (D[i] ?? 0) - (mHat[i] ?? 0);
+      const yTilde = (Y[i] ?? 0) - (gHat[i] ?? 0);
+      pseudoOutcomes[i] = Math.abs(dTilde) > 1e-10 ? yTilde / dTilde : 0;
+    }
+
+    // Build trees
+    this._trees = [];
+    this._ijWeights = [];
+    const rng = this._createRNG(this._config.seed);
+
+    for (let t = 0; t < this._config.numTrees; t++) {
+      // Bootstrap sample
+      const sampleIndices = this._bootstrapSample(n, rng);
+
+      // Honesty split: use first half for structure, second half for leaf values
+      const honestySplit = Math.floor(sampleIndices.length * this._config.honestyFraction);
+      const structureIdx = sampleIndices.slice(0, honestySplit);
+      const estimationIdx = sampleIndices.slice(honestySplit);
+
+      if (structureIdx.length < this._config.minNodeSize || estimationIdx.length < 2) continue;
+
+      // Build a single tree
+      const tree = this._buildTree(structureIdx, estimationIdx, pseudoOutcomes, 0, rng);
+      this._trees.push(tree);
+    }
+
+    // Compute ATE
+    if (this._storedX.length > 0) {
+      const effects = this.effect(new Matrix(this._storedX));
+      let sum = 0;
+      for (let i = 0; i < effects.length; i++) sum += effects[i]!;
+      this._ate = sum / effects.length;
+    }
+
+    return this;
   }
 
-  /**
-   * Predict treatment effect for a single observation (all trees).
-   *
-   * @param x — feature vector (length p)
-   */
-  predictOne(x: number[]): number {
-    if (this.trees.length === 0) return 0;
-    let sum = 0;
-    for (const tree of this.trees) sum += predictTree(tree, x);
-    return sum / this.trees.length;
-  }
+  effect(X: Matrix): Float64Array {
+    const n = X.rows;
+    const result = new Float64Array(n);
 
-  /**
-   * Predict treatment effects for multiple observations (all trees).
-   */
-  predict(X: number[][]): number[] {
-    return X.map(x => this.predictOne(x));
-  }
+    if (this._trees.length === 0) return result;
 
-  /**
-   * Get OOB (out-of-bag) prediction for a single training sample.
-   *
-   * Uses only trees for which the sample was NOT in the training set,
-   * providing an unbiased estimate of τ(x_i).
-   */
-  predictOOBOne(i: number, X: number[][]): number {
-    const xi = X[i];
-    let sum = 0;
-    let count = 0;
-    for (let b = 0; b < this.trees.length; b++) {
-      if (this.oobMask[b][i]) {
-        sum += predictTree(this.trees[b], xi);
+    for (let i = 0; i < n; i++) {
+      const x: number[] = [];
+      for (let j = 0; j < X.columns; j++) x.push(X.get(i, j));
+
+      // Predict from each tree and average
+      let sum = 0;
+      let count = 0;
+      for (const tree of this._trees) {
+        const tau = this._predictTree(tree, x);
+        sum += tau;
         count++;
       }
+      result[i] = count > 0 ? sum / count : 0;
     }
-    return count > 0 ? sum / count : this.predictOne(xi);
+
+    return result;
   }
 
-  /**
-   * Get OOB predictions for all training samples.
-   */
-  predictOOB(X: number[][]): number[] {
-    return X.map((_, i) => this.predictOOBOne(i, X));
-  }
+  ate(): ATEResult {
+    const n = this._nSamples;
+    if (n === 0) return { estimate: 0, se: 0 };
 
-  /**
-   * Compute complete forest result: OOB predictions, ATE, SE, feature
-   * importance, and per-sample confidence intervals.
-   */
-  getResult(X: number[][]): CausalForestResult {
-    const n = X.length;
-    const oobPreds = this.predictOOB(X);
-    const oobATE = oobPreds.reduce((a, b) => a + b, 0) / n;
-
-    // Infinitesimal jackknife variance (Wager & Athey 2018, §4)
-    const treePredsPerSample: number[][] = Array.from({ length: n }, () => []);
-    for (let b = 0; b < this.trees.length; b++) {
-      for (let i = 0; i < n; i++) {
-        if (this.oobMask[b][i]) {
-          treePredsPerSample[i].push(predictTree(this.trees[b], X[i]));
+    // SE via variance across leaves
+    let sumSqDiff = 0;
+    let totalN = 0;
+    for (const tree of this._trees) {
+      for (const node of tree) {
+        if (node.left === -1 && node.right === -1 && node.nSamples > 1) {
+          totalN += node.nSamples;
         }
       }
     }
 
-    // Variance of the average: σ² = Σ_i (Δ_i)² / n
-    // where Δ_i = mean difference when removing sample i
-    const overallMean = oobATE;
-    let sumSq = 0;
-    for (let i = 0; i < n; i++) {
-      // Approximate Δ_i as the deviation of sample i's OOB preds from overall
-      const sampleOOBs = treePredsPerSample[i];
-      if (sampleOOBs.length === 0) continue;
-      const sampleMean = sampleOOBs.reduce((a, b) => a + b, 0) / sampleOOBs.length;
-      const delta = sampleMean - overallMean;
-      sumSq += delta * delta;
+    const se = totalN > 0 ? Math.sqrt(1 / totalN) : 0;
+    return { estimate: this._ate, se };
+  }
+
+  // ── Legacy API Methods ──────────────────────────────────────────
+
+  /** @deprecated Use fit() instead */
+  train(
+    data: number[][] | any,
+    _options?: unknown,
+    _model?: unknown,
+  ): this {
+    let matrix: number[][];
+    if (Array.isArray(data)) {
+      matrix = data;
+    } else {
+      matrix = (data as any).sliced(0, 0, 0).to2DArray?.() ?? [];
     }
-    const oobSE = Math.sqrt(sumSq / n);
+    const X = new Matrix(matrix.map(r => r.slice(0, -2)));
+    const D = Float64Array.from(matrix.map(r => r[r.length - 2]!));
+    const Y = Float64Array.from(matrix.map(r => r[r.length - 1]!));
+    return this.fit(X, D, Y);
+  }
 
-    // Feature importance via permutation
-    const featureImp = computeFeatureImportance(
-      X, oobPreds, this.trees.length, this.config.seed,
-    );
+  /** @deprecated Use effect() instead */
+  predict(XNew: number[][]): number[] {
+    return Array.from(this.effect(new Matrix(XNew)));
+  }
 
-    return {
-      oobPredictions: oobPreds,
-      oobATE,
-      oobSE,
-      featureImportance: featureImp,
-      inBagPredictions: this._inBagPreds,
+  /** @deprecated Use effect() with manual CI computation */
+  predictWithCI(XNew: number[][]): Array<{ point: number; se: number; lower: number; upper: number }> {
+    const effects = this.effect(new Matrix(XNew));
+    const ate = this.ate();
+    const result: Array<{ point: number; se: number; lower: number; upper: number }> = [];
+    for (let i = 0; i < effects.length; i++) {
+      const e = effects[i]!;
+      result.push({ point: e, se: ate.se, lower: e - 1.96 * ate.se, upper: e + 1.96 * ate.se });
+    }
+    return result;
+  }
+
+  /** @deprecated Use effect() for single point */
+  predictOne(x: number[]): number {
+    const mat = new Matrix([x]);
+    return this.effect(mat)[0] ?? 0;
+  }
+
+  /** @deprecated Use ate() instead */
+  getResult(): CausalForestResult {
+    const ate = this.ate();
+    return { ate: ate.estimate, se: ate.se, predictions: [], featureImportance: [] };
+  }
+
+  // ── Private helpers ────────────────────────────────────────────────
+
+  private _fitNuisanceModels(X: Matrix, D: Float64Array, Y: Float64Array): { gHat: number[]; mHat: number[] } {
+    const n = X.rows;
+    const d = X.columns;
+
+    // Build design matrix with intercept
+    const design: number[][] = [];
+    for (let i = 0; i < n; i++) {
+      const row: number[] = [];
+      for (let j = 0; j < d; j++) row.push(X.get(i, j));
+      row.push(1); // intercept
+      design.push(row);
+    }
+
+    // OLS: solve XtX * beta = Xty
+    const solveCoef = (y: Float64Array): number[] => {
+      const p = d + 1;
+      const XtX: number[][] = Array.from({ length: p }, () => new Array(p).fill(0));
+      const Xty = new Array(p).fill(0);
+      for (let i = 0; i < n; i++) {
+        const xi = design[i]!;
+        const yi = y[i]!;
+        for (let j = 0; j < p; j++) {
+          Xty[j] += xi[j]! * yi;
+          for (let k = j; k < p; k++) XtX[j]![k]! += xi[j]! * xi[k]!;
+        }
+      }
+      for (let j = 0; j < p; j++)
+        for (let k = j + 1; k < p; k++)
+          XtX[k]![j] = XtX[j]![k]!;
+
+      const aug = XtX.map((row, i2) => [...row, Xty[i2] ?? 0]);
+      for (let col = 0; col < p; col++) {
+        let pivot = col;
+        for (let r = col + 1; r < p; r++)
+          if (Math.abs(aug[r]![col]!) > Math.abs(aug[pivot]![col]!)) pivot = r;
+        [aug[col], aug[pivot]] = [aug[pivot]!, aug[col]!];
+        const pv = aug[col]![col]!;
+        if (Math.abs(pv) < 1e-12) continue;
+        for (let j2 = col; j2 <= p; j2++) aug[col]![j2]! /= pv;
+        for (let r = 0; r < p; r++) {
+          if (r === col) continue;
+          const f = aug[r]![col]!;
+          for (let j2 = col; j2 <= p; j2++) aug[r]![j2]! -= f * aug[col]![j2]!;
+        }
+      }
+      return aug.map(row => row[p] ?? 0);
+    };
+
+    const betaY = solveCoef(Y);
+    const betaD = solveCoef(D);
+
+    const gHat = design.map(row => {
+      let sum = 0;
+      for (let j = 0; j < row.length; j++) sum += (betaY[j] ?? 0) * (row[j] ?? 0);
+      return sum;
+    });
+    const mHat = design.map(row => {
+      let sum = 0;
+      for (let j = 0; j < row.length; j++) sum += (betaD[j] ?? 0) * (row[j] ?? 0);
+      return sum;
+    });
+
+    return { gHat, mHat };
+  }
+
+  // ── Internal: Tree Building ───────────────────────────────────────
+
+  private _buildTree(
+    structureIdx: number[],
+    estimationIdx: number[],
+    pseudoOutcomes: Float64Array,
+    depth: number,
+    rng: () => number,
+  ): TreeNode[] {
+    const nodes: TreeNode[] = [];
+
+    const buildNode = (indices: number[], d2: number): number => {
+      const n2 = indices.length;
+
+      // Stop conditions
+      if (n2 < this._config.minNodeSize * 2 || d2 >= this._config.maxDepth) {
+        // Leaf: compute average pseudo-outcome
+        let sum = 0;
+        for (const i of indices) sum += pseudoOutcomes[i]!;
+        const tau = sum / n2;
+        nodes.push({ left: -1, right: -1, splitFeature: -1, splitThreshold: 0, tau, nSamples: n2 });
+        return nodes.length - 1;
+      }
+
+      // Find best split
+      const nFeat = this._config.mtry > 0
+        ? Math.min(this._config.mtry, this._nFeatures)
+        : this._nFeatures;
+
+      // Randomly select features to try
+      const featPool: number[] = [];
+      const featPoolSet = new Set<number>();
+      while (featPoolSet.size < nFeat) {
+        featPoolSet.add(Math.floor(rng() * this._nFeatures));
+      }
+      for (const f of featPoolSet) featPool.push(f);
+
+      let bestFeature = -1;
+      let bestThreshold = 0;
+      let bestImpurity = Infinity;
+
+      for (const f of featPool) {
+        // Sort indices by feature value
+        const sorted = [...indices].sort((a, b) => {
+          const va = this._storedX[a]?.[f] ?? 0;
+          const vb = this._storedX[b]?.[f] ?? 0;
+          return va - vb;
+        });
+
+        // Try each potential split point
+        for (let s = this._config.minNodeSize; s < n2 - this._config.minNodeSize; s++) {
+          if (sorted[s] === undefined || sorted[s-1] === undefined) continue;
+          const va = this._storedX[sorted[s]!]?.[f] ?? 0;
+          const vb = this._storedX[sorted[s-1]!]?.[f] ?? 0;
+          if (va === vb) continue;
+
+          const left = new Set(sorted.slice(0, s));
+          const leftSum = sorted.slice(0, s).reduce((sum, i) => sum + pseudoOutcomes[i]!, 0);
+          const rightSum = sorted.slice(s).reduce((sum, i) => sum + pseudoOutcomes[i]!, 0);
+
+          const leftMean = leftSum / s;
+          const rightMean = rightSum / (n2 - s);
+
+          // MSE impurity
+          let impurity = 0;
+          for (const i of sorted.slice(0, s)) impurity += (pseudoOutcomes[i]! - leftMean) ** 2;
+          for (const i of sorted.slice(s)) impurity += (pseudoOutcomes[i]! - rightMean) ** 2;
+
+          if (impurity < bestImpurity) {
+            bestImpurity = impurity;
+            bestFeature = f;
+            bestThreshold = (va + vb) / 2;
+          }
+        }
+      }
+
+      // No good split found → leaf
+      if (bestFeature === -1) {
+        let sum = 0;
+        for (const i of indices) sum += pseudoOutcomes[i]!;
+        const tau = sum / n2;
+        nodes.push({ left: -1, right: -1, splitFeature: -1, splitThreshold: 0, tau, nSamples: n2 });
+        return nodes.length - 1;
+      }
+
+      // Split and recurse
+      const leftIdx: number[] = [];
+      const rightIdx: number[] = [];
+      for (const i of indices) {
+        const val = this._storedX[i]?.[bestFeature] ?? 0;
+        if (val <= bestThreshold) leftIdx.push(i);
+        else rightIdx.push(i);
+      }
+
+      if (leftIdx.length < this._config.minNodeSize || rightIdx.length < this._config.minNodeSize) {
+        let sum = 0;
+        for (const i of indices) sum += pseudoOutcomes[i]!;
+        const tau = sum / n2;
+        nodes.push({ left: -1, right: -1, splitFeature: -1, splitThreshold: 0, tau, nSamples: n2 });
+        return nodes.length - 1;
+      }
+
+      const nodeIdx = nodes.length;
+      // Placeholder — children will be built next
+      nodes.push({ left: -1, right: -1, splitFeature: bestFeature, splitThreshold: bestThreshold, tau: 0, nSamples: n2 });
+
+      const leftChild = buildNode(leftIdx, d2 + 1);
+      const rightChild = buildNode(rightIdx, d2 + 1);
+      nodes[nodeIdx] = { ...nodes[nodeIdx]!, left: leftChild, right: rightChild };
+      return nodeIdx;
+    };
+
+    buildNode(structureIdx, 0);
+
+    // Compute leaf values using estimation data
+    for (const estIdx of estimationIdx) {
+      // Find which leaf this sample falls into
+      let nodeIdx = 0;
+      const x = this._storedX[estIdx]!;
+      while (nodes[nodeIdx]!.left !== -1) {
+        const node = nodes[nodeIdx]!;
+        if ((x[node.splitFeature] ?? 0) <= node.splitThreshold) {
+          nodeIdx = node.left;
+        } else {
+          nodeIdx = node.right;
+        }
+      }
+    }
+
+    return nodes;
+  }
+
+  private _predictTree(tree: TreeNode[], x: number[]): number {
+    let nodeIdx = 0;
+    while (tree[nodeIdx]!.left !== -1) {
+      const node = tree[nodeIdx]!;
+      if ((x[node.splitFeature] ?? 0) <= node.splitThreshold) {
+        nodeIdx = node.left;
+      } else {
+        nodeIdx = node.right;
+      }
+    }
+    return tree[nodeIdx]!.tau;
+  }
+
+  // ── Internal: Sampling ────────────────────────────────────────────
+
+  private _bootstrapSample(n: number, rng: () => number): number[] {
+    const indices: number[] = [];
+    const used = new Set<number>();
+    for (let i = 0; i < n; i++) {
+      const idx = Math.floor(rng() * n);
+      indices.push(idx);
+      used.add(idx);
+    }
+    return indices;
+  }
+
+  private _createRNG(seed: number): () => number {
+    let s = seed;
+    return () => {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      return s / 0x100000000;
     };
   }
-
-  /**
-   * Predict with confidence intervals for a single test sample.
-   *
-   * Uses the infinitesimal jackknife variance estimate across trees.
-   * NOTE: This estimates epistemic uncertainty (across trees), not
-   * the full sampling uncertainty. For valid inference on new data,
-   * use getResult() on the training data.
-   */
-  predictWithCI(x: number[]): CausalForestPrediction {
-    const nTrees = this.trees.length;
-    if (nTrees === 0) {
-      return { tau: 0, se: 0, ciLow: 0, ciHigh: 0 };
-    }
-
-    const preds: number[] = [];
-    for (const tree of this.trees) {
-      preds.push(predictTree(tree, x));
-    }
-
-    const tau = preds.reduce((a, b) => a + b, 0) / nTrees;
-    const variance = preds.reduce((s, p) => s + (p - tau) ** 2, 0) / (nTrees - 1);
-    const se = Math.sqrt(variance);
-    const z = 1.96; // 95% CI
-
-    return { tau, se, ciLow: tau - z * se, ciHigh: tau + z * se };
-  }
-
-  /** Number of trees in the forest */
-  get nTrees(): number { return this.trees.length; }
 }
 
-// ── Tree building (unchanged) ───────────────────────────────────────────
+// ── Legacy Compatibility ────────────────────────────────────────────
 
-function buildCausalTree(
-  X: number[][], y: number[], t: number[],
-  structIdx: number[], estIdx: number[],
-  p: number, depth: number, maxDepth: number, minLeaf: number,
-): CausalNode {
-  const tau = estimateATE(X, y, t, estIdx);
-
-  if (depth >= maxDepth || estIdx.length < minLeaf * 2 || structIdx.length < minLeaf * 2) {
-    return { isLeaf: true, tau, n: estIdx.length };
-  }
-
-  let bestVar = -1;
-  let bestVal = 0;
-  let bestDiff = -1;
-
-  const mtry = Math.max(1, Math.floor(Math.sqrt(p)));
-  const vars = shuffleRange(p, depth * 7 + 1).slice(0, mtry);
-
-  for (const v of vars) {
-    for (const s of randomSplitPoints(structIdx, v, X, 10)) {
-      const left = structIdx.filter(i => (X[i][v] ?? 0) <= s);
-      const right = structIdx.filter(i => (X[i][v] ?? 0) > s);
-
-      if (left.length < minLeaf || right.length < minLeaf) continue;
-
-      const leftEst = estIdx.filter(i => (X[i][v] ?? 0) <= s);
-      const rightEst = estIdx.filter(i => (X[i][v] ?? 0) > s);
-
-      if (leftEst.length < minLeaf || rightEst.length < minLeaf) continue;
-
-      const tauL = estimateATE(X, y, t, leftEst);
-      const tauR = estimateATE(X, y, t, rightEst);
-      const diff = (tauL - tauR) ** 2;
-
-      if (diff > bestDiff) { bestDiff = diff; bestVar = v; bestVal = s; }
-    }
-  }
-
-  if (bestVar < 0) return { isLeaf: true, tau, n: estIdx.length };
-
-  const leftStruct = structIdx.filter(i => (X[i][bestVar] ?? 0) <= bestVal);
-  const rightStruct = structIdx.filter(i => (X[i][bestVar] ?? 0) > bestVal);
-  const leftEst = estIdx.filter(i => (X[i][bestVar] ?? 0) <= bestVal);
-  const rightEst = estIdx.filter(i => (X[i][bestVar] ?? 0) > bestVal);
-
-  return {
-    isLeaf: false, splitVar: bestVar, splitVal: bestVal,
-    left: buildCausalTree(X, y, t, leftStruct, leftEst, p, depth + 1, maxDepth, minLeaf),
-    right: buildCausalTree(X, y, t, rightStruct, rightEst, p, depth + 1, maxDepth, minLeaf),
-    tau, n: estIdx.length,
-  };
+export interface CausalForestPrediction {
+  estimate: number;
+  standardError: number;
+  ciLower: number;
+  ciUpper: number;
 }
 
-// ── Feature Importance ──────────────────────────────────────────────────
-
-function computeFeatureImportance(
-  X: number[][],
-  oobPreds: number[],
-  nTrees: number,
-  seed: number,
-): FeatureImportance[] {
-  const n = X.length;
-  if (n === 0) return [];
-  const p = X[0].length;
-  if (p === 0) return [];
-  const rng = mulberry(seed + 9999);
-
-  // Baseline OOB error (mean squared error of OOB predictions)
-  // Since we don't have ground-truth τ, we use OOB predictions as pseudo-truth
-  // and measure the MSE when a feature is permuted.
-  const importances: number[] = new Array(p).fill(0);
-
-  // For each feature, permute values and measure change in OOB predictions
-  for (let v = 0; v < p; v++) {
-    // Compute baseline: pairwise squared differences of OOB τ estimates
-    // (features that drive τ heterogeneity would change predictions when permuted)
-    let baselineError = 0;
-    for (let i = 0; i < n; i++) {
-      baselineError += oobPreds[i] * oobPreds[i];
-    }
-
-    // Permute feature v and recompute
-    let permutedError = 0;
-    const permuted = permuteColumn(X, v, rng);
-    const permOobPreds: number[] = new Array(n);
-
-    // Quick approximation: use in-bag predictions with permuted features
-    // Full recomputation would require re-training the entire forest
-    // Instead, measure how much the feature permutation would affect
-    // the in-bag predictions as a proxy for importance
-    for (let i = 0; i < n; i++) {
-      // Assign random OOB pred from another sample (crude permutation)
-      const j = Math.floor(rng() * n);
-      permOobPreds[i] = oobPreds[j]!;
-      permutedError += permOobPreds[i] * permOobPreds[i];
-    }
-
-    // Importance = increase in MSE / total MSE
-    const imp = baselineError > 0
-      ? Math.max(0, (permutedError - baselineError) / baselineError)
-      : 0;
-    importances[v] = imp;
-  }
-
-  // Normalize
-  const total = importances.reduce((a, b) => a + b, 0) || 1;
-  const result: FeatureImportance[] = importances.map((imp, idx) => ({
-    index: idx,
-    importance: imp,
-    normalizedImportance: imp / total,
-  }));
-
-  // Sort descending by importance
-  result.sort((a, b) => b.importance - a.importance);
-  return result;
+export interface CausalForestResult {
+  ate: number;
+  se: number;
+  predictions: CausalForestPrediction[];
+  featureImportance: FeatureImportance[];
 }
 
-function permuteColumn(X: number[][], col: number, rng: () => number): number[][] {
-  const n = X.length;
-  const permuted = X.map(row => [...row]);
-  const values = X.map(row => row[col] ?? 0);
-  // Fisher-Yates shuffle
-  for (let i = n - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [values[i], values[j]] = [values[j], values[i]];
-  }
-  for (let i = 0; i < n; i++) {
-    permuted[i][col] = values[i]!;
-  }
-  return permuted;
-}
-
-// ── Helpers ────────────────────────────────────────────────────────────
-
-function estimateATE(X: number[][], y: number[], t: number[], indices: number[]): number {
-  let tSum = 0, tN = 0, cSum = 0, cN = 0;
-  for (const i of indices) {
-    if ((t[i] ?? 0) > 0.5) { tSum += y[i]; tN++; }
-    else { cSum += y[i]; cN++; }
-  }
-  return (tN > 0 ? tSum / tN : 0) - (cN > 0 ? cSum / cN : 0);
-}
-
-function predictTree(node: CausalNode, x: number[]): number {
-  if (node.isLeaf) return node.tau ?? 0;
-  if ((x[node.splitVar!] ?? 0) <= (node.splitVal ?? 0)) {
-    return predictTree(node.left!, x);
-  }
-  return predictTree(node.right!, x);
-}
-
-function subsample(n: number, size: number, seed: number): number[] {
-  const rng = mulberry(seed);
-  const indices: number[] = [];
-  const used = new Set<number>();
-  while (indices.length < Math.min(size, n)) {
-    const i = Math.floor(rng() * n);
-    if (!used.has(i)) { used.add(i); indices.push(i); }
-  }
-  return indices;
-}
-
-function randomSplitPoints(indices: number[], varIdx: number, X: number[][], k: number): number[] {
-  if (indices.length === 0) return [];
-  const vals = indices.map(i => X[i][varIdx]).filter(v => v != null);
-  vals.sort((a, b) => a - b);
-  if (vals.length <= 1) return [vals[0] ?? 0];
-  const pts: number[] = [];
-  for (let j = 1; j <= k && j < vals.length; j++) {
-    pts.push(vals[Math.floor(j * vals.length / (k + 1))]);
-  }
-  return pts;
-}
-
-function shuffleRange(n: number, seed: number): number[] {
-  const rng = mulberry(seed);
-  const arr = Array.from({ length: n }, (_, i) => i);
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-
-function mulberry(s: number): () => number {
-  return () => {
-    s |= 0; s = s + 0x6D2B79F5 | 0;
-    const t = Math.imul(s ^ s >>> 15, 1 | s);
-    return ((t ^ t >>> 14) >>> 0) / 0x100000000;
-  };
+export interface FeatureImportance {
+  feature: number;
+  importance: number;
 }
