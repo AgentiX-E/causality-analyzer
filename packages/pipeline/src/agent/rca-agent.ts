@@ -77,8 +77,8 @@ export class RCAgent {
       apiKey: config.apiKey ?? (typeof process !== 'undefined' ? process.env['DEEPSEEK_API_KEY'] ?? '' : ''),
       model: config.model ?? 'deepseek-chat',
       baseUrl: config.baseUrl ?? 'https://api.deepseek.com',
-      anomalyTailFraction: config.anomalyTailFraction ?? 0.2,
-      anomalyThreshold: config.anomalyThreshold ?? 0.3,
+      anomalyTailFraction: config.anomalyTailFraction !== undefined ? config.anomalyTailFraction : 0.2,
+      anomalyThreshold: config.anomalyThreshold !== undefined ? config.anomalyThreshold : 0.3,
     };
   }
 
