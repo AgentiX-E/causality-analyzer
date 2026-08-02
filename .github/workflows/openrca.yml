@@ -58,13 +58,51 @@ jobs:
 
       - name: Download dataset from Google Drive
         if: steps.dataset-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 30
         run: |
+          # Map system name to Google Drive file ID (from gdown --folder listing)
+          case "${{ github.event.inputs.dataset }}" in
+            Telecom)          FILE_ID="1cyOKpqyAP4fy-QiJ6a_cKuwR7D46zyVe"; ZIP_NAME="Telecom.zip" ;;
+            Bank)             FILE_ID="1enBrdPT3wLG94ITGbSOwUFg9fkLR-16R"; ZIP_NAME="Bank.zip" ;;
+            Market/cloudbed-1|Market/cloudbed-2) FILE_ID="1aDbqFHhYGgywLDfq54O7Ln8wgiv-BqGJ"; ZIP_NAME="Market.zip" ;;
+            *) echo "Unknown dataset"; exit 1 ;;
+          esac
+
+          mkdir -p OpenRCA/dataset
+
+          # Download with exponential backoff (max 3 retries)
+          for i in 1 2 3; do
+            echo "Attempt $i: downloading $ZIP_NAME..."
+            if gdown --id "$FILE_ID" -O "OpenRCA/$ZIP_NAME" 2>&1; then
+              echo "Download successful"
+              break
+            fi
+            if [ $i -lt 3 ]; then
+              WAIT=$((30 * i))
+              echo "Rate-limited. Waiting ${WAIT}s before retry..."
+              sleep $WAIT
+            else
+              echo "All download attempts failed"
+              exit 1
+            fi
+          done
+
+          # Unzip the dataset
+          echo "Extracting $ZIP_NAME..."
           cd OpenRCA
-          gdown --folder "1wGiEnu4OkWrjPxfx5ZTROnU37-5UDoPM" -O dataset/
-          # Keep only selected system to save cache space
-          if [ "${{ github.event.inputs.dataset }}" != "Telecom" ]; then rm -rf dataset/Telecom || true; fi
-          if [ "${{ github.event.inputs.dataset }}" != "Bank" ]; then rm -rf dataset/Bank || true; fi
-          if [[ "${{ github.event.inputs.dataset }}" != Market/* ]]; then rm -rf dataset/Market || true; fi
+          unzip -qo "$ZIP_NAME" -d dataset/
+          rm "$ZIP_NAME"
+
+          # For Market, rename directory from "Market" to "Market/cloudbed-1" etc.
+          if [[ "${{ github.event.inputs.dataset }}" == Market/* ]]; then
+            SUBDIR=$(echo "${{ github.event.inputs.dataset }}" | cut -d/ -f2)
+            if [ -d "dataset/Market/$SUBDIR" ]; then
+              mkdir -p "dataset/Market-tmp"
+              mv "dataset/Market/$SUBDIR" "dataset/Market-tmp/"
+              rm -rf "dataset/Market"
+              mv "dataset/Market-tmp" "dataset/Market"
+            fi
+          fi
 
       - name: Run CA-LLM RCA Agent
         env:

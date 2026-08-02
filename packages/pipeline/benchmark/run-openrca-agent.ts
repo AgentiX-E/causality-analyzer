@@ -97,12 +97,28 @@ function parseCSV(csvPath: string, startTime: string, endTime: string): OpenRCAL
 
 // ── Adapter: RCAgent prediction → OpenRCA CSV ───────────────────────
 
+/**
+ * Fallback prediction using RCA ranking when LLM is unavailable.
+ * Uses the top-ranked root cause from HeuristicPathRCA.
+ */
+function rcaFallback(diagnosis: { ranking: Array<{ component: string; score: number; isRoot: boolean }>; anomalousServices: string[] }): RCAPrediction {
+  const top = diagnosis.ranking[0];
+  const reason = top
+    ? `Top RCA score=${top.score.toFixed(3)}, root=${top.isRoot}, anomalous=[${diagnosis.anomalousServices.join(',')}]`
+    : 'No RCA ranking produced';
+  return {
+    component: top?.component ?? 'UNKNOWN',
+    reason,
+    rawLLMResponse: JSON.stringify({ source: 'rca-ranking', topScore: top?.score ?? 0 }),
+  };
+}
+
 function formatOpenRCAPrediction(prediction: RCAPrediction, datetime?: string): string {
   const dt = prediction.datetime ?? datetime ?? 'unknown';
   return JSON.stringify({
-    root_cause_occurrence_datetime: dt,
-    root_cause_component: prediction.component,
-    root_cause_reason: prediction.reason,
+    'root cause occurrence datetime': dt,
+    'root cause component': prediction.component,
+    'root cause reason': prediction.reason,
   });
 }
 
@@ -164,7 +180,20 @@ async function main(): Promise<void> {
       }
 
       const diagnosis = agent.diagnose(data, serviceNames);
-      const prediction = await agent.reason(diagnosis, description);
+
+      // Try LLM reasoning; fall back to top RCA rank if LLM unavailable
+      let prediction: RCAPrediction;
+      try {
+        const llmPrediction = await agent.reason(diagnosis, description);
+        // If LLM returned a placeholder, fall back to RCA ranking
+        if (llmPrediction.component === 'LLM_UNAVAILABLE' || llmPrediction.component === 'API_ERROR') {
+          prediction = rcaFallback(diagnosis);
+        } else {
+          prediction = llmPrediction;
+        }
+      } catch {
+        prediction = rcaFallback(diagnosis);
+      }
 
       predictions.push({
         instruction: description,
