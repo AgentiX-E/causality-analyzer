@@ -18,44 +18,92 @@ jobs:
         id: rca100-cache
         with:
           path: benchmark-data/rca100/
-          key: rca100-v1
+          key: rca100-v2
+
       - name: Download RCA100 dataset (3.4 GB)
         if: steps.rca100-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 60
         run: |
-          pip install wget pyarrow pandas
+          pip install pyarrow pandas
           mkdir -p benchmark-data/rca100/cases
-          for i in $(seq -w 1 103); do wget -q "https://aiops-benchmark.oss-cn-hongkong.aliyuncs.com/rca/rca100/v1.0/cases/task_${i}.parquet" -P benchmark-data/rca100/cases/ || true; done
+
+          # Download with progress, timeout, retry on failure
+          BASE_URL="https://aiops-benchmark.oss-cn-hongkong.aliyuncs.com/rca/rca100/v1.0/cases"
+          DOWNLOADED=0
+
+          for i in $(seq -w 1 103); do
+            echo -n "  task_${i}.parquet... "
+            if wget --timeout=30 --tries=2 --progress=dot:giga \
+              "${BASE_URL}/task_${i}.parquet" \
+              -O "benchmark-data/rca100/cases/task_${i}.parquet" 2>&1 | tail -1; then
+              DOWNLOADED=$((DOWNLOADED + 1))
+            else
+              echo "  FAILED (skip)"
+            fi
+          done
+
+          echo ""
+          echo "Downloaded ${DOWNLOADED}/103 files"
+          if [ $DOWNLOADED -eq 0 ]; then
+            echo "WARNING: Zero files downloaded. OSS may be geo-restricted."
+            echo "Generating synthetic test cases as fallback..."
+            mkdir -p benchmark-data/rca100/csv
+            python -c "
+            import pandas as pd, numpy as np
+            for task_id in range(1, 4):
+                df = pd.DataFrame({
+                    'timestamp': range(500),
+                    **{f'svc_{j}': np.random.normal(100, 5, 500) for j in range(8)}
+                })
+                df.to_csv(f'benchmark-data/rca100/csv/task_{task_id:03d}.csv', index=False)
+            print('Generated 3 synthetic test cases')
+            "
+            exit 1
+          fi
+
       - uses: pnpm/action-setup@v6
         with: { version: 10 }
       - uses: actions/setup-node@v7
         with: { node-version: '22', cache: 'pnpm' }
       - uses: actions/setup-python@v5
         with: { python-version: '3.11' }
-      - run: |
+
+      - name: Install dependencies
+        run: |
           pnpm config set approve-builds true
           pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: |
           pnpm run --filter @agentix-e/causality-analyzer-core build
           pnpm run --filter @agentix-e/causality-analyzer-pipeline build
+
       - name: Convert Parquet to CSV (Python bridge)
         run: |
           pip install pandas pyarrow
           python -c "
           import pandas as pd, os, glob
           os.makedirs('benchmark-data/rca100/csv', exist_ok=True)
-          for f in sorted(glob.glob('benchmark-data/rca100/cases/*.parquet')):
+          files = sorted(glob.glob('benchmark-data/rca100/cases/*.parquet'))
+          for f in files:
               df = pd.read_parquet(f)
               name = os.path.splitext(os.path.basename(f))[0]
               df.to_csv(f'benchmark-data/rca100/csv/{name}.csv', index=False)
-          print(f'Converted {len(glob.glob(\"benchmark-data/rca100/csv/*.csv\"))} files')
+          count = len(glob.glob('benchmark-data/rca100/csv/*.csv'))
+          print(f'Converted {count} Parquet files to CSV')
           "
+
       - name: Run RCA100 Benchmark
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        timeout-minutes: 30
         run: |
           cd packages/pipeline
           npx tsx benchmark/run-rca100-agent.ts
-      - uses: actions/upload-artifact@v4
+
+      - name: Upload predictions
+        uses: actions/upload-artifact@v4
         with:
           name: rca100-predictions
-          path: benchmark-results/rca100-*.csv
+          path: packages/pipeline/benchmark-results/rca100-*.csv
           retention-days: 90

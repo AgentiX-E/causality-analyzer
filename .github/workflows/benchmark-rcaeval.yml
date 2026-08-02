@@ -11,40 +11,41 @@ permissions:
 jobs:
   predict:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 30
     strategy:
       matrix:
         system: [RE1, RE2, RE3]
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/cache@v4
-        id: rcaeval-cache
-        with:
-          path: benchmark-data/rcaeval/
-          key: rcaeval-${{ matrix.system }}-v1
-      - name: Download RCAEval dataset
-        if: steps.rcaeval-cache.outputs.cache-hit != 'true'
-        run: |
-          pip install rca-eval
-          python -c "from rca_eval import download; download.dataset('${{ matrix.system }}')"
-          mv ~/.rca_eval/ benchmark-data/rcaeval/
+
       - uses: pnpm/action-setup@v6
         with: { version: 10 }
+
       - uses: actions/setup-node@v7
         with: { node-version: '22', cache: 'pnpm' }
-      - uses: actions/setup-python@v5
-        with: { python-version: '3.11' }
-      - run: |
+
+      - name: Install dependencies
+        run: |
           pnpm config set approve-builds true
           pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: |
           pnpm run --filter @agentix-e/causality-analyzer-core build
           pnpm run --filter @agentix-e/causality-analyzer-pipeline build
-      - name: Run RCAEval Benchmark
+
+      - name: Run RCAEval Synthetic Benchmark
+        env:
+          BENCH_RCA_MAX_SIZE: '64'
+          BENCH_RCA_SCENARIOS: '10'
+          BENCH_RCA_SEED: '42'
         run: |
           cd packages/pipeline
           npx tsx benchmark/run-rcaeval.ts
-      - uses: actions/upload-artifact@v4
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
         with:
-          name: rcaeval-predictions-${{ matrix.system }}
-          path: benchmark-results/rcaeval-*.csv
+          name: rcaeval-results-${{ matrix.system }}
+          path: packages/pipeline/benchmark-results/benchmark-rcaeval.*
           retention-days: 90

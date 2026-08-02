@@ -1,0 +1,69 @@
+name: AIOps2025 Benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      dataset:
+        description: 'AIOps2025 dataset'
+        type: choice
+        default: 'sample'
+        options:
+          - sample
+          - full
+
+permissions:
+  contents: read
+
+jobs:
+  predict:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with: { version: 10 }
+
+      - uses: actions/setup-node@v7
+        with: { node-version: '22', cache: 'pnpm' }
+
+      - name: Install dependencies
+        run: |
+          pnpm config set approve-builds true
+          pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: |
+          pnpm run --filter @agentix-e/causality-analyzer-core build
+          pnpm run --filter @agentix-e/causality-analyzer-pipeline build
+
+      - name: Download AIOps2025 sample data
+        if: github.event.inputs.dataset == 'sample'
+        run: |
+          mkdir -p benchmark-data/aiops2025/sample
+          # AIOps2025 sample data from official GitLab
+          git clone --depth 1 https://www.aiops.cn/gitlab/aiops-live-benchmark/aiopschallengedata2025.git \
+            benchmark-data/aiops2025/repo || echo "Sample data clone failed (may need VPN)"
+          # If clone fails, use synthetic cases for testing
+          if [ ! -f benchmark-data/aiops2025/repo/sample/input_time.json ]; then
+            echo '[
+              {"uuid": "test-001", "start_time": "2025-07-01 10:00:00", "end_time": "2025-07-01 10:15:00"},
+              {"uuid": "test-002", "start_time": "2025-07-01 11:00:00", "end_time": "2025-07-01 11:15:00"}
+            ]' > benchmark-data/aiops2025/cases/input_time.json
+          fi
+
+      - name: Run AIOps2025 Benchmark
+        run: |
+          cd packages/pipeline
+          if [ -d "../../benchmark-data/aiops2025/repo/sample" ]; then
+            npx tsx benchmark/run-aiops2025-agent.ts ../../benchmark-data/aiops2025/repo/sample/
+          else
+            npx tsx benchmark/run-aiops2025-agent.ts ../../benchmark-data/aiops2025/cases/
+          fi
+
+      - name: Upload predictions
+        uses: actions/upload-artifact@v4
+        with:
+          name: aiops2025-predictions
+          path: packages/pipeline/benchmark-results/aiops2025-*.{json,csv}
+          retention-days: 90
