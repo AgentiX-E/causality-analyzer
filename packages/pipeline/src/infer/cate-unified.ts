@@ -59,7 +59,7 @@ export function unifiedCATE(
     }
 
     case 'double-ml': {
-      const { cateFn, baselineATE } = doubleMLCATE(X, y, t, (config.nFolds as number) ?? 5);
+      const { cateFn, baselineATE } = doubleMLCATE(X, y, t, { nFolds: (config.nFolds as number) ?? 5 });
       const cate = X.map(row => cateFn(row));
       const sd = Math.sqrt(cate.reduce((s, v) => s + (v - baselineATE) ** 2, 0) / cate.length);
       return { estimator: 'double-ml', cate, baselineATE, cateSD: sd, config };
