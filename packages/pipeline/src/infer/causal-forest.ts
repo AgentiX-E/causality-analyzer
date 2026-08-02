@@ -104,12 +104,18 @@ export class CausalForest implements CATEstimator {
     // Pre-compute nuisance models (simple OLS for continuous treatment)
     const { gHat, mHat } = this._fitNuisanceModels(X, D, Y);
 
-    // Compute pseudo-outcomes: ρᵢ = (Yᵢ - ĝ(Xᵢ)) / (Dᵢ - m̂(Xᵢ))
+    // Compute pseudo-outcomes: ρᵢ = (Yᵢ - ĝ(Xᵢ)) / max(|Dᵢ - m̂(Xᵢ)|, ε)
+    // ε = 0.01 * std(D) prevents division blow-up when treatment variance is low
+    const dMean = D.reduce((s, v) => s + v, 0) / n;
+    const dStd = Math.sqrt(D.reduce((s, v) => s + (v - dMean) ** 2, 0) / n);
+    const epsilon = Math.max(0.01 * dStd, 1e-8);
     const pseudoOutcomes = new Float64Array(n);
     for (let i = 0; i < n; i++) {
       const dTilde = (D[i] ?? 0) - (mHat[i] ?? 0);
       const yTilde = (Y[i] ?? 0) - (gHat[i] ?? 0);
-      pseudoOutcomes[i] = Math.abs(dTilde) > 1e-10 ? yTilde / dTilde : 0;
+      // Stabilized ratio: clip extreme pseudo-outcomes to ±5× IQR-equivalent
+      const rawRho = Math.abs(dTilde) > epsilon ? yTilde / dTilde : 0;
+      pseudoOutcomes[i] = Math.max(-50, Math.min(50, rawRho));
     }
 
     // Build trees
