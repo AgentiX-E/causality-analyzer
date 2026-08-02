@@ -56,7 +56,7 @@ jobs:
       - name: Pipeline precision threshold tests
         run: |
           pnpm run --filter @agentix-e/causality-analyzer-core build
-          cd packages/pipeline && pnpm exec vitest run src/__tests__/i91-precision-thresholds.test.ts
+          cd packages/pipeline && pnpm exec vitest run src/__tests__/benchmark-precision-thresholds.test.ts
 
   browser-test:
     needs: [build]
