@@ -19,6 +19,7 @@
  * @packageDocumentation
  */
 
+import { Matrix } from 'ml-matrix';
 import {
   doubleMLATE,
   doubleMLCATE,
@@ -219,7 +220,7 @@ export class CausalForestDML {
    */
   effect(X: number[][]): number[] {
     if (!this.forest) throw new Error('CausalForestDML not fitted. Call fit() first.');
-    return Array.from(this.forest!.effect(new (require('ml-matrix').Matrix)(X)));
+    return Array.from(this.forest!.effect(new Matrix(X)));
   }
 
   /**

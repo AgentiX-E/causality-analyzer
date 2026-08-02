@@ -14,7 +14,7 @@
  */
 
 import { describe, it, expect, beforeAll } from 'vitest';
-import { writeFileSync, mkdirSync, existsSync, unlinkSync, rmdirSync } from 'fs';
+import { writeFileSync, readFileSync, mkdirSync, existsSync, unlinkSync, rmdirSync, rmSync } from 'fs';
 import { join } from 'path';
 import { Matrix } from 'ml-matrix';
 import { CausalGraph } from '../graph/causal-graph.js';
@@ -75,7 +75,6 @@ function createSyntheticOpenRCAData(nQueries = 3): string {
 // ── Helpers ──────────────────────────────────────────────────────────
 
 function parseSyntheticCSV(csvPath: string): { data: Matrix; serviceNames: string[] } {
-  const { readFileSync } = require('fs');
   const content = readFileSync(csvPath, 'utf-8');
   const lines = content.trim().split('\n');
   const header = lines[0]!.split(',').map((h: string) => h.trim());
@@ -114,7 +113,6 @@ describe('OpenRCA Agent — End-to-End Integration', () => {
   // Clean up after tests
   afterAll(() => {
     try {
-      const { existsSync, rmSync } = require('fs');
       if (existsSync(tmpDir)) rmSync(tmpDir, { recursive: true });
     } catch { /* ignore */ }
   });

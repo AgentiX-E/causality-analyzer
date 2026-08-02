@@ -179,7 +179,6 @@ export class CausalForest implements CATEstimator {
     if (n === 0) return { estimate: 0, se: 0 };
 
     // SE via variance across leaves
-    let sumSqDiff = 0;
     let totalN = 0;
     for (const tree of this._trees) {
       for (const node of tree) {
