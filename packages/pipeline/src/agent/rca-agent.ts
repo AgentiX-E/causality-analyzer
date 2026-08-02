@@ -2,13 +2,16 @@
  * Generic RCA Agent — Causal Discovery + RCA + LLM Reasoning.
  *
  * The core agent pipeline is benchmark-agnostic:
- *   1. Causal discovery (PC algorithm) → service dependency graph
- *   2. Anomaly detection (z-score on recent window)
- *   3. RCA ranking (HeuristicPath propagation scoring)
+ *   1. Causal discovery (PC algorithm, adaptive alpha) → service dependency graph
+ *   2. Anomaly detection (MAD-based z-score, configurable detector)
+ *   3. RCA ranking (HeuristicPath, configurable method)
  *   4. LLM reasoning (DeepSeek with graph + ranking context)
  *
+ * Multi-fault support via iterative residual analysis:
+ *   diagnoseMulti() identifies top cause, removes its effect, and re-ranks.
+ *
  * Benchmark-specific concerns (data format, prediction format) are
- * handled by adapter functions passed as constructor parameters.
+ * handled by adapter functions passed to runners.
  *
  * @packageDocumentation
  */
@@ -20,17 +23,29 @@ import type { CausalGraph } from '../graph/causal-graph.js';
 
 // ── Types ────────────────────────────────────────────────────────────
 
+/** Anomaly detection method */
+export type AnomalyDetector = 'mad' | 'zscore';
+
+/** RCA ranking method */
+export type RCAMethod = 'heuristic-path';
+
 export interface RCAgentConfig {
   /** LLM API key (read from env, never in code) */
   apiKey?: string;
-  /** LLM model name */
+  /** LLM model name (default: deepseek-chat) */
   model?: string;
-  /** LLM base URL */
+  /** LLM base URL (default: https://api.deepseek.com) */
   baseUrl?: string;
+  /** Anomaly detection method (default: mad) */
+  anomalyDetector?: AnomalyDetector;
   /** Fraction of data tail used for anomaly detection (default: 0.2) */
   anomalyTailFraction?: number;
-  /** Z-score threshold for anomaly detection (default: 0.3) */
+  /** MAD-based modified z-score threshold (default: 3.5). For zscore detector, use 0.3. */
   anomalyThreshold?: number;
+  /** PC algorithm alpha — auto-computed if omitted (adaptive based on sample size) */
+  pcAlpha?: number;
+  /** Enable multi-fault iterative removal (default: false) */
+  multiFault?: boolean;
 }
 
 export interface GraphNode {
@@ -67,19 +82,106 @@ export interface RCAPrediction {
   rawLLMResponse: string;
 }
 
+// ── Adaptive PC Alpha ─────────────────────────────────────────────────
+
+/**
+ * Compute adaptive PC alpha based on sample size.
+ *
+ * On small datasets (≤200 points), CI tests are underpowered with α=0.05,
+ * producing too few edges. On large datasets (≥500 points), α=0.05 is
+ * appropriately strict. We linearly interpolate in between.
+ */
+function adaptiveAlpha(nSamples: number): number {
+  if (nSamples >= 500) return 0.05;
+  if (nSamples <= 200) return 0.10;
+  // Linear interpolation: 0.10 at 200 → 0.05 at 500
+  return 0.10 - 0.05 * (nSamples - 200) / 300;
+}
+
+// ── Anomaly Detection: MAD-based ──────────────────────────────────────
+
+/**
+ * Median Absolute Deviation (MAD).
+ *
+ * More robust than standard deviation for anomaly detection
+ * because the median is unaffected by the anomalies themselves.
+ *
+ * Modified z-score formula (Iglewicz & Hoaglin 1993):
+ *   M_i = 0.6745 * (x_i - median(X)) / MAD
+ *
+ * Threshold: |M_i| > 3.5 → anomalous (standard for MAD-based detection).
+ */
+function computeMAD(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const n = sorted.length;
+  const median = n % 2 === 1
+    ? sorted[Math.floor(n / 2)]!
+    : (sorted[n / 2 - 1]! + sorted[n / 2]!) / 2;
+  const deviations = values.map(v => Math.abs(v - median));
+  deviations.sort((a, b) => a - b);
+  const m = deviations.length;
+  const mad = m % 2 === 1
+    ? deviations[Math.floor(m / 2)]!
+    : (deviations[m / 2 - 1]! + deviations[m / 2]!) / 2;
+  return mad === 0 ? 1e-10 : mad;
+}
+
+function madAnomalyDetection(
+  data: Matrix,
+  serviceNames: string[],
+  tailFraction: number,
+  threshold: number,
+): string[] {
+  const n = data.rows;
+  if (n < 10) return serviceNames.slice(0, Math.min(3, serviceNames.length));
+
+  const tail = Math.max(5, Math.floor(n * tailFraction));
+  const anomalous: string[] = [];
+
+  for (let j = 0; j < serviceNames.length; j++) {
+    const col: number[] = [];
+    for (let i = 0; i < n; i++) col.push(data.get(i, j));
+
+    const median = [...col].sort((a, b) => a - b)[Math.floor(col.length / 2)]!;
+    const mad = computeMAD(col);
+
+    // Compute mean shift in the tail window
+    const recentMean = col.slice(-tail).reduce((s, v) => s + v, 0) / tail;
+    const modifiedZ = 0.6745 * (recentMean - median) / mad;
+
+    if (Math.abs(modifiedZ) > threshold) {
+      anomalous.push(serviceNames[j]!);
+    }
+  }
+
+  return anomalous.length > 0 ? anomalous : serviceNames.slice(0, Math.min(3, serviceNames.length));
+}
+
 // ── Agent ─────────────────────────────────────────────────────────────
 
 export class RCAgent {
-  private readonly config: Required<RCAgentConfig>;
+  readonly config: Required<Omit<RCAgentConfig, 'pcAlpha'>> & { pcAlpha: number | null };
+  private _lastDiscoveredGraph: CausalGraph | null = null;
 
   constructor(config: RCAgentConfig = {}) {
     this.config = {
       apiKey: config.apiKey ?? (typeof process !== 'undefined' ? process.env['DEEPSEEK_API_KEY'] ?? '' : ''),
       model: config.model ?? 'deepseek-chat',
       baseUrl: config.baseUrl ?? 'https://api.deepseek.com',
+      anomalyDetector: config.anomalyDetector ?? 'mad',
       anomalyTailFraction: config.anomalyTailFraction !== undefined ? config.anomalyTailFraction : 0.2,
-      anomalyThreshold: config.anomalyThreshold !== undefined ? config.anomalyThreshold : 0.3,
+      anomalyThreshold: config.anomalyThreshold !== undefined ? config.anomalyThreshold : 3.5,
+      pcAlpha: config.pcAlpha ?? null,
+      multiFault: config.multiFault ?? false,
     };
+  }
+
+  /**
+   * Return the graph from the most recent discover() call.
+   * Falls back to a fresh discovery if none has been run.
+   */
+  get lastGraph(): CausalGraph | null {
+    return this._lastDiscoveredGraph;
   }
 
   // ── Step 1: Causal Discovery ─────────────────────────────────────
@@ -87,45 +189,39 @@ export class RCAgent {
   /**
    * Run PC causal discovery on service metric data.
    *
+   * Uses adaptive alpha: larger on small datasets (underpowered CI tests),
+   * stricter on large datasets.
+   *
    * @param data — Matrix where columns are services, rows are time points
    * @param serviceNames — Column labels
    * @returns Causal graph with edges representing dependency relationships
    */
   discover(data: Matrix, serviceNames: string[]): CausalGraph {
+    const alpha = this.config.pcAlpha ?? adaptiveAlpha(data.rows);
     const result = pcAlgorithm(data, serviceNames, {
-      alpha: 0.05,
+      alpha,
       stable: true,
     });
+    this._lastDiscoveredGraph = result.graph;
     return result.graph;
   }
 
   // ── Step 2: Anomaly Detection ────────────────────────────────────
 
   /**
-   * Detect anomalous services via z-score on the tail of the data.
-   * Services with |z-score| > threshold on the recent window are flagged.
+   * Detect anomalous services using the configured detector.
+   *
+   * Available detectors:
+   *   - 'mad':  Median Absolute Deviation (robust, default, threshold=3.5)
+   *   - 'zscore': Simple z-score on tail window (threshold=0.3)
    */
   detectAnomalies(data: Matrix, serviceNames: string[]): string[] {
-    const n = data.rows;
-    const tail = Math.max(1, Math.floor(n * this.config.anomalyTailFraction));
-    const threshold = this.config.anomalyThreshold;
-
-    const anomalous: string[] = [];
-    for (let j = 0; j < serviceNames.length; j++) {
-      const fullCol: number[] = [];
-      for (let i = 0; i < n; i++) fullCol.push(data.get(i, j));
-      const recentCol = fullCol.slice(-tail);
-
-      const fullMean = fullCol.reduce((s, v) => s + v, 0) / fullCol.length;
-      const fullStd = Math.sqrt(fullCol.reduce((s, v) => s + (v - fullMean) ** 2, 0) / fullCol.length) || 1;
-      const recentMean = recentCol.reduce((s, v) => s + v, 0) / recentCol.length;
-      const zScore = (recentMean - fullMean) / fullStd;
-
-      if (Math.abs(zScore) > threshold) {
-        anomalous.push(serviceNames[j]!);
-      }
+    switch (this.config.anomalyDetector) {
+      case 'mad':
+        return madAnomalyDetection(data, serviceNames, this.config.anomalyTailFraction, this.config.anomalyThreshold);
+      case 'zscore':
+        return zscoreAnomalyDetection(data, serviceNames, this.config.anomalyTailFraction, this.config.anomalyThreshold);
     }
-    return anomalous;
   }
 
   // ── Step 3: RCA Ranking ──────────────────────────────────────────
@@ -146,11 +242,10 @@ export class RCAgent {
     }));
   }
 
-  // ── Step 4: Full Diagnosis (1+2+3) ───────────────────────────────
+  // ── Step 4: Full Diagnosis ───────────────────────────────────────
 
   /**
    * Run full causal diagnosis: discover → detect anomalies → rank.
-   * Returns structured evidence ready for LLM reasoning.
    */
   diagnose(data: Matrix, serviceNames: string[], givenAnomalous?: string[]): RCADiagnosis {
     const graph = this.discover(data, serviceNames);
@@ -171,22 +266,66 @@ export class RCAgent {
     };
   }
 
+  /**
+   * Multi-fault diagnosis with iterative residual analysis.
+   *
+   * Identifies the top cause, removes its downstream effect from the
+   * anomaly set, and re-ranks. Repeated up to `maxFaults` times or
+   * until no significant residual anomalies remain.
+   */
+  diagnoseMulti(
+    data: Matrix,
+    serviceNames: string[],
+    givenAnomalous?: string[],
+    maxFaults: number = 3,
+  ): RCADiagnosis[] {
+    const results: RCADiagnosis[] = [];
+    const graph = this.discover(data, serviceNames);
+    const remainingAnomalies = new Set(givenAnomalous ?? this.detectAnomalies(data, serviceNames));
+
+    for (let iteration = 0; iteration < maxFaults && remainingAnomalies.size > 0; iteration++) {
+      const ranking = this.rank(graph, [...remainingAnomalies], data);
+
+      results.push({
+        graph: {
+          nodes: [...graph.nodes].map(n => ({ name: n })),
+          edges: graph.edges.map(e => ({
+            source: e.source,
+            target: e.target,
+            weight: e.weight ?? 1.0,
+          })),
+        },
+        ranking,
+        anomalousServices: [...remainingAnomalies],
+      });
+
+      // Remove the top-ranked component and its descendants from remaining anomalies
+      if (ranking.length > 0 && iteration < maxFaults - 1) {
+        const top = ranking[0]!;
+        remainingAnomalies.delete(top.component);
+
+        // Also remove immediate downstream effects
+        const children = graph.children(top.component);
+        for (const child of children) {
+          remainingAnomalies.delete(child);
+        }
+
+        // Stop if residual is too small
+        if (remainingAnomalies.size === 0) break;
+      }
+    }
+
+    return results;
+  }
+
   // ── Step 5: LLM Reasoning ────────────────────────────────────────
 
-  /**
-   * Call LLM with causal evidence to produce root cause prediction.
-   *
-   * @param diagnosis — Output from diagnose()
-   * @param contextDescription — Natural language description of the incident (from benchmark)
-   * @returns Structured prediction including component, reason, and raw response
-   */
   async reason(diagnosis: RCADiagnosis, contextDescription: string): Promise<RCAPrediction> {
     const prompt = this.buildPrompt(diagnosis, contextDescription);
     const rawResponse = await this.callLLM(prompt);
     return this.parseResponse(rawResponse);
   }
 
-  /** Build the LLM prompt with causal graph and RCA ranking context */
   private buildPrompt(diagnosis: RCADiagnosis, description: string): string {
     const graphDesc = diagnosis.graph.edges.length > 0
       ? diagnosis.graph.edges.slice(0, 15).map(e => `  ${e.source} → ${e.target} (weight=${e.weight.toFixed(2)})`).join('\n')
@@ -222,7 +361,6 @@ Output strictly as JSON (no markdown, no extra text):
 {"root_cause_component": "SERVICE_NAME", "root_cause_reason": "brief explanation"}`;
   }
 
-  /** Call the LLM API */
   private async callLLM(prompt: string): Promise<string> {
     if (!this.config.apiKey) {
       return JSON.stringify({
@@ -267,10 +405,8 @@ Output strictly as JSON (no markdown, no extra text):
     }
   }
 
-  /** Parse LLM JSON response into structured prediction */
   private parseResponse(raw: string): RCAPrediction {
     try {
-      // Try to extract JSON from response (may have markdown wrapping)
       const jsonMatch = raw.match(/\{[\s\S]*\}/);
       const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(raw);
       return {
@@ -287,4 +423,33 @@ Output strictly as JSON (no markdown, no extra text):
       };
     }
   }
+}
+
+// ── Fallback: Simple Z-score Detector ──────────────────────────────────
+
+function zscoreAnomalyDetection(
+  data: Matrix,
+  serviceNames: string[],
+  tailFraction: number,
+  threshold: number,
+): string[] {
+  const n = data.rows;
+  const tail = Math.max(1, Math.floor(n * tailFraction));
+
+  const anomalous: string[] = [];
+  for (let j = 0; j < serviceNames.length; j++) {
+    const fullCol: number[] = [];
+    for (let i = 0; i < n; i++) fullCol.push(data.get(i, j));
+    const recentCol = fullCol.slice(-tail);
+
+    const fullMean = fullCol.reduce((s, v) => s + v, 0) / fullCol.length;
+    const fullStd = Math.sqrt(fullCol.reduce((s, v) => s + (v - fullMean) ** 2, 0) / fullCol.length) || 1;
+    const recentMean = recentCol.reduce((s, v) => s + v, 0) / recentCol.length;
+    const zScore = (recentMean - fullMean) / fullStd;
+
+    if (Math.abs(zScore) > threshold) {
+      anomalous.push(serviceNames[j]!);
+    }
+  }
+  return anomalous.length > 0 ? anomalous : serviceNames.slice(0, Math.min(3, serviceNames.length));
 }

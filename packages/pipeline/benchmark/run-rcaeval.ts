@@ -5,9 +5,15 @@
  * Evaluates Root Cause Analysis methods against known ground-truth
  * fault injection scenarios on synthetic microservice topologies.
  *
- * Metrics: Top-1, Top-3, Top-5 accuracy, MRR (Mean Reciprocal Rank)
+ * Methods compared:
+ *   - RCAgent (PC causal discovery + HeuristicPathRCA, realistic)
+ *   - HeuristicPathRCA (on discovered graph — fair comparison)
+ *   - RandomWalkRCA (on discovered graph)
+ *   - HTRCA (on discovered graph)
+ *   - CIRCA (on discovered graph)
+ *   - Correlation baseline (no graph, simple mean shift)
  *
- * Reference: CIRCA (KDD 2022) — Causal Inference-Based Root Cause Analysis
+ * Metrics: Top-1, Top-3, Top-5 accuracy, Avg@5, MRR (Mean Reciprocal Rank)
  *
  * @packageDocumentation
  */
@@ -16,8 +22,9 @@ import { writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { Matrix } from 'ml-matrix';
 import { CausalGraph } from '../src/graph/causal-graph.js';
-import { RCAgent } from '../src/agent/rca-agent.js';
-import { HeuristicPathRCA, RandomWalkRCA } from '../src/analyze/rca.js';
+import { RCAgent, type RCADiagnosis } from '../src/agent/rca-agent.js';
+import { HeuristicPathRCA, RandomWalkRCA, HTRCA } from '../src/analyze/rca.js';
+import { CIRCAPipeline } from '../src/analyze/circa.js';
 import { createRNG, colMean } from '@agentix-e/causality-analyzer-core';
 
 const OUTPUT_DIR = join(import.meta.dirname, '..', 'benchmark-results');
@@ -27,17 +34,9 @@ const OUTPUT_DIR = join(import.meta.dirname, '..', 'benchmark-results');
 interface MicroserviceTopology {
   graph: CausalGraph;
   nodeNames: string[];
-  /** Ground-truth dependency edges (service A → service B) */
   dependencies: Array<[string, string]>;
 }
 
-/**
- * Generate a synthetic microservice call-graph topology.
- * More realistic than pure random DAG — uses service mesh patterns:
- * - Frontend → API Gateway → [Service A, Service B, Service C]
- * - Service chains with fan-out
- * - Shared backend services
- */
 function generateMicroserviceTopology(
   numServices: number,
   seed: number,
@@ -47,16 +46,14 @@ function generateMicroserviceTopology(
   const g = new CausalGraph(names);
   const deps: Array<[string, string]> = [];
 
-  // Layer-based architecture
   const layerSize = Math.max(3, Math.floor(numServices / 4));
   const layers = [
-    names.slice(0, 1),                          // Layer 0: Frontend
-    names.slice(1, 1 + layerSize),              // Layer 1: API Gateway + Auth
-    names.slice(1 + layerSize, 1 + 2 * layerSize), // Layer 2: Business logic
-    names.slice(1 + 2 * layerSize),             // Layer 3: Backend services
+    names.slice(0, 1),
+    names.slice(1, 1 + layerSize),
+    names.slice(1 + layerSize, 1 + 2 * layerSize),
+    names.slice(1 + 2 * layerSize),
   ];
 
-  // Add dependencies between layers
   for (let li = 0; li < layers.length - 1; li++) {
     const current = layers[li]!;
     const next = layers[li + 1]!;
@@ -70,7 +67,6 @@ function generateMicroserviceTopology(
     }
   }
 
-  // Add cross-layer dependencies (fan-out)
   for (const src of layers[2]!) {
     if (rng() < 0.3) {
       const tgt = layers[1]![Math.floor(rng() * layers[1]!.length)]!;
@@ -87,18 +83,11 @@ function generateMicroserviceTopology(
 interface FaultScenario {
   rootCauses: string[];
   affectedNodes: string[];
-  /** Anomalous time series data with injected fault signatures */
+  faultTypes: string[];
   data: number[][];
-  /** Column index → node name mapping */
   columns: string[];
 }
 
-/**
- * Inject a fault into the topology and generate anomalous time series.
- *
- * The fault propagates from rootCause to its descendants in the
- * causal graph, creating a cascading anomaly pattern.
- */
 function injectFault(
   topology: MicroserviceTopology,
   rootCauses: string[],
@@ -109,31 +98,27 @@ function injectFault(
   const nodeNames = [...topology.graph.nodes];
   const nNodes = nodeNames.length;
 
-  // Generate baseline data
+  const faultTypes = ['latency_spike', 'cpu_stress', 'memory_leak', 'packet_loss', 'disk_io'];
+  const faultType = faultTypes[seed % faultTypes.length]!;
+
   const data: number[][] = [];
   for (let t = 0; t < nPoints; t++) {
     const row: number[] = [];
     for (let i = 0; i < nNodes; i++) {
-      // Baseline: N(100, 5)
       let val = 100 + boxMuller(rng) * 5;
 
-      // Inject fault: increasing anomaly after midpoint
       if (t >= nPoints * 0.5) {
         const faultIntensity = (t - nPoints * 0.5) / (nPoints * 0.5);
         const node = nodeNames[i]!;
 
-        // Root cause gets direct anomaly
         if (rootCauses.includes(node)) {
-          // Latency spike — 30% increase scaling with faultIntensity
-          val *= 1 + 0.3 * faultIntensity * (1 + Math.abs(boxMuller(rng)) * 0.5);
+          val *= 1 + faultMagnitude(faultType) * faultIntensity * (1 + Math.abs(boxMuller(rng)) * 0.5);
         } else {
-          // Descendants get cascading anomaly based on graph distance from root cause
           for (const rc of rootCauses) {
             const distance = topology.graph.shortestPath?.(rc, node)?.length ?? Infinity;
             if (distance > 0 && distance < 10) {
-              // Cascade attenuation: farther nodes get less anomaly
               const attenuation = 1.0 / (1.0 + distance);
-              val *= 1 + 0.15 * faultIntensity * attenuation * (1 + Math.abs(boxMuller(rng)) * 0.3);
+              val *= 1 + 0.5 * faultMagnitude(faultType) * faultIntensity * attenuation * (1 + Math.abs(boxMuller(rng)) * 0.3);
             }
           }
         }
@@ -143,7 +128,6 @@ function injectFault(
     data.push(row);
   }
 
-  // Find affected nodes (descendants of root causes)
   const affected: Set<string> = new Set(rootCauses);
   for (const rc of rootCauses) {
     const descendants = collectDescendants(topology.graph, rc);
@@ -153,16 +137,27 @@ function injectFault(
   return {
     rootCauses,
     affectedNodes: [...affected],
+    faultTypes: [faultType],
     data,
     columns: nodeNames,
   };
+}
+
+function faultMagnitude(faultType: string): number {
+  switch (faultType) {
+    case 'latency_spike': return 0.30;
+    case 'cpu_stress': return 0.25;
+    case 'memory_leak': return 0.35;
+    case 'packet_loss': return 0.20;
+    case 'disk_io': return 0.15;
+    default: return 0.25;
+  }
 }
 
 function collectDescendants(g: CausalGraph, node: string): string[] {
   const visited = new Set<string>();
   const stack = [node];
   const result: string[] = [];
-
   while (stack.length > 0) {
     const current = stack.pop()!;
     const children = g.children(current);
@@ -174,7 +169,6 @@ function collectDescendants(g: CausalGraph, node: string): string[] {
       }
     }
   }
-
   return result;
 }
 
@@ -184,24 +178,26 @@ function boxMuller(rng: () => number): number {
   return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
 }
 
-// ── RCA Evaluation ───────────────────────────────────────────────────
+// ── Evaluation Metrics ────────────────────────────────────────────────
 
 interface RCAEvaluationResult {
   topologySize: number;
-  numFaults: number;
-  numScenarios: number;
   algorithm: string;
+  numScenarios: number;
   top1Accuracy: number;
   top3Accuracy: number;
   top5Accuracy: number;
+  avgAtK: number;        // Average precision at k=5 (RCAEval paper metric)
   mrr: number;
   avgRank: number;
   totalTimeMs: number;
 }
 
+type RankedEntry = { name: string; score: number };
+
 /**
- * Run RCAEval benchmark: generate topologies, inject faults,
- * evaluate RCA methods.
+ * Run the full RCAEval benchmark: generate topologies, inject faults,
+ * evaluate all RCA methods with fair comparison on discovered graphs.
  */
 export function runRCAEvalBenchmark(options?: {
   maxTopologySize?: number;
@@ -209,104 +205,106 @@ export function runRCAEvalBenchmark(options?: {
   seed?: number;
   dataPoints?: number;
 }): RCAEvaluationResult[] {
-  const maxSize = options?.maxTopologySize ?? 20;
-  const numScenarios = options?.numScenarios ?? 10;
+  const maxSize = options?.maxTopologySize ?? 64;
+  const numScenarios = options?.numScenarios ?? 30;
   const seed = options?.seed ?? 42;
   const nPoints = options?.dataPoints ?? 500;
 
   const topologies = [10, 15, maxSize].filter(s => s <= maxSize);
-  const algorithms = ['HeuristicPathRCA', 'RandomWalkRCA', 'RCAgent'];
+  const methods = ['RCAgent', 'HeuristicPathRCA', 'RandomWalkRCA', 'HTRCA', 'CIRCA', 'Correlation'];
   const results: RCAEvaluationResult[] = [];
   let s = seed;
 
   for (const topoSize of topologies) {
-    // Accumulate per-algorithm metrics
     const algoMetrics = new Map<string, {
       top1Sum: number; top3Sum: number; top5Sum: number;
-      mrrSum: number; rankSum: number; scenarios: number;
-      timeSum: number;
+      avgAtKSum: number; mrrSum: number; rankSum: number;
+      scenarios: number; timeSum: number;
     }>();
 
-    for (const algo of algorithms) {
-      algoMetrics.set(algo, {
+    for (const method of methods) {
+      algoMetrics.set(method, {
         top1Sum: 0, top3Sum: 0, top5Sum: 0,
-        mrrSum: 0, rankSum: 0, scenarios: 0, timeSum: 0,
+        avgAtKSum: 0, mrrSum: 0, rankSum: 0,
+        scenarios: 0, timeSum: 0,
       });
     }
 
     for (let sc = 0; sc < numScenarios; sc++) {
       const topology = generateMicroserviceTopology(topoSize, s++);
-      const numFaults = 1 + Math.floor((s++ % 3)); // 1-3 root causes
+      const numFaults = 1 + Math.floor((s++ % 3));
       const rootCandidates = [...topology.nodeNames].sort(() => (s++ % 2) - 0.5);
       const rootCauses = rootCandidates.slice(0, Math.min(numFaults, topology.nodeNames.length));
-
       const scenario = injectFault(topology, rootCauses, nPoints, s++);
+      const dataMatrix = new Matrix(scenario.data);
 
-      for (const algo of algorithms) {
-        const m = algoMetrics.get(algo)!;
+      // Pre-discover graph using PC algorithm (fair comparison baseline)
+      const agent = new RCAgent();
+      const discoveredGraph = agent.discover(dataMatrix, scenario.columns);
+
+      // Pre-detect anomalies (shared for all graph-based methods)
+      const anomalousServices = agent.detectAnomalies(dataMatrix, scenario.columns);
+
+      // ── Method 1: RCAgent (PC + HeuristicPathRCA, realistic pipeline) ──
+      runMethod('RCAgent', () => {
+        const diagnosis = agent.diagnose(dataMatrix, scenario.columns);
+        return diagnosis.ranking.map(r => ({ name: r.component, score: r.score }));
+      });
+
+      // ── Method 2: HeuristicPathRCA on discovered graph (fair) ──
+      runMethod('HeuristicPathRCA', () => {
+        const rca = new HeuristicPathRCA();
+        rca.train(discoveredGraph, new Set(anomalousServices), dataMatrix);
+        const result = rca.findRootCauses(anomalousServices);
+        return result.rootCauses.map(rc => ({ name: rc.name, score: rc.score }));
+      });
+
+      // ── Method 3: RandomWalkRCA on discovered graph ──
+      runMethod('RandomWalkRCA', () => {
+        const rca = new RandomWalkRCA();
+        rca.train(discoveredGraph, new Set(anomalousServices), dataMatrix);
+        const result = rca.findRootCauses(anomalousServices);
+        return result.rootCauses.map(rc => ({ name: rc.name, score: rc.score }));
+      });
+
+      // ── Method 4: HTRCA on discovered graph ──
+      runMethod('HTRCA', () => {
+        const rca = new HTRCA();
+        rca.train(discoveredGraph, new Set(anomalousServices), dataMatrix);
+        const result = rca.findRootCauses(anomalousServices);
+        return result.rootCauses.map(rc => ({ name: rc.name, score: rc.score }));
+      });
+
+      // ── Method 5: CIRCA on discovered graph ──
+      runMethod('CIRCA', () => {
+        // CIRCA takes number[][] for training
+        const pipeline = new CIRCAPipeline();
+        pipeline.train(discoveredGraph, scenario.data);
+        const result = pipeline.analyze(scenario.data, anomalousServices);
+        return result.rootCauses.map(rc => ({ name: rc.name, score: rc.score }));
+      });
+
+      // ── Method 6: Correlation baseline (no graph, pure statistics) ──
+      runMethod('Correlation', () => {
+        return rankByCorrelation(scenario);
+      });
+
+      // ── Inner helper: timed evaluation ──
+      function runMethod(method: string, rankFn: () => RankedEntry[]): void {
+        const m = algoMetrics.get(method)!;
         const t0 = performance.now();
-
-        // All methods work on the same data
-        const dataMatrix = new Matrix(scenario.data);
-        let ranked: Array<{ name: string; score: number }>;
-
-        if (algo === 'RCAgent') {
-          // RCAgent uses PC causal discovery + HeuristicPathRCA
-          try {
-            const agent = new RCAgent();
-            const diagnosis = agent.diagnose(dataMatrix, scenario.columns);
-            ranked = diagnosis.ranking.map(r => ({
-              name: r.component,
-              score: r.score,
-            }));
-            // If no ranking produced, fall back to correlation baseline
-            if (ranked.length === 0) {
-              ranked = rankByCorrelation(scenario, topology);
-            }
-          } catch {
-            ranked = rankByCorrelation(scenario, topology);
-          }
-        } else if (algo === 'HeuristicPathRCA') {
-          // Pure HeuristicPathRCA
-          try {
-            const anomalous = detectAnomalous(dataMatrix, scenario.columns);
-            const rca = new HeuristicPathRCA();
-            rca.train(topology.graph, new Set(anomalous), dataMatrix);
-            const result = rca.findRootCauses(anomalous);
-            ranked = result.rootCauses.map(rc => ({
-              name: rc.name,
-              score: rc.score,
-            }));
-            if (ranked.length === 0) {
-              ranked = rankByCorrelation(scenario, topology);
-            }
-          } catch {
-            ranked = rankByCorrelation(scenario, topology);
-          }
-        } else if (algo === 'RandomWalkRCA') {
-          // Pure RandomWalkRCA
-          try {
-            const anomalous = detectAnomalous(dataMatrix, scenario.columns);
-            const rca = new RandomWalkRCA();
-            rca.train(topology.graph, new Set(anomalous), dataMatrix);
-            const result = rca.findRootCauses(anomalous);
-            ranked = result.rootCauses.map(rc => ({
-              name: rc.name,
-              score: rc.score,
-            }));
-            if (ranked.length === 0) {
-              ranked = rankByCorrelation(scenario, topology);
-            }
-          } catch {
-            ranked = rankByCorrelation(scenario, topology);
-          }
-        } else {
-          ranked = rankByCorrelation(scenario, topology);
+        let ranked: RankedEntry[];
+        try {
+          ranked = rankFn();
+        } catch {
+          ranked = rankByCorrelation(scenario);
         }
-
         const timeMs = performance.now() - t0;
 
-        // Evaluate rankings
+        if (ranked.length === 0) {
+          ranked = rankByCorrelation(scenario);
+        }
+
         const ranks = rootCauses.map(rc => {
           const idx = ranked.findIndex(r => r.name === rc);
           return idx >= 0 ? idx + 1 : ranked.length + 1;
@@ -315,6 +313,10 @@ export function runRCAEvalBenchmark(options?: {
         m.top1Sum += ranks.some(r => r === 1) ? 1 : 0;
         m.top3Sum += ranks.some(r => r <= 3) ? 1 : 0;
         m.top5Sum += ranks.some(r => r <= 5) ? 1 : 0;
+        // Avg@k: precision at each rank position 1..5
+        for (let k = 1; k <= 5; k++) {
+          m.avgAtKSum += ranks.some(r => r === k) ? 1 : 0;
+        }
         m.mrrSum += ranks.reduce((s, r) => s + 1 / r, 0) / ranks.length;
         m.rankSum += ranks.reduce((s, r) => s + r, 0) / ranks.length;
         m.scenarios++;
@@ -322,16 +324,16 @@ export function runRCAEvalBenchmark(options?: {
       }
     }
 
-    for (const [algo, m] of algoMetrics) {
+    for (const [method, m] of algoMetrics) {
       if (m.scenarios === 0) continue;
       results.push({
         topologySize: topoSize,
-        numFaults: 3,
+        algorithm: method,
         numScenarios: m.scenarios,
-        algorithm: algo,
         top1Accuracy: m.top1Sum / m.scenarios,
         top3Accuracy: m.top3Sum / m.scenarios,
         top5Accuracy: m.top5Sum / m.scenarios,
+        avgAtK: m.avgAtKSum / (m.scenarios * 5),
         mrr: m.mrrSum / m.scenarios,
         avgRank: m.rankSum / m.scenarios,
         totalTimeMs: Math.round(m.timeSum),
@@ -343,62 +345,45 @@ export function runRCAEvalBenchmark(options?: {
 }
 
 /**
- * Simple anomaly detection: flag nodes whose post-fault mean shifts > 2σ from pre-fault.
+ * Detect anomalous nodes via mean shift (2σ threshold).
  */
 function detectAnomalous(data: Matrix, columns: string[]): string[] {
   const n = data.rows;
   if (n < 20) return [];
-
   const mid = Math.floor(n * 0.5);
   const anomalous: string[] = [];
-
   for (let ci = 0; ci < columns.length; ci++) {
     const pre: number[] = [], post: number[] = [];
-    for (let i = 0; i < n; i++) {
-      (i < mid ? pre : post).push(data.get(i, ci));
-    }
+    for (let i = 0; i < n; i++) (i < mid ? pre : post).push(data.get(i, ci));
     const preMean = pre.reduce((s, v) => s + v, 0) / pre.length;
     const preStd = Math.sqrt(pre.reduce((s, v) => s + (v - preMean) ** 2, 0) / pre.length) || 1;
     const postMean = post.reduce((s, v) => s + v, 0) / post.length;
-
-    if (Math.abs(postMean - preMean) > 2 * preStd) {
-      anomalous.push(columns[ci]!);
-    }
+    if (Math.abs(postMean - preMean) > 2 * preStd) anomalous.push(columns[ci]!);
   }
-
   return anomalous.length > 0 ? anomalous : columns.slice(0, Math.min(3, columns.length));
 }
 
 /**
  * Simple correlation-based root cause ranking baseline.
- * Ranks nodes by their correlation with the overall anomaly pattern.
  */
 function rankByCorrelation(
   scenario: FaultScenario,
-  _topology: MicroserviceTopology,
-): Array<{ name: string; score: number }> {
+): RankedEntry[] {
   const { data, columns } = scenario;
   const n = data.length;
   const anomalyStart = Math.floor(n * 0.5);
-  const preData = data.slice(0, anomalyStart);
   const postData = data.slice(anomalyStart);
-
-  const scores: Array<{ name: string; score: number }> = [];
+  const scores: RankedEntry[] = [];
 
   for (let ci = 0; ci < columns.length; ci++) {
-    // Mean shift metric: how much did the mean change from pre to post fault?
-    const preMean = colMean(preData, ci);
+    const preMean = colMean(data.slice(0, anomalyStart), ci);
     const postMean = colMean(postData, ci);
     const shift = Math.abs(postMean - preMean);
-
-    // Also check tail behavior: max anomaly in post period
     let maxAnomaly = 0;
     for (const row of postData) {
       maxAnomaly = Math.max(maxAnomaly, Math.abs((row[ci] ?? 0) - preMean));
     }
-
-    const score = shift + maxAnomaly * 0.5;
-    scores.push({ name: columns[ci]!, score });
+    scores.push({ name: columns[ci]!, score: shift + maxAnomaly * 0.5 });
   }
 
   scores.sort((a, b) => b.score - a.score);
@@ -412,13 +397,14 @@ export function formatRCAEvalMarkdown(results: RCAEvaluationResult[]): string {
   lines.push('# RCAEval Benchmark Results');
   lines.push('');
   lines.push('> Topology-based root cause analysis evaluation');
+  lines.push('> All graph-based methods use PC-discovered graph (fair comparison, no ground-truth leakage)');
   lines.push('');
-  lines.push('| Topology | Algorithm | Top-1 | Top-3 | Top-5 | MRR | Avg Rank | Time (ms) |');
-  lines.push('|----------|-----------|-------|-------|-------|-----|----------|----------|');
+  lines.push('| Topology | Algorithm | Top-1 | Top-3 | Top-5 | Avg@5 | MRR | Avg Rank | Time (ms) |');
+  lines.push('|----------|-----------|-------|-------|-------|-------|-----|----------|----------|');
 
   for (const r of results) {
     lines.push(
-      `| ${r.topologySize}-node | ${r.algorithm} | ${(r.top1Accuracy * 100).toFixed(1)}% | ${(r.top3Accuracy * 100).toFixed(1)}% | ${(r.top5Accuracy * 100).toFixed(1)}% | ${r.mrr.toFixed(3)} | ${r.avgRank.toFixed(1)} | ${r.totalTimeMs} |`,
+      `| ${r.topologySize}-node | ${r.algorithm} | ${pct(r.top1Accuracy)} | ${pct(r.top3Accuracy)} | ${pct(r.top5Accuracy)} | ${r.avgAtK.toFixed(3)} | ${r.mrr.toFixed(3)} | ${r.avgRank.toFixed(1)} | ${r.totalTimeMs} |`,
     );
   }
 
@@ -426,27 +412,27 @@ export function formatRCAEvalMarkdown(results: RCAEvaluationResult[]): string {
 }
 
 export function formatRCAEvalJSON(results: RCAEvaluationResult[]): string {
-  return JSON.stringify(
-    {
-      benchmark: 'RCAEval',
-      timestamp: new Date().toISOString(),
-      results,
-    },
-    null,
-    2,
-  );
+  return JSON.stringify({
+    benchmark: 'RCAEval',
+    timestamp: new Date().toISOString(),
+    note: 'All graph-based methods use PC-discovered graph (fair comparison)',
+    results,
+  }, null, 2);
 }
+
+function pct(val: number): string { return `${(val * 100).toFixed(1)}%`; }
 
 // ── CLI Runner ───────────────────────────────────────────────────────
 
 const isMainModule = process.argv[1]?.includes('run-rcaeval');
 
 if (isMainModule) {
-  const MAX_SIZE = parseInt(process.env['BENCH_RCA_MAX_SIZE'] ?? '20', 10);
-  const SCENARIOS = parseInt(process.env['BENCH_RCA_SCENARIOS'] ?? '10', 10);
+  const MAX_SIZE = parseInt(process.env['BENCH_RCA_MAX_SIZE'] ?? '64', 10);
+  const SCENARIOS = parseInt(process.env['BENCH_RCA_SCENARIOS'] ?? '30', 10);
   const SEED = parseInt(process.env['BENCH_RCA_SEED'] ?? '42', 10);
 
   console.log(`RCAEval Benchmark — max size: ${MAX_SIZE}, scenarios: ${SCENARIOS}`);
+  console.log('Note: All graph-based methods use PC-discovered graph (fair comparison)');
   console.time('RCAEval');
 
   mkdirSync(OUTPUT_DIR, { recursive: true });
@@ -457,7 +443,6 @@ if (isMainModule) {
     seed: SEED,
   });
 
-  // Save reports
   const mdPath = join(OUTPUT_DIR, 'benchmark-rcaeval.md');
   writeFileSync(mdPath, formatRCAEvalMarkdown(results));
   console.log(`\nMarkdown: ${mdPath}`);
