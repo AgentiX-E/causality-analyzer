@@ -13,7 +13,7 @@
     "prepare-pages": "node scripts/prepare-pages.cjs"
   },
   "devDependencies": {
-    "@playwright/test": "^1.62.0",
+    "@playwright/test": "^1.62.1",
     "@types/node": "^26.1.1",
     "@types/pg": "^8.20.0",
     "@typescript-eslint/eslint-plugin": "^8.65.0",
