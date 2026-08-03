@@ -102,7 +102,7 @@ jobs:
           npx tsx benchmark/run-rca100-agent.ts
 
       - name: Upload predictions
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: rca100-predictions
           path: packages/pipeline/benchmark-results/rca100-*.csv

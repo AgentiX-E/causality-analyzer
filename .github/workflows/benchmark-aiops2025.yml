@@ -84,7 +84,7 @@ jobs:
           npx tsx benchmark/run-aiops2025-agent.ts ../../benchmark-data/aiops2025/sample/
 
       - name: Upload predictions
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: aiops2025-predictions
           path: packages/pipeline/benchmark-results/aiops2025-*.{json,csv}
