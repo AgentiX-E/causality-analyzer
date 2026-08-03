@@ -20,7 +20,6 @@ import { Matrix } from 'ml-matrix';
 import { pcAlgorithm } from '../graph/pc.js';
 import { HeuristicPathRCA } from '../analyze/rca.js';
 import { BOCDDetector } from '../detect/bocd.js';
-import { MultivariateBOCPDDetector } from '../detect/multivariate-bocpd.js';
 import type { CausalGraph } from '../graph/causal-graph.js';
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -455,29 +454,21 @@ Output strictly as JSON (no markdown, no extra text):
       return { graph: { nodes: [], edges: [] }, ranking: [], anomalousServices: [] };
     }
 
-    // Step 1: Multivariate BOCPD for common changepoint (BARO approach)
+    // Step 1: Fast CUSUM on ALL latency+error columns for common changepoint
     let commonCP = Math.floor(n / 2); // fallback: midpoint
 
     if (fullMetrics && fullMetrics.columns >= 3 && fullMetrics.rows >= 30) {
-      // Multivariate BOCPD on ALL latency+error columns
-      try {
-        const bocpd = new MultivariateBOCPDDetector(fullMetrics.columns, { hazardRate: 1 / 50 });
-        const cpResult = bocpd.detect(fullMetrics);
-        if (cpResult.mostLikelyIndex > 0) {
-          commonCP = cpResult.mostLikelyIndex;
-        }
-      } catch {
-        // Fallback: CUSUM on service-aggregated data
-        const cusumDetector = new BOCDDetector({ threshold: 5.0, driftParam: 0.5 });
-        const cusumResults = cusumDetector.detectAllColumns(data, serviceNames);
-        for (const r of cusumResults) {
-          if (r.changepoint.detected && r.magnitudeShift > 1.0) {
-            commonCP = Math.min(commonCP, r.changepoint.mostLikelyIndex);
-          }
+      // CUSUM on all metric columns: O(n·d), fast
+      const cusumDetector = new BOCDDetector({ threshold: 5.0, driftParam: 0.5 });
+      const allColNames = Array.from({ length: fullMetrics.columns }, (_, i) => `m${i}`);
+      const cusumResults = cusumDetector.detectAllColumns(fullMetrics, allColNames);
+      for (const r of cusumResults) {
+        if (r.changepoint.detected && r.magnitudeShift > 1.0) {
+          commonCP = Math.min(commonCP, r.changepoint.mostLikelyIndex);
         }
       }
     } else {
-      // CUSUM fallback on service-aggregated data
+      // Fallback: CUSUM on per-service aggregated data
       const cusumDetector = new BOCDDetector({ threshold: 5.0, driftParam: 0.5 });
       const cusumResults = cusumDetector.detectAllColumns(data, serviceNames);
       for (const r of cusumResults) {
