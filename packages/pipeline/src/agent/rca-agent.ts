@@ -20,7 +20,7 @@ import { Matrix } from 'ml-matrix';
 import { pcAlgorithm } from '../graph/pc.js';
 import { HeuristicPathRCA } from '../analyze/rca.js';
 import { BOCDDetector } from '../detect/bocd.js';
-import { MultiSourceRanker, type MultiSourceInput, type FusionRankEntry } from '../analyze/multi-source-ranker.js';
+import { MultivariateBOCPDDetector } from '../detect/multivariate-bocpd.js';
 import type { CausalGraph } from '../graph/causal-graph.js';
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -426,25 +426,28 @@ Output strictly as JSON (no markdown, no extra text):
     }
   }
 
-  // ── Step 6: Multi-Source Diagnosis (v3) ──────────────────────────
+  // ── Step 6: BARO-style Diagnosis (v3, Multivariate BOCPD) ────────
 
   /**
-   * Multi-source diagnosis: BOCPD + CUSUM + HeuristicPathRCA → fused ranking.
+   * BARO-style diagnosis with multivariate changepoint detection.
    *
-   * Leverages the full v3 pipeline: CUSUM changepoint detection on all
-   * metrics, PC causal discovery, HeuristicPathRCA propagation, and
-   * MultiSourceRanker for weighted fusion.
+   * When fullMetrics (all latency+error columns) is provided:
+   *   Uses MultivariateBOCPD for joint changepoint detection across all
+   *   metrics simultaneously, capturing covariance structure changes.
    *
-   * @param data — Matrix (rows=time, cols=services), pre-aggregated per service
-   * @param serviceNames — Column labels
-   * @param options — Optional configuration
+   * Falls back to CUSUM on service-aggregated data when fullMetrics absent.
+   *
+   * After changepoint: IQR robust scoring per service (BARO RobustScorer).
+   * PC graph boost: root services in discovered graph get +20% score.
+   *
+   * @param data — per-service aggregated Matrix (rows=time, cols=services)
+   * @param serviceNames — service column labels
+   * @param fullMetrics — optional all metric columns for multivariate BOCPD
    */
   diagnoseV3(
     data: Matrix,
     serviceNames: string[],
-    options?: {
-      fusionWeights?: Partial<{ bocpd: number; cusum: number; heuristicPath: number; logError: number }>;
-    },
+    fullMetrics?: Matrix,
   ): RCADiagnosis {
     const n = data.rows;
     const d = serviceNames.length;
@@ -452,77 +455,92 @@ Output strictly as JSON (no markdown, no extra text):
       return { graph: { nodes: [], edges: [] }, ranking: [], anomalousServices: [] };
     }
 
-    // ── CUSUM detection on all services ──
-    const cusumDetector = new BOCDDetector({ threshold: 5.0, driftParam: 0.5 });
-    const cusumResultsRaw = cusumDetector.detectAllColumns(data, serviceNames);
+    // Step 1: Multivariate BOCPD for common changepoint (BARO approach)
+    let commonCP = Math.floor(n / 2); // fallback: midpoint
 
-    // ── Filter: only services with significant shift (> 1.5σ) or detected changepoint ──
-    const significantResults = cusumResultsRaw.filter(
-      r => r.changepoint.detected || r.magnitudeShift > 1.5,
-    );
+    if (fullMetrics && fullMetrics.columns >= 3 && fullMetrics.rows >= 30) {
+      // Multivariate BOCPD on ALL latency+error columns
+      try {
+        const bocpd = new MultivariateBOCPDDetector(fullMetrics.columns, { hazardRate: 1 / 50 });
+        const cpResult = bocpd.detect(fullMetrics);
+        if (cpResult.mostLikelyIndex > 0) {
+          commonCP = cpResult.mostLikelyIndex;
+        }
+      } catch {
+        // Fallback: CUSUM on service-aggregated data
+        const cusumDetector = new BOCDDetector({ threshold: 5.0, driftParam: 0.5 });
+        const cusumResults = cusumDetector.detectAllColumns(data, serviceNames);
+        for (const r of cusumResults) {
+          if (r.changepoint.detected && r.magnitudeShift > 1.0) {
+            commonCP = Math.min(commonCP, r.changepoint.mostLikelyIndex);
+          }
+        }
+      }
+    } else {
+      // CUSUM fallback on service-aggregated data
+      const cusumDetector = new BOCDDetector({ threshold: 5.0, driftParam: 0.5 });
+      const cusumResults = cusumDetector.detectAllColumns(data, serviceNames);
+      for (const r of cusumResults) {
+        if (r.changepoint.detected && r.magnitudeShift > 1.0) {
+          commonCP = Math.min(commonCP, r.changepoint.mostLikelyIndex);
+        }
+      }
+    }
 
-    // If no significant signals found, fall back to top-3 by magnitude
-    const activeResults = significantResults.length > 0
-      ? significantResults
-      : cusumResultsRaw.slice(0, Math.min(3, cusumResultsRaw.length));
+    // Step 2: IQR robust scoring per service (BARO RobustScorer)
+    const ranking: RCARankEntry[] = [];
+    const anomalousServices: string[] = [];
 
-    const anomalousServices = activeResults.map(r => r.service);
+    for (let j = 0; j < d; j++) {
+      const col: number[] = [];
+      for (let i = 0; i < n; i++) col.push(data.get(i, j));
+      if (col.length < 10) continue;
 
-    // ── BOCPD-style timing + magnitude (only for active services) ──
-    const bocpdSignals = activeResults.map(r => ({
-      service: r.service,
-      changepointIndex: r.changepoint.mostLikelyIndex,
-      magnitudeShift: r.magnitudeShift,
-      confidence: r.changepoint.confidence,
-    }));
+      const normalSlice = col.slice(0, Math.max(1, commonCP));
+      const anomalSlice = col.slice(commonCP);
 
-    const cusumSignals = activeResults.map(r => ({
-      service: r.service,
-      maxCusum: r.changepoint.maxCusum,
-      magnitudeShift: r.magnitudeShift,
-    }));
+      const sorted = [...normalSlice].sort((a, b) => a - b);
+      const mid = sorted.length;
+      const median = mid % 2 === 1
+        ? sorted[Math.floor(mid / 2)]!
+        : (sorted[mid / 2 - 1]! + sorted[mid / 2]!) / 2;
+      const q1 = sorted[Math.floor(mid * 0.25)]!;
+      const q3 = sorted[Math.floor(mid * 0.75)]!;
+      const iqr = Math.max(Math.abs(q3 - q1), 1e-10);
 
-    // ── PC causal discovery + HeuristicPathRCA ──
+      // BARO-style: max robust z-score in anomalous period
+      let maxZ = 0;
+      for (const v of anomalSlice) {
+        const z = Math.abs(v - median) / iqr;
+        if (z > maxZ) maxZ = z;
+      }
+
+      const svc = serviceNames[j]!;
+      ranking.push({ component: svc, score: maxZ, isRoot: false });
+
+      if (maxZ > 2.0) anomalousServices.push(svc);
+    }
+
+    // Step 3: PC graph boost (root services +20%)
     const graph = this.discover(data, serviceNames);
-    const hpResult = new HeuristicPathRCA();
-    hpResult.train(graph, new Set(anomalousServices), data);
-    const hpOutput = hpResult.findRootCauses(anomalousServices);
-    const hpSignals = hpOutput.rootCauses.map(rc => ({
-      component: rc.name,
-      score: rc.score,
-      isRoot: graph.parents(rc.name).length === 0,
-    }));
+    for (const r of ranking) {
+      if (graph.parents(r.component).length === 0) {
+        r.score *= 1.2;
+        r.isRoot = true;
+      }
+    }
 
-    // ── Multi-source fusion ──
-    // When no traces/logs available (metric-only), heuristicPath is primary signal
-    const defaultWeights = { bocpd: 0.25, cusum: 0.20, heuristicPath: 0.45, logError: 0.10 };
-    const ranker = new MultiSourceRanker({ ...defaultWeights, ...options?.fusionWeights });
-    const fused: FusionRankEntry[] = ranker.rank({
-      bocpdResults: bocpdSignals,
-      cusumResults: cusumSignals,
-      heuristicPathRanking: hpSignals,
-      logErrors: [],
-      serviceNames,
-      totalTimesteps: n,
-    });
-
-    const ranking: RCARankEntry[] = fused.map(f => ({
-      component: f.component,
-      score: f.score,
-      isRoot: f.isRoot,
-    }));
+    ranking.sort((a, b) => b.score - a.score);
 
     return {
       graph: {
         nodes: serviceNames.map(s => ({ name: s })),
         edges: graph.edges.map(e => ({
-          source: e.source,
-          target: e.target,
-          weight: e.weight ?? 1.0,
+          source: e.source, target: e.target, weight: e.weight ?? 1.0,
         })),
       },
       ranking,
-      anomalousServices: activeResults.map(r => r.service),
+      anomalousServices,
     };
   }
 }

@@ -84,7 +84,7 @@ function loadCaseIndex(datasetDir: string): RCACase[] {
 
 function loadServiceMetrics(
   caseDir: string,
-): { data: Matrix; serviceNames: string[]; timesteps: number; faultIndex: number } | null {
+): { data: Matrix; serviceNames: string[]; timesteps: number; faultIndex: number; fullMetrics: Matrix | null } | null {
   const metricPath = join(caseDir, 'metrics.parquet');
   if (!existsSync(metricPath)) return null;
 
@@ -92,10 +92,11 @@ function loadServiceMetrics(
 
   try {
     const output = execSync(`python3 "${scriptPath}" case_metrics "${caseDir}"`, {
-      encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024, timeout: 60000,
+      encoding: 'utf-8', maxBuffer: 100 * 1024 * 1024, timeout: 60000,
     });
     const parsed = JSON.parse(output) as {
       error?: string; serviceNames: string[]; data: number[][]; nTimesteps: number; faultIndex: number;
+      bocpdColumns?: string[]; bocpdData?: number[][];
     };
     if (parsed.error || parsed.serviceNames.length < 2 || parsed.nTimesteps === 0) return null;
 
@@ -108,11 +109,28 @@ function loadServiceMetrics(
       rows.push(row);
     }
 
+    // Build full metrics matrix for multivariate BOCPD
+    let fullMetrics: Matrix | null = null;
+    if (parsed.bocpdData && parsed.bocpdData.length >= 3 && parsed.bocpdData[0]!.length >= 30) {
+      const fmRows: number[][] = [];
+      const nPts = parsed.bocpdData[0]!.length;
+      const nCols = parsed.bocpdData.length;
+      for (let i = 0; i < nPts; i++) {
+        const row: number[] = [];
+        for (let j = 0; j < nCols; j++) {
+          row.push(parsed.bocpdData[j]?.[i] ?? 0);
+        }
+        fmRows.push(row);
+      }
+      fullMetrics = new Matrix(fmRows);
+    }
+
     return {
       data: new Matrix(rows),
       serviceNames: parsed.serviceNames,
       timesteps: parsed.nTimesteps,
       faultIndex: parsed.faultIndex,
+      fullMetrics,
     };
   } catch (e) {
     console.error(`  Failed: ${(e as Error).message}`);
@@ -143,7 +161,7 @@ function evaluateCase(case_: RCACase): CaseResult {
     }
 
     const agent = new RCAgent({ multiFault: false });
-    const diagnosis = agent.diagnoseV3(faultData, metrics.serviceNames);
+    const diagnosis = agent.diagnoseV3(faultData, metrics.serviceNames, metrics.fullMetrics ?? undefined);
     const top5 = diagnosis.ranking.slice(0, 5).map(r => r.component);
     const gt = case_.rootCauseService.toLowerCase();
     const rank = top5.findIndex(
