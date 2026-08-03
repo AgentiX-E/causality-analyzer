@@ -19,6 +19,8 @@
 import { Matrix } from 'ml-matrix';
 import { pcAlgorithm } from '../graph/pc.js';
 import { HeuristicPathRCA } from '../analyze/rca.js';
+import { BOCDDetector } from '../detect/bocd.js';
+import { MultiSourceRanker, type MultiSourceInput, type FusionRankEntry } from '../analyze/multi-source-ranker.js';
 import type { CausalGraph } from '../graph/causal-graph.js';
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -422,6 +424,101 @@ Output strictly as JSON (no markdown, no extra text):
         rawLLMResponse: raw,
       };
     }
+  }
+
+  // ── Step 6: Multi-Source Diagnosis (v3) ──────────────────────────
+
+  /**
+   * Multi-source diagnosis: BOCPD + CUSUM + HeuristicPathRCA → fused ranking.
+   *
+   * Leverages the full v3 pipeline: CUSUM changepoint detection on all
+   * metrics, PC causal discovery, HeuristicPathRCA propagation, and
+   * MultiSourceRanker for weighted fusion.
+   *
+   * @param data — Matrix (rows=time, cols=services), pre-aggregated per service
+   * @param serviceNames — Column labels
+   * @param options — Optional configuration
+   */
+  diagnoseV3(
+    data: Matrix,
+    serviceNames: string[],
+    options?: {
+      fusionWeights?: Partial<{ bocpd: number; cusum: number; heuristicPath: number; logError: number }>;
+    },
+  ): RCADiagnosis {
+    const n = data.rows;
+    const d = serviceNames.length;
+    if (n < 2 || d === 0) {
+      return {
+        graph: { nodes: [], edges: [] },
+        ranking: [],
+        anomalousServices: [],
+      };
+    }
+
+    // ── CUSUM detection on all services ──
+    const cusumDetector = new BOCDDetector({ threshold: 5.0, driftParam: 0.5 });
+    const cusumResultsRaw = cusumDetector.detectAllColumns(data, serviceNames);
+
+    // ── BOCPD-style timing + magnitude per service ──
+    const bocpdSignals = cusumResultsRaw.map(r => ({
+      service: r.service,
+      changepointIndex: r.changepoint.mostLikelyIndex,
+      magnitudeShift: r.magnitudeShift,
+      confidence: r.changepoint.confidence,
+    }));
+
+    const cusumSignals = cusumResultsRaw.map(r => ({
+      service: r.service,
+      maxCusum: r.changepoint.maxCusum,
+      magnitudeShift: r.magnitudeShift,
+    }));
+
+    // ── Anomalous services from CUSUM (detected services) ──
+    const anomalousServices = cusumResultsRaw
+      .filter(r => r.changepoint.detected || r.magnitudeShift > 0.5)
+      .map(r => r.service);
+
+    // ── PC causal discovery + HeuristicPathRCA ──
+    const graph = this.discover(data, serviceNames);
+    const hpResult = new HeuristicPathRCA();
+    hpResult.train(graph, new Set(anomalousServices), data);
+    const hpOutput = hpResult.findRootCauses(anomalousServices);
+    const hpSignals = hpOutput.rootCauses.map(rc => ({
+      component: rc.name,
+      score: rc.score,
+      isRoot: graph.parents(rc.name).length === 0,
+    }));
+
+    // ── Multi-source fusion ──
+    const ranker = new MultiSourceRanker(options?.fusionWeights);
+    const fused: FusionRankEntry[] = ranker.rank({
+      bocpdResults: bocpdSignals,
+      cusumResults: cusumSignals,
+      heuristicPathRanking: hpSignals,
+      logErrors: [], // L7: log integration later
+      serviceNames,
+      totalTimesteps: n,
+    });
+
+    const ranking: RCARankEntry[] = fused.map(f => ({
+      component: f.component,
+      score: f.score,
+      isRoot: f.isRoot,
+    }));
+
+    return {
+      graph: {
+        nodes: serviceNames.map(s => ({ name: s })),
+        edges: graph.edges.map(e => ({
+          source: e.source,
+          target: e.target,
+          weight: e.weight ?? 1.0,
+        })),
+      },
+      ranking,
+      anomalousServices,
+    };
   }
 }
 

@@ -143,7 +143,7 @@ function evaluateCase(case_: RCACase): CaseResult {
     }
 
     const agent = new RCAgent({ multiFault: false });
-    const diagnosis = agent.diagnose(faultData, metrics.serviceNames);
+    const diagnosis = agent.diagnoseV3(faultData, metrics.serviceNames);
     const top5 = diagnosis.ranking.slice(0, 5).map(r => r.component);
     const gt = case_.rootCauseService.toLowerCase();
     const rank = top5.findIndex(
