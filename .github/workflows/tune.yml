@@ -24,7 +24,7 @@ jobs:
       - name: Tune discovery algorithms
         run: BENCH_TUNING_TRIALS=3 pnpm --filter @agentix-e/causality-analyzer-pipeline benchmark:tune
         timeout-minutes: 80
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: tuning-results-discovery
           path: packages/pipeline/benchmark-results/tuning-results.json
@@ -43,7 +43,7 @@ jobs:
       - name: Tune IHDP estimators
         run: pnpm --filter @agentix-e/causality-analyzer-pipeline benchmark:tune:ihdp
         timeout-minutes: 110
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: tuning-results-estimation
           path: packages/pipeline/benchmark-results/tuning-ihdp.json

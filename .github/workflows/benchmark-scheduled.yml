@@ -36,7 +36,7 @@ jobs:
       - name: Validate against SHD baselines
         run: node scripts/validate-benchmarks.cjs benchmark-output.log
       - name: Upload benchmark results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: benchmark-results
           path: benchmark-output.log
@@ -86,7 +86,7 @@ jobs:
       - name: Run OCDB small-tier benchmark
         run: pnpm run --filter @agentix-e/causality-analyzer-pipeline benchmark:ocdb:ci
       - name: Upload OCDB benchmark results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ocdb-benchmark-results
           path: packages/pipeline/benchmark-results/benchmark-ocdb.*
@@ -121,7 +121,7 @@ jobs:
       - name: Run causal-learn benchmark
         run: python3 packages/pipeline/benchmark/run-causal-learn-benchmark.py
       - name: Upload comparison results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cross-language-comparison
           path: packages/pipeline/benchmark-results/cross-language-comparison.*

@@ -44,7 +44,7 @@ jobs:
           npx tsx benchmark/run-rcaeval.ts
 
       - name: Upload benchmark results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: rcaeval-results-${{ matrix.system }}
           path: packages/pipeline/benchmark-results/benchmark-rcaeval.*
