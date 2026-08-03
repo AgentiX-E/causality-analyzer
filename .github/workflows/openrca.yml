@@ -50,7 +50,7 @@ jobs:
           pnpm run --filter @agentix-e/causality-analyzer-pipeline build
 
       - name: Restore dataset cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         id: dataset-cache
         with:
           path: OpenRCA/dataset/
