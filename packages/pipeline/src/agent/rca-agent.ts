@@ -449,35 +449,38 @@ Output strictly as JSON (no markdown, no extra text):
     const n = data.rows;
     const d = serviceNames.length;
     if (n < 2 || d === 0) {
-      return {
-        graph: { nodes: [], edges: [] },
-        ranking: [],
-        anomalousServices: [],
-      };
+      return { graph: { nodes: [], edges: [] }, ranking: [], anomalousServices: [] };
     }
 
     // ── CUSUM detection on all services ──
     const cusumDetector = new BOCDDetector({ threshold: 5.0, driftParam: 0.5 });
     const cusumResultsRaw = cusumDetector.detectAllColumns(data, serviceNames);
 
-    // ── BOCPD-style timing + magnitude per service ──
-    const bocpdSignals = cusumResultsRaw.map(r => ({
+    // ── Filter: only services with significant shift (> 1.5σ) or detected changepoint ──
+    const significantResults = cusumResultsRaw.filter(
+      r => r.changepoint.detected || r.magnitudeShift > 1.5,
+    );
+
+    // If no significant signals found, fall back to top-3 by magnitude
+    const activeResults = significantResults.length > 0
+      ? significantResults
+      : cusumResultsRaw.slice(0, Math.min(3, cusumResultsRaw.length));
+
+    const anomalousServices = activeResults.map(r => r.service);
+
+    // ── BOCPD-style timing + magnitude (only for active services) ──
+    const bocpdSignals = activeResults.map(r => ({
       service: r.service,
       changepointIndex: r.changepoint.mostLikelyIndex,
       magnitudeShift: r.magnitudeShift,
       confidence: r.changepoint.confidence,
     }));
 
-    const cusumSignals = cusumResultsRaw.map(r => ({
+    const cusumSignals = activeResults.map(r => ({
       service: r.service,
       maxCusum: r.changepoint.maxCusum,
       magnitudeShift: r.magnitudeShift,
     }));
-
-    // ── Anomalous services from CUSUM (detected services) ──
-    const anomalousServices = cusumResultsRaw
-      .filter(r => r.changepoint.detected || r.magnitudeShift > 0.5)
-      .map(r => r.service);
 
     // ── PC causal discovery + HeuristicPathRCA ──
     const graph = this.discover(data, serviceNames);
@@ -491,12 +494,14 @@ Output strictly as JSON (no markdown, no extra text):
     }));
 
     // ── Multi-source fusion ──
-    const ranker = new MultiSourceRanker(options?.fusionWeights);
+    // When no traces/logs available (metric-only), heuristicPath is primary signal
+    const defaultWeights = { bocpd: 0.25, cusum: 0.20, heuristicPath: 0.45, logError: 0.10 };
+    const ranker = new MultiSourceRanker({ ...defaultWeights, ...options?.fusionWeights });
     const fused: FusionRankEntry[] = ranker.rank({
       bocpdResults: bocpdSignals,
       cusumResults: cusumSignals,
       heuristicPathRanking: hpSignals,
-      logErrors: [], // L7: log integration later
+      logErrors: [],
       serviceNames,
       totalTimesteps: n,
     });
@@ -517,7 +522,7 @@ Output strictly as JSON (no markdown, no extra text):
         })),
       },
       ranking,
-      anomalousServices,
+      anomalousServices: activeResults.map(r => r.service),
     };
   }
 }
