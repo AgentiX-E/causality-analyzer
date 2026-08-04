@@ -101,6 +101,18 @@ def load_case_metrics(case_dir):
         bocpd_cols = sorted(all_columns)[:min(10, len(all_columns))]
         bocpd_data = [df[c].ffill().fillna(0).values.tolist() for c in bocpd_cols]
 
+    # Min-max normalize ALL data to [0,1] (BARO convention for IQR scoring)
+    for series in bocpd_data:
+        mn, mx = min(series), max(series)
+        rng = mx - mn if mx != mn else 1
+        for k in range(len(series)):
+            series[k] = (series[k] - mn) / rng
+    for series in service_series:
+        mn, mx = min(series), max(series)
+        rng = mx - mn if mx != mn else 1
+        for k in range(len(series)):
+            series[k] = (series[k] - mn) / rng
+
     # Fault index
     fault_idx = 0
     if 'time' in df.columns and inject_time > 0:
