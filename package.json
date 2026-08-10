@@ -13,11 +13,11 @@
     "prepare-pages": "node scripts/prepare-pages.cjs"
   },
   "devDependencies": {
-    "@playwright/test": "^1.62.0",
+    "@playwright/test": "^1.62.1",
     "@types/node": "^26.1.1",
     "@types/pg": "^8.20.0",
-    "@typescript-eslint/eslint-plugin": "^8.65.0",
-    "@typescript-eslint/parser": "^8.65.0",
+    "@typescript-eslint/eslint-plugin": "^8.66.0",
+    "@typescript-eslint/parser": "^8.66.0",
     "@vitest/coverage-v8": "^4.1.10",
     "eslint": "^10.8.0",
     "playwright": "^1.62.0",
