@@ -19,8 +19,8 @@
     "uplot": "^1.6.0"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^4.1.10",
-    "happy-dom": "^20.11.1",
+    "@vitest/coverage-v8": "^4.1.11",
+    "happy-dom": "^20.11.6",
     "typescript": "^5.9.3",
     "vitest": "^4.1.10"
   },

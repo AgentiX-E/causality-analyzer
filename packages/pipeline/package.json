@@ -26,13 +26,13 @@
   },
   "dependencies": {
     "@agentix-e/causality-analyzer-core": "workspace:*",
-    "@kanaries/ml": "^1.0.1",
-    "ml-matrix": "^6.14.0",
-    "simple-statistics": "^7.8.0",
+    "@kanaries/ml": "^1.1.0",
+    "ml-matrix": "^6.15.0",
+    "simple-statistics": "^7.10.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^4.1.10",
+    "@vitest/coverage-v8": "^4.1.11",
     "typescript": "^5.9.3",
     "vitest": "^4.1.10"
   },
