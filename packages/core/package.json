@@ -44,8 +44,8 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "ubique": "^1.0.2",
-    "zod": "^4.4.3"
+    "ubique": "^1.0.4",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^4.1.10",
